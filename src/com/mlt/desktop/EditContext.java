@@ -29,6 +29,7 @@ import com.mlt.desktop.control.BooleanEditor;
 import com.mlt.desktop.control.ComboBox;
 import com.mlt.desktop.control.Control;
 import com.mlt.desktop.control.DateField;
+import com.mlt.desktop.control.Label;
 import com.mlt.desktop.control.NumberField;
 import com.mlt.desktop.control.StringField;
 import com.mlt.desktop.formatter.NumberFilter;
@@ -90,6 +91,8 @@ public class EditContext {
 	private List<Action> valueActions = new ArrayList<>();
 	/** Edit field. */
 	private EditField editField;
+	/** Label. */
+	private Label label;
 
 	/**
 	 * Constructor.
@@ -151,6 +154,17 @@ public class EditContext {
 		}
 
 		return editField;
+	}
+
+	/**
+	 * Shortcut to access the editor control.
+	 * 
+	 * @return The control.
+	 */
+	public Control getEditor() {
+		Control editor = getEditField().getControl();
+		editor.setName(getNameEditor());
+		return editor;
 	}
 
 	/**
@@ -272,21 +286,34 @@ public class EditContext {
 	}
 
 	/**
-	 * Shortcut to access the proper label.
+	 * Return the label.
 	 * 
 	 * @return The label.
 	 */
-	public String getLabel() {
-		return field.getDisplayLabel();
+	public Label getLabel() {
+		if (label == null) {
+			label = new Label(field.getDisplayLabel());
+			label.setName(getNameLabel());
+		}
+		return label;
 	}
 
 	/**
-	 * Shortcut to access the control.
+	 * Return the name of the editor.
 	 * 
-	 * @return The control.
+	 * @return The name.
 	 */
-	public Control getControl() {
-		return getEditField().getControl();
+	public String getNameEditor() {
+		return "editor-" + field.getAlias();
+	}
+
+	/**
+	 * Return the name of the label.
+	 * 
+	 * @return The name.
+	 */
+	public String getNameLabel() {
+		return "label-" + field.getAlias();
 	}
 
 	/**

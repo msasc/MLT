@@ -18,6 +18,7 @@
 package com.mlt.desktop.control;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,11 +33,14 @@ import com.mlt.desktop.EditContext;
 import com.mlt.desktop.EditMode;
 import com.mlt.desktop.border.LineBorderSides;
 import com.mlt.desktop.graphic.Stroke;
+import com.mlt.desktop.graphic.Text;
 import com.mlt.desktop.layout.Anchor;
 import com.mlt.desktop.layout.Constraints;
+import com.mlt.desktop.layout.Dimension;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.util.Numbers;
+import com.mlt.util.Strings;
 
 /**
  * A pane that hold a form to layout fields of a record. Fields are distributed
@@ -121,6 +125,8 @@ public class FormRecordPane {
 	private int labelGap = 5;
 	/** Field to field gap. */
 	private int fieldGap = 2;
+	/** Preferred row height. */
+	private double preferredRowHeight = -1;
 
 	/**
 	 * Constructor.
@@ -305,10 +311,8 @@ public class FormRecordPane {
 		List<Row> rows = new ArrayList<>();
 		for (int i = 0; i < grid.contexts.size(); i++) {
 			EditContext context = grid.contexts.get(i);
-			Label label = new Label(context.getLabel());
-			label.setName(getNameLabel(context.getField()));
-			Control editor = context.getControl();
-			editor.setName(getNameEditor(context.getField()));
+			Label label = context.getLabel();
+			Control editor = context.getEditor();
 			Row row = new Row();
 			row.context = context;
 			row.label = label;
@@ -316,12 +320,8 @@ public class FormRecordPane {
 			rows.add(row);
 		}
 
-		/* Get the maximum row height. */
-		double maxHeight = 0;
-		for (Row row : rows) {
-			maxHeight = Math.max(maxHeight, row.label.getPreferredSize().getHeight());
-			maxHeight = Math.max(maxHeight, row.editor.getPreferredSize().getHeight());
-		}
+		/* The prefrerred row height. */
+		double height = getPreferredRowHeight();
 
 		/* Add rows to the pane with insets to get the same height for all rows. */
 		GridBagPane pane = new GridBagPane();
@@ -332,9 +332,9 @@ public class FormRecordPane {
 
 			/* Insets and constraints for the label. */
 			double labelHeight = label.getPreferredSize().getHeight();
-			double labelTop = Numbers.round((maxHeight - labelHeight) / 2, 0);
+			double labelTop = Numbers.round((height - labelHeight) / 2, 0);
 			double labelLeft = 0;
-			double labelBottom = maxHeight - labelHeight - labelTop;
+			double labelBottom = 0;
 			double labelRight = labelGap;
 			if (i > 0) {
 				labelTop += fieldGap;
@@ -349,9 +349,9 @@ public class FormRecordPane {
 			double weightx = 1;
 			double weighty = (i == rows.size() - 1 ? 1 : 0);
 			double editorHeight = editor.getPreferredSize().getHeight();
-			double editorTop = Numbers.round((maxHeight - editorHeight) / 2, 0);
+			double editorTop = Numbers.round((height - editorHeight) / 2, 0);
 			double editorLeft = 0;
-			double editorBottom = maxHeight - editorHeight - editorTop;
+			double editorBottom = 0;
 			double editorRight = 0;
 			if (i > 0) {
 				editorTop += fieldGap;
@@ -397,7 +397,8 @@ public class FormRecordPane {
 	 */
 	private GridBagPane getGroupPane(Group group) {
 		GridBagPane groupPane = new GridBagPane();
-		Constraints constraints = new Constraints(Anchor.TOP_LEFT, Fill.HORIZONTAL, 0, 0, groupInsets);
+		Constraints constraints =
+			new Constraints(Anchor.TOP_LEFT, Fill.HORIZONTAL, 0, 0, groupInsets);
 		if (layouts.get(group) == Layout.COLUMNS) {
 			groupPane.add(getGroupPaneByColumns(group), constraints);
 		} else {
@@ -583,23 +584,58 @@ public class FormRecordPane {
 	}
 
 	/**
-	 * Return the name of the editor.
+	 * Return the font within labels and controls with the maximum height.
 	 * 
-	 * @param field The field.
-	 * @return The name.
+	 * @return The font within labels and controls with the maximum height.
 	 */
-	private String getNameEditor(Field field) {
-		return "editor-" + field.getAlias();
+	private Font getMaxFont() {
+		StringBuilder b = new StringBuilder();
+		for (char c = 32; c < 256; c++) {
+			b.append(c);
+		}
+		String str = b.toString();
+		Font font = null;
+		Dimension size = null;
+		for (Group group : groups) {
+			for (Grid grid : group.grids) {
+				for (EditContext context : grid.contexts) {
+					if (font == null) {
+						font = context.getLabel().getFont();
+						size = Text.getSize(str, font);
+					}
+					Font labelFont = context.getLabel().getFont();
+					Dimension labelSize = Text.getSize(str, labelFont);
+					if (labelSize.getHeight() > size.getHeight()) {
+						font = labelFont;
+						size = labelSize;
+					}
+					Font editorFont = context.getEditor().getFont();
+					Dimension editorSize = Text.getSize(str, editorFont);
+					if (editorSize.getHeight() > size.getHeight()) {
+						font = editorFont;
+						size = editorSize;
+					}
+				}
+			}
+		}
+		return font;
 	}
 
 	/**
-	 * Return the name of the label.
+	 * Return the preferred row height using a combo box and the greatest font,
+	 * because a combo box is a litter higher that the usual text field.
 	 * 
-	 * @param field The field.
-	 * @return The name.
+	 * @return The preferred row height.
 	 */
-	private String getNameLabel(Field field) {
-		return "label-" + field.getAlias();
+	private double getPreferredRowHeight() {
+		if (preferredRowHeight <= 0) {
+			ComboBox editor = new ComboBox();
+			editor.setFont(getMaxFont());
+			editor.addValue(new Value("Test Value"));
+			preferredRowHeight = editor.getPreferredSize().getHeight();
+		}
+
+		return preferredRowHeight;
 	}
 
 	/**

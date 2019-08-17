@@ -68,7 +68,11 @@ public class StatisticsAverages extends StatisticsTicker {
 		 * Called to notify an element start.
 		 */
 		@Override
-		public void elementStart(String namespace, String elementName, String path, Attributes attributes) throws SAXException {
+		public void elementStart(
+			String namespace,
+			String elementName,
+			String path,
+			Attributes attributes) throws SAXException {
 			if (path.equals("averages/average")) {
 
 				/* Type. */
@@ -106,19 +110,12 @@ public class StatisticsAverages extends StatisticsTicker {
 	/**
 	 * Constructor.
 	 * 
-	 * @param dbEngine   The database engine.
-	 * @param server     Server.
 	 * @param instrument Instrument.
 	 * @param period     Period.
 	 * @param idSuffix   Id suffix.
 	 */
-	public StatisticsAverages(
-		DBEngine dbEngine,
-		Server server,
-		Instrument instrument,
-		Period period,
-		String idSuffix) {
-		super(dbEngine, server, instrument, period);
+	public StatisticsAverages(Instrument instrument, Period period, String idSuffix) {
+		super(instrument, period);
 		setId("st" + idSuffix);
 	}
 
@@ -234,9 +231,10 @@ public class StatisticsAverages extends StatisticsTicker {
 		}
 		return fields;
 	}
-	
+
 	/**
 	 * Return the field list with increases in percentage of the last N close values
+	 * 
 	 * @param suffix
 	 * @return
 	 */

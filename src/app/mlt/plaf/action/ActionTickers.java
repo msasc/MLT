@@ -98,7 +98,7 @@ public class ActionTickers extends ActionRun {
 				Server server = MLT.getServer();
 				Database db = MLT.getDatabase();
 				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
-				Instrument instrument = db.fromRecordToInstrument(db.getRecord_Instrument(server, instrumentId));
+				Instrument instrument = db.fromRecordToInstrument(db.records().instrument(instrumentId));
 				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
@@ -165,7 +165,7 @@ public class ActionTickers extends ActionRun {
 				Server server = MLT.getServer();
 				Database db = MLT.getDatabase();
 				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
-				Instrument instrument = db.fromRecordToInstrument(db.getRecord_Instrument(server, instrumentId));
+				Instrument instrument = db.fromRecordToInstrument(db.records().instrument(instrumentId));
 				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 

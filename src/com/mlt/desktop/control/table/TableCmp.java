@@ -22,7 +22,6 @@ import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import javax.swing.Icon;
 import javax.swing.JTable;

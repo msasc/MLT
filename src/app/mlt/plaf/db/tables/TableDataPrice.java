@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package app.mlt.plaf.db.tables;
@@ -20,6 +25,7 @@ import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 import com.mlt.mkt.server.Server;
 
+import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldDataInst;
@@ -37,13 +43,14 @@ public class TableDataPrice extends Table {
 	/**
 	 * Constructor.
 	 *
-	 * @param dbEngine   Database engine.
-	 * @param server     Server.
 	 * @param instrument Instrument.
 	 * @param period     Period.
 	 */
-	public TableDataPrice(DBEngine dbEngine, Server server, Instrument instrument, Period period) {
+	public TableDataPrice(Instrument instrument, Period period) {
 		super();
+
+		DBEngine dbEngine = MLT.getDatabase().getDBEngine();
+		Server server = MLT.getServer();
 
 		setName(Database.getName_Ticker(instrument, period));
 		setSchema(Database.getSchema(server));

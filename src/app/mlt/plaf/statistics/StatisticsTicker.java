@@ -22,6 +22,8 @@ import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 import com.mlt.mkt.server.Server;
 
+import app.mlt.plaf.MLT;
+
 /**
  * Statistics on tickers.
  *
@@ -29,10 +31,6 @@ import com.mlt.mkt.server.Server;
  */
 public abstract class StatisticsTicker extends Statistics {
 
-	/** Database engine. */
-	private DBEngine dbEngine;
-	/** Server. */
-	private Server server;
 	/** Instrument. */
 	private Instrument instrument;
 	/** Period. */
@@ -41,27 +39,22 @@ public abstract class StatisticsTicker extends Statistics {
 	/**
 	 * Constructor.
 	 * 
-	 * @param dbEngine   The database engine.
-	 * @param server     Server.
 	 * @param instrument Instrument.
 	 * @param period     Period.
 	 */
-	public StatisticsTicker(DBEngine dbEngine, Server server, Instrument instrument,
-		Period period) {
+	public StatisticsTicker(Instrument instrument, Period period) {
 		super();
-		this.dbEngine = dbEngine;
-		this.server = server;
 		this.instrument = instrument;
 		this.period = period;
 	}
 
 	/**
-	 * Return the database engine.
+	 * Sortcut to access the database engine.
 	 * 
 	 * @return The database engine.
 	 */
 	public DBEngine getDBEngine() {
-		return dbEngine;
+		return MLT.getDatabase().getDBEngine();
 	}
 
 	/**
@@ -83,12 +76,12 @@ public abstract class StatisticsTicker extends Statistics {
 	}
 
 	/**
-	 * Return the server.
+	 * Sortcut to access the server.
 	 * 
 	 * @return The server.
 	 */
 	public Server getServer() {
-		return server;
+		return MLT.getServer();
 	}
 
 }

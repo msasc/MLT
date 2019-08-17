@@ -1059,6 +1059,13 @@ public class Option {
 	 */
 	public Option() {
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	public boolean equals(String str) {
+		return equals((Object) str);
+	}
 
 	/**
 	 * {@inheritDoc}

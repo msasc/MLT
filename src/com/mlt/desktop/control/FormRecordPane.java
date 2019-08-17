@@ -40,7 +40,6 @@ import com.mlt.desktop.layout.Dimension;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.util.Numbers;
-import com.mlt.util.Strings;
 
 /**
  * A pane that hold a form to layout fields of a record. Fields are distributed

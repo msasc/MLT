@@ -491,6 +491,7 @@ public class FieldProperties {
 	 * @param properties The properties record.
 	 * @return The property value.
 	 */
+	@SuppressWarnings("unlikely-arg-type")
 	public boolean getPropertyAscending(Record properties) {
 		return properties.getValue(ASCENDING).equals(Resources.getText("tokenAsc", locale));
 	}

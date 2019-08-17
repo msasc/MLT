@@ -301,33 +301,33 @@ public class MLT {
 			/* Check for the necessary table Servers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check servers table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.SERVERS)) {
-				ddl.buildTable(db.getTable_Servers());
+				ddl.buildTable(db.tables().servers());
 			}
 			synchronizeSupportedServer(db.getPersistor_Servers());
 
 			/* Check for the necessary table Periods in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check periods table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.PERIODS)) {
-				ddl.buildTable(db.getTable_Periods());
+				ddl.buildTable(db.tables().periods());
 			}
 			synchronizeStandardPeriods(db.getPersistor_Periods());
 
 			/* Check for the necessary table Instruments in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check instruments table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.INSTRUMENTS)) {
-				ddl.buildTable(db.getTable_Instruments());
+				ddl.buildTable(db.tables().instruments());
 			}
 
 			/* Check for the necessary table Tickers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check tickers table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.TICKERS)) {
-				ddl.buildTable(db.getTable_Tickers());
+				ddl.buildTable(db.tables().tickers());
 			}
 
 			/* Check for the necessary table Statistics in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check statistics table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.STATISTICS)) {
-				ddl.buildTable(db.getTable_Statistics());
+				ddl.buildTable(db.tables().statistics());
 			}
 
 		} catch (Exception exc) {

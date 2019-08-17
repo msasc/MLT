@@ -64,7 +64,6 @@ import com.mlt.mkt.data.PlotType;
 import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.mkt.data.info.PriceInfo;
 import com.mlt.mkt.data.info.VolumeInfo;
-import com.mlt.mkt.server.Server;
 import com.mlt.util.Colors;
 import com.mlt.util.Logs;
 
@@ -95,10 +94,10 @@ public class ActionTickers extends ActionRun {
 				}
 				Record selected = tableTickers.getSelectedRecord();
 
-				Server server = MLT.getServer();
 				Database db = MLT.getDatabase();
 				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
-				Instrument instrument = db.fromRecordToInstrument(db.records().instrument(instrumentId));
+				Instrument instrument =
+					db.fromRecordToInstrument(db.record().instrument(instrumentId));
 				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
@@ -106,9 +105,9 @@ public class ActionTickers extends ActionRun {
 				String text = instrument.getDescription() + " " + period;
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
-				ListPersistor persistor = 
-					new ListPersistor(db.getPersistor_DataPrice(server, instrument, period));
-				
+				ListPersistor persistor =
+					new ListPersistor(db.persistor().price(instrument, period));
+
 				long timeLower = Date.valueOf(LocalDate.of(2018, 1, 1)).getTime();
 				long timeUpper = Date.valueOf(LocalDate.of(2018, 12, 31)).getTime();
 				Criteria criteria = new Criteria();
@@ -162,10 +161,10 @@ public class ActionTickers extends ActionRun {
 				}
 				Record selected = tableTickers.getSelectedRecord();
 
-				Server server = MLT.getServer();
 				Database db = MLT.getDatabase();
 				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
-				Instrument instrument = db.fromRecordToInstrument(db.records().instrument(instrumentId));
+				Instrument instrument =
+					db.fromRecordToInstrument(db.record().instrument(instrumentId));
 				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
@@ -174,7 +173,7 @@ public class ActionTickers extends ActionRun {
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 				ListPersistor persistor =
-					new ListPersistor(db.getPersistor_DataPrice(server, instrument, period));
+					new ListPersistor(db.persistor().price(instrument, period));
 				persistor.setCacheSize(50000);
 
 				/* Build the plot data. */
@@ -186,12 +185,14 @@ public class ActionTickers extends ActionRun {
 
 				/* A smoothed WMA of 20 periods. */
 				IndicatorDataList wma20 =
-					IndicatorUtils.getSmoothedWeightedMovingAverage(price, Data.CLOSE, Colors.DARKRED, 200, 5, 3, 3);
+					IndicatorUtils.getSmoothedWeightedMovingAverage(price, Data.CLOSE,
+						Colors.DARKRED, 200, 5, 3, 3);
 //				plotDataPrice.add(wma20);
 
 				/* A smoothed WMA of 100 periods. */
 				IndicatorDataList wma100 =
-					IndicatorUtils.getSmoothedWeightedMovingAverage(price, Data.CLOSE, Colors.DARKBLUE, 600, 5, 3, 3);
+					IndicatorUtils.getSmoothedWeightedMovingAverage(price, Data.CLOSE,
+						Colors.DARKBLUE, 600, 5, 3, 3);
 //				plotDataPrice.add(wma100);
 
 //				IndicatorDataList sma100 = IndicatorUtils.getSimpleMovingAverage(price, Data.CLOSE, Colors.DARKBLUE, 100);
@@ -243,9 +244,8 @@ public class ActionTickers extends ActionRun {
 			}
 			MLT.getStatusBar().setLabel("TICKERS", "Setup tickers");
 
-			Server server = MLT.getServer();
-			Persistor persistor = MLT.getDatabase().getPersistor_Tickers();
-			RecordSet recordSet = MLT.getDatabase().getRecordSet_Tickers(server);
+			Persistor persistor = MLT.getDatabase().persistor().ticker();
+			RecordSet recordSet = MLT.getDatabase().recordSet().ticker();
 			Record masterRecord = persistor.getDefaultRecord();
 
 			TableRecordModel model = new TableRecordModel(masterRecord);
@@ -298,8 +298,10 @@ public class ActionTickers extends ActionRun {
 			tableTickers.setPopupMenuProvider(optionPane);
 
 			GridBagPane pane = new GridBagPane();
-			pane.add(tablePane, new Constraints(Anchor.TOP, Fill.BOTH, 0, 0, new Insets(0, 0, 0, 0)));
-			pane.add(optionPane, new Constraints(Anchor.BOTTOM, Fill.HORIZONTAL, 0, 1, new Insets(0, 0, 0, 0)));
+			pane.add(tablePane,
+				new Constraints(Anchor.TOP, Fill.BOTH, 0, 0, new Insets(0, 0, 0, 0)));
+			pane.add(optionPane,
+				new Constraints(Anchor.BOTTOM, Fill.HORIZONTAL, 0, 1, new Insets(0, 0, 0, 0)));
 
 			IconChar iconChar = new IconChar();
 			iconChar.setText("k");

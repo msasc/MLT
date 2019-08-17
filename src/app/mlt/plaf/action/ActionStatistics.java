@@ -39,7 +39,6 @@ import com.mlt.desktop.layout.Constraints;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.desktop.layout.Orientation;
-import com.mlt.mkt.server.Server;
 import com.mlt.util.Logs;
 
 import app.mlt.plaf.MLT;
@@ -75,9 +74,8 @@ public class ActionStatistics extends ActionRun {
 			}
 			MLT.getStatusBar().setLabel("STATS", "Setup statistics");
 
-			Server server = MLT.getServer();
-			Persistor persistor = MLT.getDatabase().getPersistor_Statistics();
-			RecordSet recordSet = MLT.getDatabase().getRecordSet_Statistics(server);
+			Persistor persistor = MLT.getDatabase().persistor().statistic();
+			RecordSet recordSet = MLT.getDatabase().recordSet().statistic();
 			Record masterRecord = persistor.getDefaultRecord();
 			
 			TableRecordModel model = new TableRecordModel(masterRecord);

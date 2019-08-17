@@ -1,15 +1,18 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
- * <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package app.mlt.plaf;
 
@@ -32,6 +35,7 @@ import com.mlt.db.Record;
 import com.mlt.db.Value;
 import com.mlt.db.rdbms.DBEngine;
 import com.mlt.db.rdbms.DBEngineAdapter;
+import com.mlt.db.rdbms.DBPersistorDDL;
 import com.mlt.db.rdbms.DataSourceInfo;
 import com.mlt.db.rdbms.adapters.PostgreSQLAdapter;
 import com.mlt.desktop.Alert;
@@ -80,7 +84,8 @@ public class MLT {
 	static class FrameListener extends Stage.Adapter {
 		@Override
 		public void closing(Stage stage) {
-			new ActionExitApplication().actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Exit"));
+			new ActionExitApplication()
+				.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Exit"));
 		}
 	}
 
@@ -91,6 +96,29 @@ public class MLT {
 	 */
 	public static Database getDatabase() {
 		return (Database) properties.getObject("DATABASE");
+	}
+
+	/**
+	 * Return the database engine.
+	 * 
+	 * @return The database engine.
+	 */
+	public static DBEngine getDBEngine() {
+		return (DBEngine) properties.getObject("DB_ENGINE");
+	}
+
+	/**
+	 * Return the proper persistor DDL.
+	 * 
+	 * @return The persistor DDL.
+	 */
+	public static PersistorDDL getDDL() {
+		PersistorDDL ddl = (PersistorDDL) properties.getObject("DDL");
+		if (ddl == null) {
+			ddl = new DBPersistorDDL(getDBEngine());
+			properties.setObject("DDL", ddl);
+		}
+		return ddl;
 	}
 
 	/**
@@ -118,6 +146,15 @@ public class MLT {
 	 */
 	public static Server getServer() {
 		return (Server) properties.getObject("SERVER");
+	}
+
+	/**
+	 * Return the working server schema.
+	 * 
+	 * @return The working server schema.
+	 */
+	public static String getServerSchema() {
+		return Database.SYSTEM_SCHEMA + "_" + getServer().getId();
 	}
 
 	/**
@@ -152,9 +189,11 @@ public class MLT {
 		 * Launch arguments management.
 		 */
 		ArgumentManager argMngr = new ArgumentManager();
-		Argument argConnection = new Argument("dataSourceFile", "Database connection file", true, true, false);
+		Argument argConnection =
+			new Argument("dataSourceFile", "Database connection file", true, true, false);
 		Argument argServer = new Argument("server", "Trading server", true, false, "Dukascopy");
-		Argument argAccount = new Argument("account", "Trading account", true, false, "demo", "live");
+		Argument argAccount =
+			new Argument("account", "Trading account", true, false, "demo", "live");
 		argMngr.add(argConnection);
 		argMngr.add(argServer);
 		argMngr.add(argAccount);
@@ -198,8 +237,10 @@ public class MLT {
 		GridBagPane content = new GridBagPane();
 		properties.setObject("TABBED_PANE", new TabPane());
 		properties.setObject("STATUS_BAR", new StatusBar());
-		content.add(getTabbedPane(), new Constraints(Anchor.TOP, Fill.BOTH, 0, 0, new Insets(0, 0, 0, 0)));
-		content.add(getStatusBar(), new Constraints(Anchor.BOTTOM, Fill.HORIZONTAL, 0, 1, new Insets(0, 0, 0, 0)));
+		content.add(getTabbedPane(),
+			new Constraints(Anchor.TOP, Fill.BOTH, 0, 0, new Insets(0, 0, 0, 0)));
+		content.add(getStatusBar(),
+			new Constraints(Anchor.BOTTOM, Fill.HORIZONTAL, 0, 1, new Insets(0, 0, 0, 0)));
 		getFrame().setContent(content);
 
 		getFrame().setSize(0.8, 0.8);
@@ -271,7 +312,8 @@ public class MLT {
 			getStatusBar().setLabel("DBCHK", prefix + "connection file...");
 			File cnFile = new File(connectionFile);
 			if (!cnFile.exists()) {
-				throw new FileNotFoundException("Connection file " + connectionFile + " does not exist.");
+				throw new FileNotFoundException(
+					"Connection file " + connectionFile + " does not exist.");
 			}
 
 			/* Data source info and db engine. */
@@ -279,11 +321,12 @@ public class MLT {
 			DataSourceInfo info = DataSourceInfo.getDataSourceInfo(cnFile);
 			DBEngineAdapter adapter = new PostgreSQLAdapter();
 			DBEngine dbEngine = new DBEngine(adapter, info);
-			Database db = new Database(dbEngine);
+			properties.setObject("DB_ENGINE", dbEngine);
+			Database db = new Database();
 			properties.setObject("DATABASE", db);
 
 			/* Persistor DDL. */
-			PersistorDDL ddl = db.getDDL();
+			PersistorDDL ddl = getDDL();
 
 			/* Check for the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check system schema...");
@@ -293,7 +336,7 @@ public class MLT {
 
 			/* Check for server schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check server schema...");
-			String schema = Database.getSchema(getServer());
+			String schema = getServerSchema();
 			if (!ddl.existsSchema(schema)) {
 				ddl.createSchema(schema);
 			}
@@ -301,33 +344,33 @@ public class MLT {
 			/* Check for the necessary table Servers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check servers table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.SERVERS)) {
-				ddl.buildTable(db.tables().servers());
+				ddl.buildTable(db.table().server());
 			}
-			synchronizeSupportedServer(db.getPersistor_Servers());
+			synchronizeSupportedServer(db.persistor().server());
 
 			/* Check for the necessary table Periods in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check periods table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.PERIODS)) {
-				ddl.buildTable(db.tables().periods());
+				ddl.buildTable(db.table().period());
 			}
-			synchronizeStandardPeriods(db.getPersistor_Periods());
+			synchronizeStandardPeriods(db.persistor().period());
 
 			/* Check for the necessary table Instruments in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check instruments table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.INSTRUMENTS)) {
-				ddl.buildTable(db.tables().instruments());
+				ddl.buildTable(db.table().instrument());
 			}
 
 			/* Check for the necessary table Tickers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check tickers table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.TICKERS)) {
-				ddl.buildTable(db.tables().tickers());
+				ddl.buildTable(db.table().ticker());
 			}
 
 			/* Check for the necessary table Statistics in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check statistics table...");
 			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.STATISTICS)) {
-				ddl.buildTable(db.tables().statistics());
+				ddl.buildTable(db.table().statistic());
 			}
 
 		} catch (Exception exc) {

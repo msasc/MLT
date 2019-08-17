@@ -32,12 +32,10 @@ import com.mlt.db.Field;
 import com.mlt.db.Index;
 import com.mlt.db.Table;
 import com.mlt.db.View;
-import com.mlt.db.rdbms.DBEngine;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.desktop.Option;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
-import com.mlt.mkt.server.Server;
 import com.mlt.util.Numbers;
 import com.mlt.util.Strings;
 import com.mlt.util.xml.Parser;
@@ -45,6 +43,7 @@ import com.mlt.util.xml.ParserHandler;
 import com.mlt.util.xml.XMLAttribute;
 import com.mlt.util.xml.XMLWriter;
 
+import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Domains;
 import app.mlt.plaf.db.Fields;
@@ -354,12 +353,11 @@ public class StatisticsAverages extends StatisticsTicker {
 
 		tableRanges = new Table();
 
-		Server server = getServer();
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
 		String name = Database.getName_Ticker(instrument, period, "_" + getId() + "_rng");
 
-		tableRanges.setSchema(Database.getSchema(server));
+		tableRanges.setSchema(MLT.getServerSchema());
 		tableRanges.setName(name);
 
 		/* Name of the field. */
@@ -390,9 +388,8 @@ public class StatisticsAverages extends StatisticsTicker {
 		index.setUnique(false);
 		tableRanges.addIndex(index);
 
-		DBEngine dbEngine = getDBEngine();
 		View view = tableRanges.getComplexView(index);
-		tableRanges.setPersistor(new DBPersistor(dbEngine, view));
+		tableRanges.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
 		return tableRanges;
 	}
@@ -409,12 +406,11 @@ public class StatisticsAverages extends StatisticsTicker {
 
 		tableStates = new Table();
 
-		Server server = getServer();
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
 		String name = Database.getName_Ticker(instrument, period, "_" + getId() + "_src");
 
-		tableStates.setSchema(Database.getSchema(server));
+		tableStates.setSchema(MLT.getServerSchema());
 		tableStates.setName(name);
 
 		/* Time, open, high, low, close. */
@@ -475,9 +471,8 @@ public class StatisticsAverages extends StatisticsTicker {
 			tableStates.addField(field);
 		}
 
-		DBEngine dbEngine = getDBEngine();
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
-		tableStates.setPersistor(new DBPersistor(dbEngine, view));
+		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
 		return tableStates;
 	}

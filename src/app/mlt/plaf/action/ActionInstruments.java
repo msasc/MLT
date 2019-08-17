@@ -13,23 +13,23 @@
  */
 package app.mlt.plaf.action;
 
-import com.mlt.desktop.action.ActionRun;
 import java.awt.Color;
 import java.awt.Font;
 
-import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Fields;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
+import com.mlt.desktop.action.ActionRun;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.control.table.SelectionMode;
 import com.mlt.desktop.control.table.TableRecordModel;
 import com.mlt.desktop.icon.IconChar;
-import com.mlt.mkt.server.Server;
 import com.mlt.util.Logs;
+
+import app.mlt.plaf.MLT;
+import app.mlt.plaf.db.Fields;
 
 /**
  * Packs the instruments available and synchronize actions.
@@ -61,9 +61,8 @@ public class ActionInstruments {
 				}
 				MLT.getStatusBar().setLabel("INST-AV", "Setup available instruments");
 
-				Server server = MLT.getServer();
-				Persistor persistor = MLT.getDatabase().getPersistor_Instruments();
-				RecordSet recordSet = MLT.getDatabase().getRecordSet_AvailableInstruments(server);
+				Persistor persistor = MLT.getDatabase().persistor().instrument();
+				RecordSet recordSet = MLT.getDatabase().recordSet().instrument();
 				Record masterRecord = persistor.getDefaultRecord();
 
 				TableRecordModel model = new TableRecordModel(masterRecord);

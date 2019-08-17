@@ -17,7 +17,6 @@
 
 package app.mlt.plaf.statistics;
 
-import com.mlt.db.rdbms.DBEngine;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 import com.mlt.mkt.server.Server;
@@ -46,15 +45,6 @@ public abstract class StatisticsTicker extends Statistics {
 		super();
 		this.instrument = instrument;
 		this.period = period;
-	}
-
-	/**
-	 * Sortcut to access the database engine.
-	 * 
-	 * @return The database engine.
-	 */
-	public DBEngine getDBEngine() {
-		return MLT.getDatabase().getDBEngine();
 	}
 
 	/**

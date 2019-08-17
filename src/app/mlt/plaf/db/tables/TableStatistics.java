@@ -14,14 +14,13 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package app.mlt.plaf.db.tables;
 
 import com.mlt.db.ForeignKey;
 import com.mlt.db.Table;
-import com.mlt.db.rdbms.DBEngine;
 import com.mlt.db.rdbms.DBPersistor;
 
+import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldInstrumentId;
@@ -40,10 +39,8 @@ public class TableStatistics extends Table {
 
 	/**
 	 * Constructor.
-	 *
-	 * @param dbEngine The database engine.
 	 */
-	public TableStatistics(DBEngine dbEngine) {
+	public TableStatistics() {
 		super();
 
 		setName(Database.STATISTICS);
@@ -61,13 +58,13 @@ public class TableStatistics extends Table {
 		getField(Fields.PERIOD_ID).setPrimaryKey(true);
 		getField(Fields.STATISTICS_ID).setPrimaryKey(true);
 
-		Table tablePeriods = new TablePeriods(dbEngine);
+		Table tablePeriods = new TablePeriods();
 		ForeignKey fkPeriods = new ForeignKey(false);
 		fkPeriods.setLocalTable(this);
 		fkPeriods.setForeignTable(tablePeriods);
 		fkPeriods.add(getField(Fields.PERIOD_ID), tablePeriods.getField(Fields.PERIOD_ID));
 		addForeignKey(fkPeriods);
 
-		setPersistor(new DBPersistor(dbEngine, getComplexView(getPrimaryKey())));
+		setPersistor(new DBPersistor(MLT.getDBEngine(), getComplexView(getPrimaryKey())));
 	}
 }

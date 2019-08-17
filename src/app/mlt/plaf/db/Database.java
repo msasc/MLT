@@ -2,24 +2,35 @@
  * Copyright (C) 2018 Miquel Sas
  *
  * This program is free software: you can redistribute it and/or modify it under
- * the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see
- * <http://www.gnu.org/licenses/>.
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package app.mlt.plaf.db;
 
 import java.util.Currency;
 import java.util.HashMap;
+
+import com.mlt.db.Condition;
+import com.mlt.db.Criteria;
+import com.mlt.db.Field;
+import com.mlt.db.Persistor;
+import com.mlt.db.PersistorException;
+import com.mlt.db.Record;
+import com.mlt.db.RecordSet;
+import com.mlt.db.Table;
+import com.mlt.db.Value;
+import com.mlt.desktop.LookupRecords;
+import com.mlt.mkt.data.Instrument;
+import com.mlt.mkt.data.Period;
 
 import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.tables.TableDataPrice;
@@ -28,21 +39,6 @@ import app.mlt.plaf.db.tables.TablePeriods;
 import app.mlt.plaf.db.tables.TableServers;
 import app.mlt.plaf.db.tables.TableStatistics;
 import app.mlt.plaf.db.tables.TableTickers;
-import com.mlt.db.Condition;
-import com.mlt.db.Criteria;
-import com.mlt.db.Persistor;
-import com.mlt.db.PersistorDDL;
-import com.mlt.db.PersistorException;
-import com.mlt.db.Record;
-import com.mlt.db.RecordSet;
-import com.mlt.db.Table;
-import com.mlt.db.Value;
-import com.mlt.db.rdbms.DBEngine;
-import com.mlt.db.rdbms.DBPersistorDDL;
-import com.mlt.desktop.LookupRecords;
-import com.mlt.mkt.data.Instrument;
-import com.mlt.mkt.data.Period;
-import com.mlt.mkt.server.Server;
 
 /**
  * Provide access to the database objects.
@@ -50,18 +46,130 @@ import com.mlt.mkt.server.Server;
  * @author Miquel Sas
  */
 public class Database {
+	/**
+	 * Lookup provider.
+	 */
+	public class LookupProvider {
+		/**
+		 * Lookup an instrument.
+		 * 
+		 * @return The selected instrument record.
+		 * @throws PersistorException
+		 */
+		public Record instrument() throws PersistorException {
+			LookupRecords lookup = new LookupRecords(persistor().instrument().getDefaultRecord());
+			lookup.addColumn(Fields.INSTRUMENT_ID);
+			lookup.addColumn(Fields.INSTRUMENT_DESC);
+			lookup.addColumn(Fields.INSTRUMENT_PIP_VALUE);
+			lookup.addColumn(Fields.INSTRUMENT_PIP_SCALE);
+			lookup.addColumn(Fields.INSTRUMENT_TICK_VALUE);
+			lookup.addColumn(Fields.INSTRUMENT_TICK_SCALE);
+			lookup.addColumn(Fields.INSTRUMENT_VOLUME_SCALE);
+			lookup.addColumn(Fields.INSTRUMENT_PRIMARY_CURRENCY);
+			lookup.addColumn(Fields.INSTRUMENT_SECONDARY_CURRENCY);
+			lookup.setRecordSet(recordSet().instrument());
+			Record record = lookup.lookupRecord();
+			return record;
+		}
 
+		/**
+		 * Lookup a period.
+		 * 
+		 * @return The selected period.
+		 * @throws PersistorException
+		 */
+		public Record period() throws PersistorException {
+			LookupRecords lookup = new LookupRecords(persistor().period().getDefaultRecord());
+			lookup.addColumn(Fields.PERIOD_ID);
+			lookup.addColumn(Fields.PERIOD_NAME);
+			lookup.addColumn(Fields.PERIOD_SIZE);
+			lookup.setRecordSet(recordSet().period());
+			Record record = lookup.lookupRecord();
+			return record;
+		}
+	}
+	
 	/**
 	 * Persistor provider.
 	 */
-	public class Persistors {
+	public class PersistorProvider {
+		/**
+		 * Returns the data price persistor.
+		 * 
+		 * @param instrument The instrument.
+		 * @param period     The period.
+		 * @return The persistor.
+		 */
+		public Persistor price(Instrument instrument, Period period) {
+			return table().price(instrument, period).getPersistor();
+		}
 
+		/**
+		 * Returns the instruments persistor.
+		 * 
+		 * @return The persistor.
+		 */
+		public Persistor instrument() {
+			return table().instrument().getPersistor();
+		}
+
+		/**
+		 * Returns the periods persistor.
+		 * 
+		 * @return The persistor.
+		 */
+		public Persistor period() {
+			return table().period().getPersistor();
+		}
+
+		/**
+		 * Returns the servers persistor.
+		 * 
+		 * @return The persistor.
+		 */
+		public Persistor server() {
+			return table().server().getPersistor();
+		}
+
+		/**
+		 * Returns the statistics persistor.
+		 * 
+		 * @return The persistor.
+		 */
+		public Persistor statistic() {
+			return table().statistic().getPersistor();
+		}
+
+		/**
+		 * Returns the tickers persistor.
+		 * 
+		 * @return The persistor.
+		 */
+		public Persistor ticker() {
+			return table().ticker().getPersistor();
+		}
 	}
 
 	/**
 	 * Record provider.
 	 */
-	public class Records {
+	public class RecordProvider {
+		/**
+		 * Return the ticker record.
+		 * 
+		 * @param instrument Instrument.
+		 * @param period     Period.
+		 * @return The record.
+		 */
+		public Record ticker(Instrument instrument, Period period) {
+			Record record = persistor().ticker().getDefaultRecord();
+			record.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
+			record.setValue(Fields.INSTRUMENT_ID, new Value(instrument.getId()));
+			record.setValue(Fields.PERIOD_ID, new Value(period.getId()));
+			record.setValue(Fields.TABLE_NAME, new Value(getName_Ticker(instrument, period)));
+			return record;
+		}
+
 		/**
 		 * Returns the filled record for the instrument.
 		 * 
@@ -83,7 +191,7 @@ public class Database {
 			Value vINSTRUMENT_SECONDARY_CURRENCY =
 				new Value(instrument.getSecondaryCurrency().toString());
 
-			Record record = getPersistor_Instruments().getDefaultRecord();
+			Record record = persistor().instrument().getDefaultRecord();
 			record.setValue(Fields.SERVER_ID, vSERVER_ID);
 			record.setValue(Fields.INSTRUMENT_ID, vINSTRUMENT_ID);
 			record.setValue(Fields.INSTRUMENT_DESC, vINSTRUMENT_DESC);
@@ -104,27 +212,107 @@ public class Database {
 		 * @return The record.
 		 */
 		public Record instrument(String id) throws PersistorException {
-			Persistor persistor = getPersistor_Instruments();
-			Record record = getPersistor_Instruments().getDefaultRecord();
+			Persistor persistor = persistor().instrument();
+			Record record = persistor.getDefaultRecord();
 			record.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
 			record.setValue(Fields.INSTRUMENT_ID, new Value(id));
 			persistor.refresh(record);
 			return record;
 		}
-
 	}
 
 	/**
 	 * Recordsets provider.
 	 */
-	public class RecordSets {
+	public class RecordSetProvider {
+		/**
+		 * Returns the data price persistor.
+		 * 
+		 * @return The persistor.
+		 */
+		public Persistor price(Instrument instrument, Period period) {
+			return table().price(instrument, period).getPersistor();
+		}
 
+		/**
+		 * Returns a record set with the available instruments for the argument server.
+		 * 
+		 * @return The record set.
+		 * @throws PersistorException If any persistence error occurs.
+		 */
+		public RecordSet instrument() throws PersistorException {
+
+			Persistor persistor = persistor().instrument();
+			Criteria criteria = new Criteria();
+			Field field = persistor.getField(Fields.SERVER_ID);
+			Value value = new Value(MLT.getServer().getId());
+			criteria.add(Condition.fieldEQ(field, value));
+			RecordSet recordSet = persistor.select(criteria);
+
+			/* Track max pip and tick scale to set their values decimals. */
+			int maxPipScale = 0;
+			int maxTickScale = 0;
+			for (int i = 0; i < recordSet.size(); i++) {
+				Record record = recordSet.get(i);
+				int pipScale = record.getValue(Fields.INSTRUMENT_PIP_SCALE).getInteger();
+				int tickScale = record.getValue(Fields.INSTRUMENT_TICK_SCALE).getInteger();
+				maxPipScale = Math.max(maxPipScale, pipScale);
+				maxTickScale = Math.max(maxTickScale, tickScale);
+			}
+			recordSet.getField(Fields.INSTRUMENT_PIP_VALUE).setDisplayDecimals(maxPipScale);
+			recordSet.getField(Fields.INSTRUMENT_TICK_VALUE).setDisplayDecimals(maxTickScale);
+			return recordSet;
+		}
+
+		/**
+		 * Returns a record set with the standard periods.
+		 * 
+		 * @return The record set.
+		 * @throws PersistorException If any persistence error occurs.
+		 */
+		public RecordSet period() throws PersistorException {
+			Persistor persistor = persistor().period();
+			RecordSet recordSet = persistor.select((Criteria) null);
+			return recordSet;
+		}
+
+		/**
+		 * Returns a record set with the defined statistics for the argument server.
+		 * 
+		 * @return The record set.
+		 * @throws PersistorException If any persistence error occurs.
+		 */
+		public RecordSet statistic() throws PersistorException {
+			Persistor persistor = persistor().statistic();
+			Field field = persistor.getField(Fields.SERVER_ID);
+			Value value = new Value(MLT.getServer().getId());
+			Criteria criteria = new Criteria();
+			criteria.add(Condition.fieldEQ(field, value));
+			RecordSet recordSet = persistor.select(criteria);
+			return recordSet;
+		}
+
+		/**
+		 * Returns a record set with the defined tickers for the argument server.
+		 * 
+		 * @return The record set.
+		 * @throws PersistorException If any persistence error occurs.
+		 */
+		public RecordSet ticker() throws PersistorException {
+			Persistor persistor = persistor().ticker();
+			Field field = persistor.getField(Fields.SERVER_ID);
+			Value value = new Value(MLT.getServer().getId());
+			Criteria criteria = new Criteria();
+			criteria.add(Condition.fieldEQ(field, value));
+			RecordSet recordSet = persistor.select(criteria);
+			return recordSet;
+		}
 	}
 
 	/**
 	 * Tables provider.
 	 */
-	public class Tables {
+	public class TableProvider {
 		/**
 		 * Access to the price table.
 		 * 
@@ -133,7 +321,7 @@ public class Database {
 		 * @param period     Period.
 		 * @return The table.
 		 */
-		public TableDataPrice prices(Instrument instrument, Period period) {
+		public TableDataPrice price(Instrument instrument, Period period) {
 			String name = getName_Ticker(instrument, period);
 			TableDataPrice table = (TableDataPrice) mapTables.get(name);
 			if (table == null) {
@@ -148,10 +336,10 @@ public class Database {
 		 * 
 		 * @return The table.
 		 */
-		public TableInstruments instruments() {
+		public TableInstruments instrument() {
 			TableInstruments table = (TableInstruments) mapTables.get(INSTRUMENTS);
 			if (table == null) {
-				table = new TableInstruments(dbEngine);
+				table = new TableInstruments();
 				mapTables.put(INSTRUMENTS, table);
 			}
 			return table;
@@ -162,10 +350,10 @@ public class Database {
 		 * 
 		 * @return The table.
 		 */
-		public TablePeriods periods() {
+		public TablePeriods period() {
 			TablePeriods table = (TablePeriods) mapTables.get(PERIODS);
 			if (table == null) {
-				table = new TablePeriods(dbEngine);
+				table = new TablePeriods();
 				mapTables.put(PERIODS, table);
 			}
 			return table;
@@ -176,10 +364,10 @@ public class Database {
 		 * 
 		 * @return The table.
 		 */
-		public TableServers servers() {
+		public TableServers server() {
 			TableServers table = (TableServers) mapTables.get(SERVERS);
 			if (table == null) {
-				table = new TableServers(dbEngine);
+				table = new TableServers();
 				mapTables.put(SERVERS, table);
 			}
 			return table;
@@ -190,10 +378,10 @@ public class Database {
 		 * 
 		 * @return The table.
 		 */
-		public TableStatistics statistics() {
+		public TableStatistics statistic() {
 			TableStatistics table = (TableStatistics) mapTables.get(STATISTICS);
 			if (table == null) {
-				table = new TableStatistics(dbEngine);
+				table = new TableStatistics();
 				mapTables.put(STATISTICS, table);
 			}
 			return table;
@@ -204,10 +392,10 @@ public class Database {
 		 * 
 		 * @return The table.
 		 */
-		public TableTickers tickers() {
+		public TableTickers ticker() {
 			TableTickers table = (TableTickers) mapTables.get(TICKERS);
 			if (table == null) {
-				table = new TableTickers(dbEngine);
+				table = new TableTickers();
 				mapTables.put(TICKERS, table);
 			}
 			return table;
@@ -252,240 +440,30 @@ public class Database {
 		return getName_Ticker(instrument, period, null);
 	}
 
-	/**
-	 * Return the schema name.
-	 * 
-	 * @param server The server.
-	 * @return The name.
-	 */
-	public static String getSchema(Server server) {
-		return SYSTEM_SCHEMA + "_" + server.getId();
-	}
-
-	/** DB engine. */
-	private DBEngine dbEngine;
+	/** Lookup provider. */
+	private LookupProvider lookup;
 	/** Persistors provider. */
-	private Persistors persistors;
+	private PersistorProvider persistor;
 	/** Records provider. */
-	private Records records;
+	private RecordProvider record;
 	/** Recordsets provider. */
-	private RecordSets recordSets;
+	private RecordSetProvider recordSet;
 	/** Tables provider. */
-	private Tables tables;
+	private TableProvider table;
+	
 	/** Map of tables. */
 	private HashMap<String, Table> mapTables = new HashMap<>();
 
 	/**
 	 * Constructor.
 	 */
-	public Database(DBEngine dbEngine) {
+	public Database() {
 		super();
-		this.dbEngine = dbEngine;
-		this.persistors = new Persistors();
-		this.records = new Records();
-		this.recordSets = new RecordSets();
-		this.tables = new Tables();
-	}
-
-	/**
-	 * Return the conected database engine.
-	 * 
-	 * @return The database engine.
-	 */
-	public DBEngine getDBEngine() {
-		return dbEngine;
-	}
-
-	/**
-	 * Returns a suitable DDL.
-	 * 
-	 * @return The DDL.
-	 */
-	public PersistorDDL getDDL() {
-		return new DBPersistorDDL(dbEngine);
-	}
-
-	/**
-	 * Returns the data price persistor.
-	 * 
-	 * @return The persistor.
-	 */
-	public Persistor getPersistor_DataPrice(Server server, Instrument instrument, Period period) {
-		return tables().prices(instrument, period).getPersistor();
-	}
-
-	/**
-	 * Returns the instruments persistor.
-	 * 
-	 * @return The persistor.
-	 */
-	public Persistor getPersistor_Instruments() {
-		return tables().instruments().getPersistor();
-	}
-
-	/**
-	 * Returns the periods persistor.
-	 * 
-	 * @return The persistor.
-	 */
-	public Persistor getPersistor_Periods() {
-		return tables().periods().getPersistor();
-	}
-
-	/**
-	 * Returns the servers persistor.
-	 * 
-	 * @return The persistor.
-	 */
-	public Persistor getPersistor_Servers() {
-		return tables().servers().getPersistor();
-	}
-
-	/**
-	 * Returns the statistics persistor.
-	 * 
-	 * @return The persistor.
-	 */
-	public Persistor getPersistor_Statistics() {
-		return tables().statistics().getPersistor();
-	}
-
-	/**
-	 * Returns the tickers persistor.
-	 * 
-	 * @return The persistor.
-	 */
-	public Persistor getPersistor_Tickers() {
-		return tables().tickers().getPersistor();
-	}
-
-	/**
-	 * Return the ticker record.
-	 * 
-	 * @param server     Server.
-	 * @param instrument Instrument.
-	 * @param period     Period.
-	 * @return The record.
-	 */
-	public Record getRecord_Ticker(Server server, Instrument instrument, Period period) {
-		Record record = getPersistor_Tickers().getDefaultRecord();
-		record.setValue(Fields.SERVER_ID, new Value(server.getId()));
-		record.setValue(Fields.INSTRUMENT_ID, new Value(instrument.getId()));
-		record.setValue(Fields.PERIOD_ID, new Value(period.getId()));
-		record.setValue(Fields.TABLE_NAME, new Value(getName_Ticker(instrument, period)));
-		return record;
-	}
-
-	/**
-	 * Returns a record set with the available instruments for the argument server.
-	 * 
-	 * @param server The server.
-	 * @return The record set.
-	 * @throws PersistorException If any persistence error occurs.
-	 */
-	public RecordSet getRecordSet_AvailableInstruments(Server server) throws PersistorException {
-
-		Persistor persistor = getPersistor_Instruments();
-		Criteria criteria = new Criteria();
-		criteria.add(
-			Condition.fieldEQ(persistor.getField(Fields.SERVER_ID), new Value(server.getId())));
-		RecordSet recordSet = persistor.select(criteria);
-
-		// Track max pip and tick scale to set their values decimals.
-		int maxPipScale = 0;
-		int maxTickScale = 0;
-		for (int i = 0; i < recordSet.size(); i++) {
-			Record record = recordSet.get(i);
-			maxPipScale =
-				Math.max(maxPipScale, record.getValue(Fields.INSTRUMENT_PIP_SCALE).getInteger());
-			maxTickScale =
-				Math.max(maxTickScale, record.getValue(Fields.INSTRUMENT_TICK_SCALE).getInteger());
-		}
-		recordSet.getField(Fields.INSTRUMENT_PIP_VALUE).setDisplayDecimals(maxPipScale);
-		recordSet.getField(Fields.INSTRUMENT_TICK_VALUE).setDisplayDecimals(maxTickScale);
-		return recordSet;
-	}
-
-	/**
-	 * Returns a record set with the standard periods.
-	 * 
-	 * @return The record set.
-	 * @throws PersistorException If any persistence error occurs.
-	 */
-	public RecordSet getRecordSet_Periods() throws PersistorException {
-		Persistor persistor = getPersistor_Periods();
-		RecordSet recordSet = persistor.select((Criteria) null);
-		return recordSet;
-	}
-
-	/**
-	 * Returns a record set with the defined statistics for the argument server.
-	 * 
-	 * @param server The server.
-	 * @return The record set.
-	 * @throws PersistorException If any persistence error occurs.
-	 */
-	public RecordSet getRecordSet_Statistics(Server server) throws PersistorException {
-		Persistor persistor = getPersistor_Statistics();
-		Criteria criteria = new Criteria();
-		criteria.add(
-			Condition.fieldEQ(persistor.getField(Fields.SERVER_ID), new Value(server.getId())));
-		RecordSet recordSet = persistor.select(criteria);
-		return recordSet;
-	}
-
-	/**
-	 * Returns a record set with the defined tickers for the argument server.
-	 * 
-	 * @param server The server.
-	 * @return The record set.
-	 * @throws PersistorException If any persistence error occurs.
-	 */
-	public RecordSet getRecordSet_Tickers(Server server) throws PersistorException {
-		Persistor persistor = getPersistor_Tickers();
-		Criteria criteria = new Criteria();
-		criteria.add(
-			Condition.fieldEQ(persistor.getField(Fields.SERVER_ID), new Value(server.getId())));
-		RecordSet recordSet = persistor.select(criteria);
-		return recordSet;
-	}
-
-	/**
-	 * Lookup an instrument.
-	 * 
-	 * @return The selected instrument record.
-	 * @throws PersistorException
-	 */
-	public Record lookupInstrument() throws PersistorException {
-		LookupRecords lookup = new LookupRecords(getPersistor_Instruments().getDefaultRecord());
-		lookup.addColumn(Fields.INSTRUMENT_ID);
-		lookup.addColumn(Fields.INSTRUMENT_DESC);
-		lookup.addColumn(Fields.INSTRUMENT_PIP_VALUE);
-		lookup.addColumn(Fields.INSTRUMENT_PIP_SCALE);
-		lookup.addColumn(Fields.INSTRUMENT_TICK_VALUE);
-		lookup.addColumn(Fields.INSTRUMENT_TICK_SCALE);
-		lookup.addColumn(Fields.INSTRUMENT_VOLUME_SCALE);
-		lookup.addColumn(Fields.INSTRUMENT_PRIMARY_CURRENCY);
-		lookup.addColumn(Fields.INSTRUMENT_SECONDARY_CURRENCY);
-		lookup.setRecordSet(getRecordSet_AvailableInstruments(MLT.getServer()));
-		Record record = lookup.lookupRecord();
-		return record;
-	}
-
-	/**
-	 * Lookup a period.
-	 * 
-	 * @return The selected period.
-	 * @throws PersistorException
-	 */
-	public Record lookupPeriod() throws PersistorException {
-		LookupRecords lookup = new LookupRecords(getPersistor_Periods().getDefaultRecord());
-		lookup.addColumn(Fields.PERIOD_ID);
-		lookup.addColumn(Fields.PERIOD_NAME);
-		lookup.addColumn(Fields.PERIOD_SIZE);
-		lookup.setRecordSet(getRecordSet_Periods());
-		Record record = lookup.lookupRecord();
-		return record;
+		this.lookup = new LookupProvider();
+		this.persistor = new PersistorProvider();
+		this.record = new RecordProvider();
+		this.recordSet = new RecordSetProvider();
+		this.table = new TableProvider();
 	}
 
 	public Instrument fromRecordToInstrument(Record record) {
@@ -510,19 +488,23 @@ public class Database {
 		return Period.parseId(id);
 	}
 
-	public Persistors persistors() {
-		return persistors;
+	public LookupProvider lookup() {
+		return lookup;
+	}
+	
+	public PersistorProvider persistor() {
+		return persistor;
 	}
 
-	public Records records() {
-		return records;
+	public RecordProvider record() {
+		return record;
 	}
 
-	public RecordSets recordSets() {
-		return recordSets;
+	public RecordSetProvider recordSet() {
+		return recordSet;
 	}
 
-	public Tables tables() {
-		return tables;
+	public TableProvider table() {
+		return table;
 	}
 }

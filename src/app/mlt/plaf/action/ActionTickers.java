@@ -67,8 +67,8 @@ import com.mlt.mkt.data.info.VolumeInfo;
 import com.mlt.util.Colors;
 import com.mlt.util.Logs;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 
 /**
@@ -94,10 +94,8 @@ public class ActionTickers extends ActionRun {
 				}
 				Record selected = tableTickers.getSelectedRecord();
 
-				Database db = MLT.getDatabase();
 				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
-				Instrument instrument =
-					db.fromRecordToInstrument(db.record().instrument(instrumentId));
+				Instrument instrument = DB.to_instrument(DB.record_instrument(instrumentId));
 				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
@@ -106,7 +104,7 @@ public class ActionTickers extends ActionRun {
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 				ListPersistor persistor =
-					new ListPersistor(db.persistor().price(instrument, period));
+					new ListPersistor(DB.persistor_prices(instrument, period));
 
 				long timeLower = Date.valueOf(LocalDate.of(2018, 1, 1)).getTime();
 				long timeUpper = Date.valueOf(LocalDate.of(2018, 12, 31)).getTime();
@@ -161,10 +159,8 @@ public class ActionTickers extends ActionRun {
 				}
 				Record selected = tableTickers.getSelectedRecord();
 
-				Database db = MLT.getDatabase();
 				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
-				Instrument instrument =
-					db.fromRecordToInstrument(db.record().instrument(instrumentId));
+				Instrument instrument = DB.to_instrument(DB.record_instrument(instrumentId));
 				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
@@ -173,7 +169,7 @@ public class ActionTickers extends ActionRun {
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 				ListPersistor persistor =
-					new ListPersistor(db.persistor().price(instrument, period));
+					new ListPersistor(DB.persistor_prices(instrument, period));
 				persistor.setCacheSize(50000);
 
 				/* Build the plot data. */
@@ -244,8 +240,8 @@ public class ActionTickers extends ActionRun {
 			}
 			MLT.getStatusBar().setLabel("TICKERS", "Setup tickers");
 
-			Persistor persistor = MLT.getDatabase().persistor().ticker();
-			RecordSet recordSet = MLT.getDatabase().recordSet().ticker();
+			Persistor persistor = DB.persistor_tickers();
+			RecordSet recordSet = DB.recordset_tickers();
 			Record masterRecord = persistor.getDefaultRecord();
 
 			TableRecordModel model = new TableRecordModel(masterRecord);

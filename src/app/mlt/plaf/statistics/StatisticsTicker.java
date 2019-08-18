@@ -19,9 +19,6 @@ package app.mlt.plaf.statistics;
 
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
-import com.mlt.mkt.server.Server;
-
-import app.mlt.plaf.MLT;
 
 /**
  * Statistics on tickers.
@@ -63,15 +60,6 @@ public abstract class StatisticsTicker extends Statistics {
 	 */
 	public Period getPeriod() {
 		return period;
-	}
-
-	/**
-	 * Sortcut to access the server.
-	 * 
-	 * @return The server.
-	 */
-	public Server getServer() {
-		return MLT.getServer();
 	}
 
 }

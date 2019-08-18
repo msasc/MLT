@@ -19,16 +19,10 @@ package app.mlt.plaf;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 
-import app.mlt.plaf.action.ActionExitApplication;
-import app.mlt.plaf.action.ActionInstruments;
-import app.mlt.plaf.action.ActionStatistics;
-import app.mlt.plaf.action.ActionTickers;
-import app.mlt.plaf.db.Database;
-import app.mlt.plaf.db.Fields;
-import com.mlt.launch.Argument;
-import com.mlt.launch.ArgumentManager;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorDDL;
 import com.mlt.db.Record;
@@ -52,6 +46,8 @@ import com.mlt.desktop.layout.Anchor;
 import com.mlt.desktop.layout.Constraints;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
+import com.mlt.launch.Argument;
+import com.mlt.launch.ArgumentManager;
 import com.mlt.mkt.data.Period;
 import com.mlt.mkt.server.Server;
 import com.mlt.mkt.servers.dukascopy.DkServer;
@@ -59,8 +55,12 @@ import com.mlt.util.Logs;
 import com.mlt.util.Properties;
 import com.mlt.util.Resources;
 import com.mlt.util.Strings;
-import java.time.LocalDate;
-import java.util.Locale;
+
+import app.mlt.plaf.action.ActionExitApplication;
+import app.mlt.plaf.action.ActionInstruments;
+import app.mlt.plaf.action.ActionStatistics;
+import app.mlt.plaf.action.ActionTickers;
+import app.mlt.plaf.db.Fields;
 
 /**
  * MLT platform entry.
@@ -87,15 +87,6 @@ public class MLT {
 			new ActionExitApplication()
 				.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Exit"));
 		}
-	}
-
-	/**
-	 * Return the database.
-	 * 
-	 * @return The database.
-	 */
-	public static Database getDatabase() {
-		return (Database) properties.getObject("DATABASE");
 	}
 
 	/**
@@ -154,7 +145,7 @@ public class MLT {
 	 * @return The working server schema.
 	 */
 	public static String getServerSchema() {
-		return Database.SYSTEM_SCHEMA + "_" + getServer().getId();
+		return DB.SYSTEM_SCHEMA + "_" + getServer().getId();
 	}
 
 	/**
@@ -322,16 +313,14 @@ public class MLT {
 			DBEngineAdapter adapter = new PostgreSQLAdapter();
 			DBEngine dbEngine = new DBEngine(adapter, info);
 			properties.setObject("DB_ENGINE", dbEngine);
-			Database db = new Database();
-			properties.setObject("DATABASE", db);
 
 			/* Persistor DDL. */
 			PersistorDDL ddl = getDDL();
 
 			/* Check for the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check system schema...");
-			if (!ddl.existsSchema(Database.SYSTEM_SCHEMA)) {
-				ddl.createSchema(Database.SYSTEM_SCHEMA);
+			if (!ddl.existsSchema(DB.SYSTEM_SCHEMA)) {
+				ddl.createSchema(DB.SYSTEM_SCHEMA);
 			}
 
 			/* Check for server schema. */
@@ -343,34 +332,34 @@ public class MLT {
 
 			/* Check for the necessary table Servers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check servers table...");
-			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.SERVERS)) {
-				ddl.buildTable(db.table().server());
+			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.SERVERS)) {
+				ddl.buildTable(DB.table_servers());
 			}
-			synchronizeSupportedServer(db.persistor().server());
+			synchronizeSupportedServer(DB.persistor_servers());
 
 			/* Check for the necessary table Periods in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check periods table...");
-			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.PERIODS)) {
-				ddl.buildTable(db.table().period());
+			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.PERIODS)) {
+				ddl.buildTable(DB.table_periods());
 			}
-			synchronizeStandardPeriods(db.persistor().period());
+			synchronizeStandardPeriods(DB.persistor_periods());
 
 			/* Check for the necessary table Instruments in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check instruments table...");
-			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.INSTRUMENTS)) {
-				ddl.buildTable(db.table().instrument());
+			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.INSTRUMENTS)) {
+				ddl.buildTable(DB.table_instruments());
 			}
 
 			/* Check for the necessary table Tickers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check tickers table...");
-			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.TICKERS)) {
-				ddl.buildTable(db.table().ticker());
+			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.TICKERS)) {
+				ddl.buildTable(DB.table_tickers());
 			}
 
 			/* Check for the necessary table Statistics in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check statistics table...");
-			if (!ddl.existsTable(Database.SYSTEM_SCHEMA, Database.STATISTICS)) {
-				ddl.buildTable(db.table().statistic());
+			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.STATISTICS)) {
+				ddl.buildTable(DB.table_statistics());
 			}
 
 		} catch (Exception exc) {

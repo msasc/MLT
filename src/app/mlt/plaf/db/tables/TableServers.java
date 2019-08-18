@@ -19,8 +19,8 @@ package app.mlt.plaf.db.tables;
 import com.mlt.db.Table;
 import com.mlt.db.rdbms.DBPersistor;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldServerId;
 import app.mlt.plaf.db.fields.FieldServerName;
@@ -39,8 +39,8 @@ public class TableServers extends Table {
 	public TableServers() {
 		super();
 
-		setName(Database.SERVERS);
-		setSchema(Database.SYSTEM_SCHEMA);
+		setName(DB.SERVERS);
+		setSchema(DB.SYSTEM_SCHEMA);
 
 		addField(new FieldServerId(Fields.SERVER_ID));
 		addField(new FieldServerName(Fields.SERVER_NAME));

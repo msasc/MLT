@@ -43,8 +43,8 @@ import com.mlt.util.xml.ParserHandler;
 import com.mlt.util.xml.XMLAttribute;
 import com.mlt.util.xml.XMLWriter;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Domains;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldDataInst;
@@ -355,7 +355,7 @@ public class StatisticsAverages extends StatisticsTicker {
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
-		String name = Database.getName_Ticker(instrument, period, "_" + getId() + "_rng");
+		String name = DB.name_ticker(instrument, period, "_" + getId() + "_rng");
 
 		tableRanges.setSchema(MLT.getServerSchema());
 		tableRanges.setName(name);
@@ -408,7 +408,7 @@ public class StatisticsAverages extends StatisticsTicker {
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
-		String name = Database.getName_Ticker(instrument, period, "_" + getId() + "_src");
+		String name = DB.name_ticker(instrument, period, "_" + getId() + "_src");
 
 		tableStates.setSchema(MLT.getServerSchema());
 		tableStates.setName(name);

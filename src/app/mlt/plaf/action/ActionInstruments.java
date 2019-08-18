@@ -28,6 +28,7 @@ import com.mlt.desktop.control.table.TableRecordModel;
 import com.mlt.desktop.icon.IconChar;
 import com.mlt.util.Logs;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.Fields;
 
@@ -61,8 +62,8 @@ public class ActionInstruments {
 				}
 				MLT.getStatusBar().setLabel("INST-AV", "Setup available instruments");
 
-				Persistor persistor = MLT.getDatabase().persistor().instrument();
-				RecordSet recordSet = MLT.getDatabase().recordSet().instrument();
+				Persistor persistor = DB.persistor_instruments();
+				RecordSet recordSet = DB.recordset_instruments();
 				Record masterRecord = persistor.getDefaultRecord();
 
 				TableRecordModel model = new TableRecordModel(masterRecord);

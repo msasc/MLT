@@ -17,14 +17,12 @@
 package app.mlt.plaf.db.tables;
 
 import com.mlt.db.Table;
-import com.mlt.db.rdbms.DBEngine;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
-import com.mlt.mkt.server.Server;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldDataInst;
 import app.mlt.plaf.db.fields.FieldTime;
@@ -47,7 +45,7 @@ public class TableDataPrice extends Table {
 	public TableDataPrice(Instrument instrument, Period period) {
 		super();
 
-		setName(Database.getName_Ticker(instrument, period));
+		setName(DB.name_ticker(instrument, period));
 		setSchema(MLT.getServerSchema());
 
 		addField(new FieldTime(Fields.TIME));

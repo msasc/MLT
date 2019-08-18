@@ -21,8 +21,8 @@ import com.mlt.db.Order;
 import com.mlt.db.Table;
 import com.mlt.db.rdbms.DBPersistor;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldInstrumentId;
 import app.mlt.plaf.db.fields.FieldPeriodId;
@@ -42,8 +42,8 @@ public class TableTickers extends Table {
 	public TableTickers() {
 		super();
 
-		setName(Database.TICKERS);
-		setSchema(Database.SYSTEM_SCHEMA);
+		setName(DB.TICKERS);
+		setSchema(DB.SYSTEM_SCHEMA);
 
 		addField(new FieldServerId(Fields.SERVER_ID));
 		addField(new FieldInstrumentId(Fields.INSTRUMENT_ID));

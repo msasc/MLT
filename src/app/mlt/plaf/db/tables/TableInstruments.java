@@ -19,8 +19,8 @@ package app.mlt.plaf.db.tables;
 import com.mlt.db.Table;
 import com.mlt.db.rdbms.DBPersistor;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldInstrumentDesc;
 import app.mlt.plaf.db.fields.FieldInstrumentId;
@@ -46,8 +46,8 @@ public class TableInstruments extends Table {
 	public TableInstruments() {
 		super();
 
-		setName(Database.INSTRUMENTS);
-		setSchema(Database.SYSTEM_SCHEMA);
+		setName(DB.INSTRUMENTS);
+		setSchema(DB.SYSTEM_SCHEMA);
 
 		addField(new FieldServerId(Fields.SERVER_ID));
 		addField(new FieldInstrumentId(Fields.INSTRUMENT_ID));

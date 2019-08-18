@@ -20,8 +20,8 @@ import com.mlt.db.Order;
 import com.mlt.db.Table;
 import com.mlt.db.rdbms.DBPersistor;
 
+import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Database;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldPeriodId;
 import app.mlt.plaf.db.fields.FieldPeriodName;
@@ -41,8 +41,8 @@ public class TablePeriods extends Table {
 	public TablePeriods() {
 		super();
 
-		setName(Database.PERIODS);
-		setSchema(Database.SYSTEM_SCHEMA);
+		setName(DB.PERIODS);
+		setSchema(DB.SYSTEM_SCHEMA);
 
 		addField(new FieldPeriodId(Fields.PERIOD_ID));
 		addField(new FieldPeriodName(Fields.PERIOD_NAME));

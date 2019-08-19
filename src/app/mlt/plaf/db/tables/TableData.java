@@ -30,11 +30,11 @@ import app.mlt.plaf.db.fields.FieldTimeFmt;
 import app.mlt.plaf.db.fields.FieldVolume;
 
 /**
- * Tickers table definition.
+ * Table of market data, either prices or any time series data values.
  *
  * @author Miquel Sas
  */
-public class TableDataPrice extends Table {
+public class TableData extends Table {
 
 	/**
 	 * Constructor.
@@ -42,21 +42,19 @@ public class TableDataPrice extends Table {
 	 * @param instrument Instrument.
 	 * @param period     Period.
 	 */
-	public TableDataPrice(Instrument instrument, Period period) {
+	public TableData(Instrument instrument, Period period) {
 		super();
 
 		setName(DB.name_ticker(instrument, period));
-		setSchema(MLT.getServerSchema());
+		setSchema(DB.schema_server());
 
 		addField(new FieldTime(Fields.TIME));
 		addField(new FieldDataInst(instrument, Fields.OPEN, "Open", "Open"));
 		addField(new FieldDataInst(instrument, Fields.HIGH, "High", "High"));
 		addField(new FieldDataInst(instrument, Fields.LOW, "Low", "Low"));
 		addField(new FieldDataInst(instrument, Fields.CLOSE, "Close", "Close"));
-		addField(new FieldVolume(Fields.VOLUME));
+		addField(new FieldVolume(instrument, Fields.VOLUME));
 		addField(new FieldTimeFmt(Fields.TIME_FMT, period));
-
-		getField(Fields.VOLUME).setDisplayDecimals(instrument.getVolumeScale());
 
 		getField(Fields.TIME).setPrimaryKey(true);
 

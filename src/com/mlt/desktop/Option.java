@@ -1061,6 +1061,20 @@ public class Option {
 	}
 	
 	/**
+	 * Execute (click) the option.
+	 */
+	public void doClick() {
+		if (getButton() != null) {
+			getButton().doClick();
+			return;
+		}
+		if (getMenuItem() != null) {
+			getMenuItem().doClick();
+			return;
+		}
+	}
+	
+	/**
 	 * {@inheritDoc}
 	 */
 	public boolean equals(String str) {

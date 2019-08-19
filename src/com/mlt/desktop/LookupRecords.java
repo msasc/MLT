@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2017 Miquel Sas
  * 
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  * 
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  * 
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 
@@ -16,6 +21,7 @@ package com.mlt.desktop;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -32,6 +38,7 @@ import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.control.table.SelectionMode;
 import com.mlt.desktop.control.table.TableRecordModel;
+import com.mlt.desktop.event.MouseHandler;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.util.Lists;
 
@@ -70,6 +77,27 @@ public class LookupRecords {
 			selectedRecords.addAll(table.getSelectedRecords());
 		}
 	}
+	
+	/**
+	 * Double click mouse listener.
+	 */
+	class MouseListener extends MouseHandler {
+		
+		Option option;
+
+		MouseListener(Option option) {
+			super();
+			this.option = option;
+		}
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			if (e.getClickCount() == 2) {
+				option.doClick();
+			}
+		}
+		
+	}
 
 	/** Window owner. */
 	private Stage owner;
@@ -79,6 +107,13 @@ public class LookupRecords {
 	private String title;
 	/** List of selected rows. */
 	private List<Integer> selectedRows = new ArrayList<>();
+
+	/** Height factor. */
+	private double heightFactor = 0.8;
+	/** Width factor. */
+	private double widthFactor = 0.8;
+	/** Pack indicator. */
+	private boolean pack = false;
 
 	/**
 	 * Constructor.
@@ -153,15 +188,15 @@ public class LookupRecords {
 	 */
 	public Record lookupRecord() {
 		List<Record> records = lookupRecords(SelectionMode.SINGLE_ROW_SELECTION);
-		if (!records.isEmpty())
-			return records.get(0);
+		if (!records.isEmpty()) return records.get(0);
 		return null;
 	}
 
 	/**
 	 * Lookup records and return the list of selected records.
 	 * 
-	 * @param multipleRowInterval A boolean indicating whether multiple row interval selection should apply.
+	 * @param multipleRowInterval A boolean indicating whether multiple row interval
+	 *                            selection should apply.
 	 * @return The list of selected records.
 	 */
 	public List<Record> lookupRecords() {
@@ -171,12 +206,14 @@ public class LookupRecords {
 	/**
 	 * Lookup records and return the list of selected records.
 	 * 
-	 * @param multipleRowInterval A boolean indicating whether multiple row interval selection should apply.
+	 * @param multipleRowInterval A boolean indicating whether multiple row interval
+	 *                            selection should apply.
 	 * @return The list of selected records.
 	 */
 	public List<Record> lookupRecords(boolean multipleRowInterval) {
 		return lookupRecords(
-		multipleRowInterval ? SelectionMode.MULTIPLE_ROW_INTERVAL : SelectionMode.SINGLE_ROW_INTERVAL);
+			multipleRowInterval ? SelectionMode.MULTIPLE_ROW_INTERVAL
+				: SelectionMode.SINGLE_ROW_INTERVAL);
 	}
 
 	/**
@@ -204,6 +241,7 @@ public class LookupRecords {
 		select.setAction(actionSelect);
 		select.setCloseWindow(true);
 		select.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+		table.addMouseListener(new MouseListener(select));
 		Option cancel = Option.option_CANCEL();
 		List<Option> options = new ArrayList<>();
 		options.add(select);
@@ -216,8 +254,9 @@ public class LookupRecords {
 		wnd.getOptionPane().setMnemonics();
 
 		/* Initially selected rows. */
-		if (selectedRows.isEmpty())
+		if (selectedRows.isEmpty()) {
 			selectedRows.add(0);
+		}
 		List<int[]> ranges = getSelectedRowRanges();
 		for (int i = 0; i < ranges.size(); i++) {
 			int topRow = ranges.get(i)[0];
@@ -226,11 +265,24 @@ public class LookupRecords {
 		}
 
 		/* Show the window. */
-		wnd.setSize(0.8, 0.8);
+		if (pack) {
+			wnd.pack();
+		} else {
+			wnd.setSize(widthFactor, heightFactor);
+		}
 		wnd.centerOnScreen();
 		wnd.show();
 
 		return selectedRecords;
+	}
+
+	/**
+	 * Set the pack indicator.
+	 * 
+	 * @param pack A boolean.
+	 */
+	public void setPack(boolean pack) {
+		this.pack = pack;
 	}
 
 	/**
@@ -263,6 +315,17 @@ public class LookupRecords {
 				selectedRows.add(row);
 			}
 		}
+	}
+
+	/**
+	 * Set the size factors.
+	 * 
+	 * @param widthFactor  Width factor.
+	 * @param heightFactor Height factor.
+	 */
+	public void setSize(double widthFactor, double heightFactor) {
+		this.widthFactor = widthFactor;
+		this.heightFactor = heightFactor;
 	}
 
 	/**

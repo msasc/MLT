@@ -28,11 +28,14 @@ import javax.swing.Icon;
 import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
 import com.mlt.db.ListPersistor;
+import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
+import com.mlt.db.Table;
 import com.mlt.db.Value;
+import com.mlt.desktop.Alert;
 import com.mlt.desktop.Option;
 import com.mlt.desktop.Option.Group;
 import com.mlt.desktop.action.ActionRun;
@@ -65,6 +68,7 @@ import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.mkt.data.info.PriceInfo;
 import com.mlt.mkt.data.info.VolumeInfo;
 import com.mlt.util.Colors;
+import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 
 import app.mlt.plaf.DB;
@@ -104,7 +108,7 @@ public class ActionTickers extends ActionRun {
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 				ListPersistor persistor =
-					new ListPersistor(DB.persistor_prices(instrument, period));
+					new ListPersistor(DB.persistor_data(instrument, period));
 
 				long timeLower = Date.valueOf(LocalDate.of(2018, 1, 1)).getTime();
 				long timeUpper = Date.valueOf(LocalDate.of(2018, 12, 31)).getTime();
@@ -169,7 +173,7 @@ public class ActionTickers extends ActionRun {
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 				ListPersistor persistor =
-					new ListPersistor(DB.persistor_prices(instrument, period));
+					new ListPersistor(DB.persistor_data(instrument, period));
 				persistor.setCacheSize(50000);
 
 				/* Build the plot data. */
@@ -225,6 +229,134 @@ public class ActionTickers extends ActionRun {
 	}
 
 	/**
+	 * Create a new ticker.
+	 */
+	class ActionCreate extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				/* Instrument. */
+				Record rcInstrument = DB.lookup_instrument();
+				if (rcInstrument == null) {
+					return;
+				}
+				Instrument instrument = DB.to_instrument(rcInstrument);
+
+				/* Period. */
+				Record rcPeriod = DB.lookup_period();
+				if (rcPeriod == null) {
+					return;
+				}
+				Period period = DB.to_period(rcPeriod);
+
+				/* New ticker record. */
+				Value vServerId = new Value(MLT.getServer().getId());
+				Value vInstrumentId = new Value(instrument.getId());
+				Value vPeriodId = new Value(period.getId());
+				Value vTableName = new Value(DB.name_ticker(instrument, period));
+				Record rcTicker = DB.record_ticker(instrument, period);
+				rcTicker.setValue(Fields.SERVER_ID, vServerId);
+				rcTicker.setValue(Fields.INSTRUMENT_ID, vInstrumentId);
+				rcTicker.setValue(Fields.PERIOD_ID, vPeriodId);
+				rcTicker.setValue(Fields.TABLE_NAME, vTableName);
+				rcTicker.setValue(Fields.PERIOD_NAME, rcPeriod.getValue(Fields.PERIOD_NAME));
+				rcTicker.setValue(Fields.PERIOD_UNIT_INDEX, rcPeriod.getValue(Fields.PERIOD_UNIT_INDEX));
+				rcTicker.setValue(Fields.PERIOD_SIZE, rcPeriod.getValue(Fields.PERIOD_SIZE));
+
+				/* Check already exists. */
+				if (DB.persistor_tickers().exists(rcTicker)) {
+					Alert.error("Ticker " + vTableName + " already exists!");
+					return;
+				}
+
+				/* Create the record and the table. */
+				DB.persistor_tickers().insert(rcTicker);
+				Table data = DB.table_data(instrument, period);
+				DB.ddl().buildTable(data);
+				RecordSet rs = tableTickers.getModel().getRecordSet();
+				Order order = DB.persistor_tickers().getView().getOrderBy();
+				int index = rs.getInsertIndex(rcTicker, order);
+				rs.add(index, rcTicker);
+				tableTickers.getModel().fireTableDataChanged();
+				tableTickers.setSelectedRow(index);
+
+			} catch (PersistorException exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
+	 * Delete a ticker.
+	 */
+	class ActionDelete extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				/* Selected record. */
+				Record rcTicker = tableTickers.getSelectedRecord();
+				if (rcTicker == null) {
+					return;
+				}
+				
+				/* Ask. */
+				HTML msg = new HTML();
+				msg.startTag("h2");
+				msg.append("Delete the current ticker?", "color: red;");
+				msg.endTag("h2");
+				msg.startTag("h3");
+				msg.append(rcTicker.getValue(Fields.INSTRUMENT_ID).toString());
+				msg.append(", ");
+				msg.append(rcTicker.getValue(Fields.PERIOD_NAME).toString());
+				msg.endTag("h3");
+				Option option = Alert.confirm(msg.toString(true));
+				if (!Option.isOk(option)) {
+					return;
+				}
+				
+				/* Instrument. */
+				String instrumentId = rcTicker.getValue(Fields.INSTRUMENT_ID).toString();
+				Record rcInstrument = DB.record_instrument(instrumentId);
+				if (rcInstrument == null) {
+					return;
+				}
+				Instrument instrument = DB.to_instrument(rcInstrument);
+
+				/* Period. */
+				String periodId = rcTicker.getValue(Fields.PERIOD_ID).toString();
+				Record rcPeriod = DB.record_period(periodId);
+				if (rcPeriod == null) {
+					return;
+				}
+				Period period = DB.to_period(rcPeriod);
+				
+				/* Drop table, delete ticker and refresh view. */
+				Table data = DB.table_data(instrument, period);
+				DB.ddl().dropTable(data);
+				DB.persistor_tickers().delete(rcTicker);
+				RecordSet rs = tableTickers.getModel().getRecordSet();
+				int index = rs.indexOf(rcTicker);
+				if (index >= 0) {
+					rs.remove(index);
+				}
+				tableTickers.getModel().fireTableDataChanged();
+				tableTickers.setSelectedRow(index);
+
+			} catch (PersistorException exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
 	 * The table.
 	 */
 	private TableRecord tableTickers;
@@ -260,11 +392,13 @@ public class ActionTickers extends ActionRun {
 			Option create = new Option();
 			create.setText("Create");
 			create.setToolTip("Create a new ticker");
+			create.setAction(new ActionCreate());
 			create.setOptionGroup(Group.EDIT);
 
 			Option delete = new Option();
 			delete.setText("Delete");
 			delete.setToolTip("Delete the selected ticker");
+			delete.setAction(new ActionDelete());
 			delete.setOptionGroup(Group.EDIT);
 
 			Option browse = new Option();

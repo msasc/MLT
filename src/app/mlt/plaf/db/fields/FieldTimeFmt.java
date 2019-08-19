@@ -13,8 +13,6 @@
  */
 package app.mlt.plaf.db.fields;
 
-import java.sql.Timestamp;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import com.mlt.db.Calculator;
@@ -22,10 +20,10 @@ import com.mlt.db.Field;
 import com.mlt.db.Record;
 import com.mlt.db.Value;
 import com.mlt.mkt.data.Period;
-import com.mlt.util.StringConverter;
 
 import app.mlt.plaf.db.Domains;
 import app.mlt.plaf.db.Fields;
+import app.mlt.plaf.db.converters.TimeFmtConverter;
 
 /**
  * Data filter field.
@@ -43,38 +41,6 @@ public class FieldTimeFmt extends Field {
 			return record.getValue(Fields.TIME);
 		}
 
-	}
-
-	/**
-	 * String converter.
-	 */
-	public static class Converter implements StringConverter {
-		/** Date format. */
-		private SimpleDateFormat format;
-
-		/**
-		 * Constructor.
-		 * 
-		 * @param format The date format.
-		 */
-		public Converter(SimpleDateFormat format) {
-			super();
-			this.format = format;
-		}
-
-		@Override
-		public Object stringToValue(String text) throws ParseException {
-			return null;
-		}
-
-		@Override
-		public String valueToString(Object obj) throws ParseException {
-			if (!(obj instanceof Value)) {
-				return obj.toString();
-			}
-			Value value = (Value) obj;
-			return format.format(new Timestamp(value.getLong()));
-		}
 	}
 
 	/**
@@ -116,6 +82,6 @@ public class FieldTimeFmt extends Field {
 			throw new IllegalArgumentException();
 		}
 		setCalculator(new Time());
-		setStringConverter(new Converter(new SimpleDateFormat(pattern)));
+		setStringConverter(new TimeFmtConverter(new SimpleDateFormat(pattern)));
 	}
 }

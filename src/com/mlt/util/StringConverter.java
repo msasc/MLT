@@ -37,9 +37,9 @@ public interface StringConverter {
 	/**
 	 * Convert to string.
 	 * 
-	 * @param value The value.
+	 * @param obj The value.
 	 * @return The string.
 	 * @throws java.text.ParseException
 	 */
-	String valueToString(Object value) throws ParseException;
+	String valueToString(Object obj) throws ParseException;
 }

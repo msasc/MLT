@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control.table;
@@ -27,6 +32,7 @@ import com.mlt.db.Value;
 import com.mlt.desktop.AWT;
 import com.mlt.desktop.icon.Icons;
 import com.mlt.desktop.layout.Alignment;
+import com.mlt.util.Formats;
 import com.mlt.util.Resources;
 
 /**
@@ -64,8 +70,13 @@ public class TableRecordCellRenderer extends CellRenderer {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public Component getTableCellRendererComponent(JTable table, Object object, boolean isSelected, boolean hasFocus,
-	int row, int column) {
+	public Component getTableCellRendererComponent(
+		JTable table,
+		Object object,
+		boolean isSelected,
+		boolean hasFocus,
+		int row,
+		int column) {
 		super.getTableCellRendererComponent(table, object, isSelected, hasFocus, row, column);
 
 		/* Set the font if required. */
@@ -95,8 +106,7 @@ public class TableRecordCellRenderer extends CellRenderer {
 		if (field.getStringConverter() != null) {
 			try {
 				getLabel().setText(field.getStringConverter().valueToString(value));
-			} catch (ParseException ignore) {
-			}
+			} catch (ParseException ignore) {}
 			return this;
 		}
 
@@ -122,8 +132,23 @@ public class TableRecordCellRenderer extends CellRenderer {
 			return this;
 		}
 
+		/* Number with display decimals set. */
+		if (field.isNumber()) {
+			int decimals = field.getDisplayDecimals();
+			if (decimals >= 0) {
+				double d = value.getNumber().doubleValue();
+				String text = Formats.fromDouble(d, decimals, Locale.getDefault());
+				getLabel().setText(text);
+				return this;
+			}
+		}
+
 		/* Number, date-time or string */
-		if (field.isNumber() || field.isDate() || field.isTime() || field.isDateTime() || field.isString()) {
+		if (field.isNumber() ||
+			field.isDate() ||
+			field.isTime() ||
+			field.isDateTime() ||
+			field.isString()) {
 			getLabel().setText(Value.fromValue(value, Locale.getDefault()));
 			return this;
 		}

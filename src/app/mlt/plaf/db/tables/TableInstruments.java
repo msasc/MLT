@@ -47,7 +47,7 @@ public class TableInstruments extends Table {
 		super();
 
 		setName(DB.INSTRUMENTS);
-		setSchema(DB.SYSTEM_SCHEMA);
+		setSchema(DB.schema_system());
 
 		addField(new FieldServerId(Fields.SERVER_ID));
 		addField(new FieldInstrumentId(Fields.INSTRUMENT_ID));
@@ -62,7 +62,7 @@ public class TableInstruments extends Table {
 
 		getField(Fields.SERVER_ID).setPrimaryKey(true);
 		getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);
-
+		
 		setPersistor(new DBPersistor(MLT.getDBEngine(), getComplexView(getPrimaryKey())));
 	}
 

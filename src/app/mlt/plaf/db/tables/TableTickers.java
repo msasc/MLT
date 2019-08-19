@@ -43,7 +43,7 @@ public class TableTickers extends Table {
 		super();
 
 		setName(DB.TICKERS);
-		setSchema(DB.SYSTEM_SCHEMA);
+		setSchema(DB.schema_system());
 
 		addField(new FieldServerId(Fields.SERVER_ID));
 		addField(new FieldInstrumentId(Fields.INSTRUMENT_ID));

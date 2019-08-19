@@ -24,17 +24,19 @@ import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
 import com.mlt.db.Field;
 import com.mlt.db.Persistor;
+import com.mlt.db.PersistorDDL;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
 import com.mlt.db.Value;
+import com.mlt.db.rdbms.DBPersistorDDL;
 import com.mlt.desktop.LookupRecords;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
 import app.mlt.plaf.db.Fields;
-import app.mlt.plaf.db.tables.TableDataPrice;
+import app.mlt.plaf.db.tables.TableData;
 import app.mlt.plaf.db.tables.TableInstruments;
 import app.mlt.plaf.db.tables.TablePeriods;
 import app.mlt.plaf.db.tables.TableServers;
@@ -53,11 +55,24 @@ public class DB {
 	public static final String PERIODS = "periods";
 	public static final String SERVERS = "servers";
 	public static final String STATISTICS = "statistics";
-	public static final String SYSTEM_SCHEMA = "qtfx";
 	public static final String TICKERS = "tickers";
 
 	/** Map of tables. */
 	private static HashMap<String, Table> tables = new HashMap<>();
+	/** DDL. */
+	private static PersistorDDL ddl;
+
+	/**
+	 * Return the proper persistor DDL.
+	 * 
+	 * @return The persistor DDL.
+	 */
+	public static PersistorDDL ddl() {
+		if (ddl == null) {
+			ddl = new DBPersistorDDL(MLT.getDBEngine());
+		}
+		return ddl;
+	}
 
 	/**
 	 * Lookup an instrument.
@@ -77,6 +92,8 @@ public class DB {
 		lookup.addColumn(Fields.INSTRUMENT_PRIMARY_CURRENCY);
 		lookup.addColumn(Fields.INSTRUMENT_SECONDARY_CURRENCY);
 		lookup.setRecordSet(recordset_instruments());
+		lookup.setSize(0.5, 0.8);
+		lookup.setTitle("Select the instrument");
 		Record record = lookup.lookupRecord();
 		return record;
 	}
@@ -93,6 +110,8 @@ public class DB {
 		lookup.addColumn(Fields.PERIOD_NAME);
 		lookup.addColumn(Fields.PERIOD_SIZE);
 		lookup.setRecordSet(recordset_periods());
+		lookup.setSize(0.3, 0.4);
+		lookup.setTitle("Select the instrument");
 		Record record = lookup.lookupRecord();
 		return record;
 	}
@@ -135,8 +154,8 @@ public class DB {
 	 * @param period     The period.
 	 * @return The persistor.
 	 */
-	public static Persistor persistor_prices(Instrument instrument, Period period) {
-		return table_prices(instrument, period).getPersistor();
+	public static Persistor persistor_data(Instrument instrument, Period period) {
+		return table_data(instrument, period).getPersistor();
 	}
 
 	/**
@@ -222,7 +241,7 @@ public class DB {
 	/**
 	 * Returns the filled record for the instrument.
 	 * 
-	 * @param instrument The instrument.
+	 * @param id The instrument id.
 	 * @return The record.
 	 */
 	public static Record record_instrument(String id) throws PersistorException {
@@ -230,6 +249,20 @@ public class DB {
 		Record record = persistor.getDefaultRecord();
 		record.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
 		record.setValue(Fields.INSTRUMENT_ID, new Value(id));
+		persistor.refresh(record);
+		return record;
+	}
+
+	/**
+	 * Returns the filled record for the period.
+	 * 
+	 * @param id The period id.
+	 * @return The record.
+	 */
+	public static Record record_period(String id) throws PersistorException {
+		Persistor persistor = persistor_periods();
+		Record record = persistor.getDefaultRecord();
+		record.setValue(Fields.PERIOD_ID, new Value(id));
 		persistor.refresh(record);
 		return record;
 	}
@@ -323,6 +356,14 @@ public class DB {
 		RecordSet recordSet = persistor.select(criteria);
 		return recordSet;
 	}
+	
+	public static String schema_server() {
+		return "qtfx" + "_" + MLT.getServer().getId();
+	}
+	
+	public static String schema_system() {
+		return "qtfx";
+	}
 
 	/**
 	 * Access to the price table.
@@ -331,11 +372,11 @@ public class DB {
 	 * @param period     Period.
 	 * @return The table.
 	 */
-	public static TableDataPrice table_prices(Instrument instrument, Period period) {
+	public static TableData table_data(Instrument instrument, Period period) {
 		String name = name_ticker(instrument, period);
-		TableDataPrice table = (TableDataPrice) tables.get(name);
+		TableData table = (TableData) tables.get(name);
 		if (table == null) {
-			table = new TableDataPrice(instrument, period);
+			table = new TableData(instrument, period);
 			tables.put(name, table);
 		}
 		return table;

@@ -44,7 +44,7 @@ public class TableStatistics extends Table {
 		super();
 
 		setName(DB.STATISTICS);
-		setSchema(DB.SYSTEM_SCHEMA);
+		setSchema(DB.schema_system());
 
 		addField(new FieldServerId(Fields.SERVER_ID));
 		addField(new FieldInstrumentId(Fields.INSTRUMENT_ID));

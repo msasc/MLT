@@ -40,7 +40,7 @@ public class TableServers extends Table {
 		super();
 
 		setName(DB.SERVERS);
-		setSchema(DB.SYSTEM_SCHEMA);
+		setSchema(DB.schema_system());
 
 		addField(new FieldServerId(Fields.SERVER_ID));
 		addField(new FieldServerName(Fields.SERVER_NAME));

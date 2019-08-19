@@ -357,7 +357,7 @@ public class StatisticsAverages extends StatisticsTicker {
 		Period period = getPeriod();
 		String name = DB.name_ticker(instrument, period, "_" + getId() + "_rng");
 
-		tableRanges.setSchema(MLT.getServerSchema());
+		tableRanges.setSchema(DB.schema_server());
 		tableRanges.setName(name);
 
 		/* Name of the field. */
@@ -410,7 +410,7 @@ public class StatisticsAverages extends StatisticsTicker {
 		Period period = getPeriod();
 		String name = DB.name_ticker(instrument, period, "_" + getId() + "_src");
 
-		tableStates.setSchema(MLT.getServerSchema());
+		tableStates.setSchema(DB.schema_server());
 		tableStates.setName(name);
 
 		/* Time, open, high, low, close. */

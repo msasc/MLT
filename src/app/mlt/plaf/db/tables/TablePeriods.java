@@ -42,7 +42,7 @@ public class TablePeriods extends Table {
 		super();
 
 		setName(DB.PERIODS);
-		setSchema(DB.SYSTEM_SCHEMA);
+		setSchema(DB.schema_system());
 
 		addField(new FieldPeriodId(Fields.PERIOD_ID));
 		addField(new FieldPeriodName(Fields.PERIOD_NAME));

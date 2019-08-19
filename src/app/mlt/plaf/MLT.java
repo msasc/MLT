@@ -99,20 +99,6 @@ public class MLT {
 	}
 
 	/**
-	 * Return the proper persistor DDL.
-	 * 
-	 * @return The persistor DDL.
-	 */
-	public static PersistorDDL getDDL() {
-		PersistorDDL ddl = (PersistorDDL) properties.getObject("DDL");
-		if (ddl == null) {
-			ddl = new DBPersistorDDL(getDBEngine());
-			properties.setObject("DDL", ddl);
-		}
-		return ddl;
-	}
-
-	/**
 	 * Return the main frame.
 	 * 
 	 * @return The main frame.
@@ -137,15 +123,6 @@ public class MLT {
 	 */
 	public static Server getServer() {
 		return (Server) properties.getObject("SERVER");
-	}
-
-	/**
-	 * Return the working server schema.
-	 * 
-	 * @return The working server schema.
-	 */
-	public static String getServerSchema() {
-		return DB.SYSTEM_SCHEMA + "_" + getServer().getId();
 	}
 
 	/**
@@ -315,50 +292,50 @@ public class MLT {
 			properties.setObject("DB_ENGINE", dbEngine);
 
 			/* Persistor DDL. */
-			PersistorDDL ddl = getDDL();
+			PersistorDDL ddl = DB.ddl();
 
 			/* Check for the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check system schema...");
-			if (!ddl.existsSchema(DB.SYSTEM_SCHEMA)) {
-				ddl.createSchema(DB.SYSTEM_SCHEMA);
+			if (!ddl.existsSchema(DB.schema_system())) {
+				ddl.createSchema(DB.schema_system());
 			}
 
 			/* Check for server schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check server schema...");
-			String schema = getServerSchema();
+			String schema = DB.schema_server();
 			if (!ddl.existsSchema(schema)) {
 				ddl.createSchema(schema);
 			}
 
 			/* Check for the necessary table Servers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check servers table...");
-			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.SERVERS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.SERVERS)) {
 				ddl.buildTable(DB.table_servers());
 			}
 			synchronizeSupportedServer(DB.persistor_servers());
 
 			/* Check for the necessary table Periods in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check periods table...");
-			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.PERIODS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.PERIODS)) {
 				ddl.buildTable(DB.table_periods());
 			}
 			synchronizeStandardPeriods(DB.persistor_periods());
 
 			/* Check for the necessary table Instruments in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check instruments table...");
-			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.INSTRUMENTS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.INSTRUMENTS)) {
 				ddl.buildTable(DB.table_instruments());
 			}
 
 			/* Check for the necessary table Tickers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check tickers table...");
-			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.TICKERS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.TICKERS)) {
 				ddl.buildTable(DB.table_tickers());
 			}
 
 			/* Check for the necessary table Statistics in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check statistics table...");
-			if (!ddl.existsTable(DB.SYSTEM_SCHEMA, DB.STATISTICS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.STATISTICS)) {
 				ddl.buildTable(DB.table_statistics());
 			}
 

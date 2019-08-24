@@ -183,7 +183,6 @@ public class ImageCanvas extends Canvas {
 				}
 				y1 += cellSize;
 			}
-
 		}
 	}
 

@@ -46,7 +46,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	/**
 	 * Cache factor: 0.5, removes half of the cache.
 	 */
-	private double cacheFactor = 0.5;
+	private double cacheFactor = 0.1;
 
 	/**
 	 * Constructor.
@@ -98,7 +98,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 * @param cacheFactor The cache factor.
 	 */
 	public void setCacheFactor(double cacheFactor) {
-		if (cacheFactor <= 0 || cacheFactor > 1) {
+		if (cacheFactor < 0 || cacheFactor > 1) {
 			throw new IllegalArgumentException();
 		}
 		this.cacheFactor = cacheFactor;
@@ -177,9 +177,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 * @return The list of keys to remove.
 	 */
 	private List<K> getRemoveKeys() {
-		int count = Double
-			.valueOf(Numbers.round(Double.valueOf(cacheSize) * cacheFactor, 0))
-			.intValue();
+		int count = Double.valueOf(Double.valueOf(cacheSize) * cacheFactor).intValue();
 		List<K> keys = new ArrayList<>();
 		Iterator<K> iterator = map.keySet().iterator();
 		while (keys.size() < count && iterator.hasNext()) {

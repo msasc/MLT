@@ -53,7 +53,16 @@ import app.mlt.plaf.db.fields.FieldTime;
 import app.mlt.plaf.db.fields.FieldTimeFmt;
 
 /**
- * Statistics built on a list of averages.
+ * Statistics built on a list of averages. Average statistics is the main source
+ * of data to train the networks to trade a financial product. Two main table
+ * are created:
+ * <ul>
+ * <li>
+ * <b>States</b> contains all the defined values to train the corresponding
+ * networks, either with supervised data or by reinforcement learning,
+ * normallized when necessary and described below.
+ * </li>
+ * </ul>
  *
  * @author Miquel Sas
  */

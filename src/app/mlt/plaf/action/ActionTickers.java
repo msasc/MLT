@@ -20,13 +20,9 @@ package app.mlt.plaf.action;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.sql.Date;
-import java.time.LocalDate;
 
 import javax.swing.Icon;
 
-import com.mlt.db.Condition;
-import com.mlt.db.Criteria;
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Order;
 import com.mlt.db.Persistor;
@@ -109,13 +105,8 @@ public class ActionTickers extends ActionRun {
 
 				ListPersistor persistor =
 					new ListPersistor(DB.persistor_data(instrument, period));
-
-				long timeLower = Date.valueOf(LocalDate.of(2018, 1, 1)).getTime();
-				long timeUpper = Date.valueOf(LocalDate.of(2018, 12, 31)).getTime();
-				Criteria criteria = new Criteria();
-				criteria.add(Condition.fieldGE(persistor.getField(0), new Value(timeLower)));
-				criteria.add(Condition.fieldLE(persistor.getField(0), new Value(timeUpper)));
-//				persistor.setGlobalCriteria(criteria);
+				persistor.setCacheSize(40000);
+				persistor.setPageSize(100);
 
 				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
 				model.addColumn(Fields.TIME_FMT);
@@ -138,7 +129,6 @@ public class ActionTickers extends ActionRun {
 				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
 
 				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
-
 				MLT.getStatusBar().removeProgress(key);
 
 			} catch (PersistorException exc) {
@@ -174,7 +164,9 @@ public class ActionTickers extends ActionRun {
 
 				ListPersistor persistor =
 					new ListPersistor(DB.persistor_data(instrument, period));
-				persistor.setCacheSize(50000);
+				persistor.setCacheSize(10000);
+				persistor.setCacheFactor(0.0);
+				persistor.setPageSize(100);
 
 				/* Build the plot data. */
 				DataInfo infoPrice = new PriceInfo(instrument, period);
@@ -183,17 +175,16 @@ public class ActionTickers extends ActionRun {
 				PlotData plotDataPrice = new PlotData();
 				plotDataPrice.add(price);
 
-				/* A smoothed WMA of 20 periods. */
-				IndicatorDataList wma20 =
-					IndicatorUtils.getSmoothedWeightedMovingAverage(price, Data.CLOSE,
-						Colors.DARKRED, 200, 5, 3, 3);
-//				plotDataPrice.add(wma20);
+				/* A smoothed WMA of 50 periods. */
+				IndicatorDataList wma50 = IndicatorUtils.getSmoothedWeightedMovingAverage(
+					price, Data.CLOSE, Colors.DARKRED, 50, 5, 5, 5);
+				plotDataPrice.add(wma50);
 
-				/* A smoothed WMA of 100 periods. */
-				IndicatorDataList wma100 =
-					IndicatorUtils.getSmoothedWeightedMovingAverage(price, Data.CLOSE,
-						Colors.DARKBLUE, 600, 5, 3, 3);
-//				plotDataPrice.add(wma100);
+				/* A smoothed WMA of 200 periods. */
+				IndicatorDataList wma200 =
+					IndicatorUtils.getSmoothedWeightedMovingAverage(
+						price, Data.CLOSE, Colors.DARKBLUE, 200, 20, 10, 5);
+				plotDataPrice.add(wma200);
 
 //				IndicatorDataList sma100 = IndicatorUtils.getSimpleMovingAverage(price, Data.CLOSE, Colors.DARKBLUE, 100);
 //				plotDataPrice.add(sma100);
@@ -264,7 +255,8 @@ public class ActionTickers extends ActionRun {
 				rcTicker.setValue(Fields.PERIOD_ID, vPeriodId);
 				rcTicker.setValue(Fields.TABLE_NAME, vTableName);
 				rcTicker.setValue(Fields.PERIOD_NAME, rcPeriod.getValue(Fields.PERIOD_NAME));
-				rcTicker.setValue(Fields.PERIOD_UNIT_INDEX, rcPeriod.getValue(Fields.PERIOD_UNIT_INDEX));
+				rcTicker.setValue(Fields.PERIOD_UNIT_INDEX,
+					rcPeriod.getValue(Fields.PERIOD_UNIT_INDEX));
 				rcTicker.setValue(Fields.PERIOD_SIZE, rcPeriod.getValue(Fields.PERIOD_SIZE));
 
 				/* Check already exists. */
@@ -306,7 +298,7 @@ public class ActionTickers extends ActionRun {
 				if (rcTicker == null) {
 					return;
 				}
-				
+
 				/* Ask. */
 				HTML msg = new HTML();
 				msg.startTag("h2");
@@ -321,7 +313,7 @@ public class ActionTickers extends ActionRun {
 				if (!Option.isOk(option)) {
 					return;
 				}
-				
+
 				/* Instrument. */
 				String instrumentId = rcTicker.getValue(Fields.INSTRUMENT_ID).toString();
 				Record rcInstrument = DB.record_instrument(instrumentId);
@@ -337,7 +329,7 @@ public class ActionTickers extends ActionRun {
 					return;
 				}
 				Period period = DB.to_period(rcPeriod);
-				
+
 				/* Drop table, delete ticker and refresh view. */
 				Table data = DB.table_data(instrument, period);
 				DB.ddl().dropTable(data);

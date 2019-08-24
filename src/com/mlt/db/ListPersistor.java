@@ -403,6 +403,14 @@ public class ListPersistor implements Persistor {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public long count(Criteria criteria) throws PersistorException {
+		return persistor.count(criteria);
+	}
+
+	/**
 	 * Count records before or after.
 	 * 
 	 * @param key  The key.
@@ -418,6 +426,42 @@ public class ListPersistor implements Persistor {
 			Logs.catching(exc);
 		}
 		return count;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int delete(Criteria criteria) throws PersistorException {
+		clearCache();
+		clearLimits();
+		return persistor.delete(criteria);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int delete(Record record) throws PersistorException {
+		clearCache();
+		clearLimits();
+		return persistor.delete(record);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean exists(OrderKey primaryKey) throws PersistorException {
+		return persistor.exists(primaryKey);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean exists(Record record) throws PersistorException {
+		return persistor.exists(record);
 	}
 
 	/**
@@ -476,6 +520,60 @@ public class ListPersistor implements Persistor {
 			return getCriteriaMove(key, Move.FORWARD);
 		}
 		return getCriteriaMove(key, Move.BACKWARD);
+	}
+
+	/*
+	 * Persistor implementation.
+	 */
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public PersistorDDL getDDL() {
+		return persistor.getDDL();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Record getDefaultRecord() {
+		return persistor.getDefaultRecord();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Field getField(int index) {
+		return persistor.getField(index);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Field getField(String alias) {
+		return getField(alias);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int getFieldCount() {
+		return persistor.getFieldCount();
+	}
+
+	@Override
+	public int getFieldIndex(String alias) {
+		return persistor.getFieldIndex(alias);
+	}
+
+	@Override
+	public FieldList getFieldList() {
+		return persistor.getFieldList();
 	}
 
 	/**
@@ -650,30 +748,19 @@ public class ListPersistor implements Persistor {
 	}
 
 	/**
-	 * Return the first record with the key, or null.
-	 * 
-	 * @param key The key.
-	 * @return The record or null.
+	 * {@inheritDoc}
 	 */
-	private Record getRecordByKey(OrderKey key) {
-		Record record = null;
-		try {
-			Criteria criteria = new Criteria();
-			for (int i = 0; i < order.size(); i++) {
-				Field field = order.getField(i);
-				Value value = key.getValue(i);
-				criteria.add(Condition.fieldEQ(field, value));
-			}
-			order.setAscending();
-			RecordIterator iter = persistor.iterator(criteria, order);
-			if (iter.hasNext()) {
-				record = iter.next();
-			}
-			iter.close();
-		} catch (PersistorException exc) {
-			Logs.catching(exc);
-		}
-		return record;
+	@Override
+	public Record getRecord(List<Value> primaryKeyValues) throws PersistorException {
+		return persistor.getRecord(primaryKeyValues);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Record getRecord(OrderKey primaryKey) throws PersistorException {
+		return persistor.getRecord(primaryKey);
 	}
 
 	/**
@@ -705,6 +792,91 @@ public class ListPersistor implements Persistor {
 			Logs.catching(exc);
 		}
 		return record;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Record getRecord(Value... primaryKeyValues) throws PersistorException {
+		return persistor.getRecord(primaryKeyValues);
+	}
+
+	/**
+	 * Return the first record with the key, or null.
+	 * 
+	 * @param key The key.
+	 * @return The record or null.
+	 */
+	private Record getRecordByKey(OrderKey key) {
+		Record record = null;
+		try {
+			Criteria criteria = new Criteria();
+			for (int i = 0; i < order.size(); i++) {
+				Field field = order.getField(i);
+				Value value = key.getValue(i);
+				criteria.add(Condition.fieldEQ(field, value));
+			}
+			order.setAscending();
+			RecordIterator iter = persistor.iterator(criteria, order);
+			if (iter.hasNext()) {
+				record = iter.next();
+			}
+			iter.close();
+		} catch (PersistorException exc) {
+			Logs.catching(exc);
+		}
+		return record;
+	}
+
+	/*
+	 * Persistor implementation.
+	 */
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Transaction getTransaction() {
+		return persistor.getTransaction();
+	}
+
+	/*
+	 * Persistor implementation.
+	 */
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public View getView() {
+		return persistor.getView();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int insert(Record record) throws PersistorException {
+		clearCache();
+		clearLimits();
+		return persistor.insert(record);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public RecordIterator iterator(Criteria criteria) throws PersistorException {
+		return persistor.iterator(criteria);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public RecordIterator iterator(Criteria criteria, Order order) throws PersistorException {
+		return persistor.iterator(criteria, order);
 	}
 
 	/**
@@ -751,6 +923,99 @@ public class ListPersistor implements Persistor {
 		} catch (PersistorException exc) {
 			Logs.catching(exc);
 		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public ValueMap max(Criteria criteria, int... indexes) throws PersistorException {
+		return persistor.max(criteria, indexes);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public ValueMap max(Criteria criteria, String... aliases) throws PersistorException {
+		return persistor.max(criteria, aliases);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public ValueMap min(Criteria criteria, int... indexes) throws PersistorException {
+		return persistor.min(criteria, indexes);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public ValueMap min(Criteria criteria, String... aliases) throws PersistorException {
+		return persistor.min(criteria, aliases);
+	}
+
+	/*
+	 * Persistor implementation.
+	 */
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean refresh(Record record) throws PersistorException {
+		clearCache();
+		clearLimits();
+		return persistor.refresh(record);
+	}
+
+	/*
+	 * Persistor implementation.
+	 */
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int save(Record record) throws PersistorException {
+		clearCache();
+		clearLimits();
+		return persistor.save(record);
+	}
+
+	/*
+	 * Persistor implementation.
+	 */
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public RecordSet select(Criteria criteria) throws PersistorException {
+		return persistor.select(criteria);
+	}
+
+	/*
+	 * Persistor implementation.
+	 */
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public RecordSet select(Criteria criteria, Order order) throws PersistorException {
+		return persistor.select(criteria, order);
+	}
+
+	/**
+	 * Set the cache factor.
+	 * 
+	 * @param size The size.
+	 */
+	public void setCacheFactor(double factor) {
+		mapRecords.setCacheFactor(factor);
 	}
 
 	/**
@@ -825,234 +1090,6 @@ public class ListPersistor implements Persistor {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public PersistorDDL getDDL() {
-		return persistor.getDDL();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Transaction getTransaction() {
-		return persistor.getTransaction();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public View getView() {
-		return persistor.getView();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Record getDefaultRecord() {
-		return persistor.getDefaultRecord();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Record getRecord(OrderKey primaryKey) throws PersistorException {
-		return persistor.getRecord(primaryKey);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Record getRecord(List<Value> primaryKeyValues) throws PersistorException {
-		return persistor.getRecord(primaryKeyValues);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Record getRecord(Value... primaryKeyValues) throws PersistorException {
-		return persistor.getRecord(primaryKeyValues);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public int getFieldCount() {
-		return persistor.getFieldCount();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Field getField(int index) {
-		return persistor.getField(index);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Field getField(String alias) {
-		return getField(alias);
-	}
-
-	@Override
-	public int getFieldIndex(String alias) {
-		return persistor.getFieldIndex(alias);
-	}
-
-	@Override
-	public FieldList getFieldList() {
-		return persistor.getFieldList();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public long count(Criteria criteria) throws PersistorException {
-		return persistor.count(criteria);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public int delete(Criteria criteria) throws PersistorException {
-		clearCache();
-		clearLimits();
-		return persistor.delete(criteria);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public int delete(Record record) throws PersistorException {
-		clearCache();
-		clearLimits();
-		return persistor.delete(record);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public boolean exists(Record record) throws PersistorException {
-		return persistor.exists(record);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public boolean exists(OrderKey primaryKey) throws PersistorException {
-		return persistor.exists(primaryKey);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public boolean refresh(Record record) throws PersistorException {
-		clearCache();
-		clearLimits();
-		return persistor.refresh(record);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public int insert(Record record) throws PersistorException {
-		clearCache();
-		clearLimits();
-		return persistor.insert(record);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public RecordIterator iterator(Criteria criteria) throws PersistorException {
-		return persistor.iterator(criteria);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public RecordIterator iterator(Criteria criteria, Order order) throws PersistorException {
-		return persistor.iterator(criteria, order);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public ValueMap max(Criteria criteria, int... indexes) throws PersistorException {
-		return persistor.max(criteria, indexes);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public ValueMap max(Criteria criteria, String... aliases) throws PersistorException {
-		return persistor.max(criteria, aliases);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public ValueMap min(Criteria criteria, int... indexes) throws PersistorException {
-		return persistor.min(criteria, indexes);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public ValueMap min(Criteria criteria, String... aliases) throws PersistorException {
-		return persistor.min(criteria, aliases);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public int save(Record record) throws PersistorException {
-		clearCache();
-		clearLimits();
-		return persistor.save(record);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public RecordSet select(Criteria criteria) throws PersistorException {
-		return persistor.select(criteria);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public RecordSet select(Criteria criteria, Order order) throws PersistorException {
-		return persistor.select(criteria, order);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	public ValueMap sum(Criteria criteria, int... indexes) throws PersistorException {
 		return persistor.sum(criteria, indexes);
 	}
@@ -1069,19 +1106,19 @@ public class ListPersistor implements Persistor {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public int update(Record record) throws PersistorException {
+	public int update(Criteria criteria, ValueMap map) throws PersistorException {
 		clearCache();
 		clearLimits();
-		return persistor.update(record);
+		return persistor.update(criteria, map);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public int update(Criteria criteria, ValueMap map) throws PersistorException {
+	public int update(Record record) throws PersistorException {
 		clearCache();
 		clearLimits();
-		return persistor.update(criteria, map);
+		return persistor.update(record);
 	}
 }

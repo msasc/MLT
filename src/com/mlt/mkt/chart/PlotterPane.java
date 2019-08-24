@@ -15,6 +15,7 @@ package com.mlt.mkt.chart;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -34,6 +35,7 @@ import com.mlt.desktop.layout.Insets;
 import com.mlt.mkt.chart.plotter.DataPlotter;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.DataList;
+import com.mlt.mkt.data.IndicatorDataList;
 import com.mlt.mkt.data.PlotData;
 import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.util.Colors;
@@ -229,16 +231,40 @@ public class PlotterPane extends BorderPane {
 		if (!gc.isImmediateRepaint()) {
 			List<DataList> dataLists = plotData.getDataLists();
 			dataLists.forEach(dataList -> dataList.setContext(dc));
+			
+			/* Separate non indicator lists. */
+			List<DataList> indicators = new ArrayList<>();
+			List<DataList> notIndicators = new ArrayList<>();
+			for (DataList dataList : dataLists) {
+				if (dataList instanceof IndicatorDataList) {
+					indicators.add(dataList);
+				} else {
+					notIndicators.add(dataList);
+				}
+			}			
+			
 			gc.clear(Colors.WHITESMOKE);
 			int startIndex = plotData.getStartIndex();
 			int endIndex = plotData.getEndIndex();
-			for (DataList dataList : plotData.getDataLists()) {
+			
+			/* Plot not indicators. */
+			for (DataList dataList : notIndicators) {
 				if (dataList.isPlot()) {
 					for (DataPlotter plotter : dataList.getDataPlotters()) {
 						plotter.plot(gc, dataList, startIndex, endIndex);
 					}
 				}
 			}
+			
+			/* Plot indicators. */
+			for (DataList dataList : indicators) {
+				if (dataList.isPlot()) {
+					for (DataPlotter plotter : dataList.getDataPlotters()) {
+						plotter.plot(gc, dataList, startIndex, endIndex);
+					}
+				}
+			}
+			
 			cursor.clearSave();
 			setInfo();
 		}
@@ -252,6 +278,8 @@ public class PlotterPane extends BorderPane {
 				cursor.restore(gc);
 			}
 		}
+		
+		gc.flush();
 	}
 
 	/**

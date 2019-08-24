@@ -61,6 +61,8 @@ public abstract class Canvas extends Control {
 		private Paint background;
 		/** List of saved rendering hints. */
 		private List<Hint> hints = new ArrayList<>();
+		/** A boolean that indicates whether the image has been flushed. */
+		private boolean flushed = false;
 
 		/**
 		 * A boolean that indicates whether the context is used in an immediate repaint.
@@ -149,7 +151,10 @@ public abstract class Canvas extends Control {
 		 * Flush this buffered graphics context to the underlying canvas.
 		 */
 		public void flush() {
-			parent.drawImage(getImage(), 0, 0, null);
+			if (!flushed) {
+				parent.drawImage(getImage(), 0, 0, null);
+			}
+			flushed = true;
 		}
 
 		/**
@@ -259,7 +264,8 @@ public abstract class Canvas extends Control {
 			if (sz.getWidth() == 0 || sz.getHeight() == 0) {
 				sz = new Dimension(1.0, 1.0);
 			}
-			if (img == null || g2d == null || img.getWidth() < sz.getWidth() || img.getHeight() < sz.getHeight()) {
+			if (img == null || g2d == null || img.getWidth() < sz.getWidth()
+				|| img.getHeight() < sz.getHeight()) {
 
 				int width = (int) Numbers.round(sz.getWidth(), 0);
 				int height = (int) Numbers.round(sz.getHeight(), 0);
@@ -270,6 +276,7 @@ public abstract class Canvas extends Control {
 				}
 				g2d = img.createGraphics();
 			}
+			flushed = false;
 		}
 
 		/**

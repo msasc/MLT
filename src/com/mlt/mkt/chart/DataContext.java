@@ -1,15 +1,18 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
- * <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.chart;
 
@@ -21,9 +24,10 @@ import com.mlt.mkt.data.PlotScale;
 import com.mlt.util.Numbers;
 
 /**
- * Plot data context information. Plot data is displayed through a chart plotter that has an information bar, a vertical
- * axis, and a center canvas where prices, volumes, indicators and other drawings are displayed. Plot data must be
- * contextualized to be able to map coordinates to data.
+ * Plot data context information. Plot data is displayed through a chart plotter
+ * that has an information bar, a vertical axis, and a center canvas where
+ * prices, volumes, indicators and other drawings are displayed. Plot data must
+ * be contextualized to be able to map coordinates to data.
  *
  * @author Miquel Sas
  */
@@ -37,13 +41,15 @@ public class DataContext {
 	private Rectangle bounds;
 
 	/**
-	 * The width of a period. This is the visible width per period. Bars, candles or histogram bars are centered on it.
+	 * The width of a period. This is the visible width per period. Bars, candles or
+	 * histogram bars are centered on it.
 	 */
 	private double periodWidth;
 	/** Minimum period width to set the data width to 1. */
 	private double minimumPeriodWidth = 4;
 	/** A boolean that indicates if the context has been initialized. */
 	private boolean initialized = false;
+
 	/**
 	 * Constructor.
 	 *
@@ -108,8 +114,9 @@ public class DataContext {
 		bounds = new Rectangle(x, y, width, height);
 
 		/*
-		 * Available width per data item. As a general rule, it can be 75% of the available width per bar, as an odd
-		 * number, and if the result is less than 2, plot just a vertical line of 1 pixel width.
+		 * Available width per data item. As a general rule, it can be 75% of the
+		 * available width per bar, as an odd number, and if the result is less than 2,
+		 * plot just a vertical line of 1 pixel width.
 		 */
 		int startIndex = plotData.getStartIndex();
 		int endIndex = plotData.getEndIndex();
@@ -119,8 +126,8 @@ public class DataContext {
 	}
 
 	/**
-	 * Returns the coordinate of the drawing center for a bar, candle, line or histogram, given the starting X
-	 * coordinate.
+	 * Returns the coordinate of the drawing center for a bar, candle, line or
+	 * histogram, given the starting X coordinate.
 	 *
 	 * @param x The starting x coordinate.
 	 * @return The vertical line X coordinate.
@@ -149,7 +156,8 @@ public class DataContext {
 	}
 
 	/**
-	 * Returns the Y coordinate, starting at the top of the paint area, given the value.
+	 * Returns the Y coordinate, starting at the top of the paint area, given the
+	 * value.
 	 *
 	 * @param value The value to retrieve its Y coordinate.
 	 * @return The Y coordinate for the argument value.

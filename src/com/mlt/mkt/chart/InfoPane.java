@@ -143,8 +143,7 @@ public class InfoPane extends GridBagPane {
 		
 		setSizes(chart.getContainer().getSize().getWidth());
 		
-		gc.setBackground(getBackground());
-		gc.clear();
+		gc.clear(getBackground());
 
 		Line hline = new Line(0, gc.getHeight(), gc.getWidth(), gc.getHeight());
 		hline.setDrawPaint(lineColor);

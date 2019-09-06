@@ -76,7 +76,7 @@ public class ImageCanvas extends Canvas {
 	protected void paintCanvas(Context gc) {
 
 		/* Clear background. */
-		gc.clear();
+		gc.clear(getBackground());
 
 		/* Images still not loaded. */
 		if (image == null) {

@@ -105,6 +105,14 @@ public class Fields {
 	public static final String STATISTICS_ID = "stats_id";
 	public static final String STATISTICS_CLASS = "stats_class";
 	public static final String STATISTICS_PARAMS = "stats_params";
+	
+	/*
+	 * Averages type, period and smooths.
+	 */
+	
+	public static final String AVERAGE_TYPE = "avg_type";
+	public static final String AVERAGE_PERIOD = "avg_period";
+	public static final String AVERAGE_SMOOTHS = "avg_smooths";
 
 	/**
 	 * Returns the field header for an average.

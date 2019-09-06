@@ -53,10 +53,10 @@ import app.mlt.plaf.db.Fields;
 public class ActionStatistics extends ActionRun {
 
 	/**
-	 * 
+	 * Constructor.
 	 */
 	public ActionStatistics() {
-		// TODO Auto-generated constructor stub
+		super();
 	}
 	
 	/**

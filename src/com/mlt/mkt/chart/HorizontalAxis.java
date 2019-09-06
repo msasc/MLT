@@ -156,7 +156,7 @@ class HorizontalAxis extends GridBagPane {
 				cursor.restore(gc);
 			}
 		} else {
-			gc.clear();
+			gc.clear(getBackground());
 			plotAxis(gc);
 			cursor.clearSave();
 		}

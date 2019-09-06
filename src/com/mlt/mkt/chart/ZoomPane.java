@@ -76,7 +76,7 @@ public class ZoomPane extends GridBagPane {
 		if (charts.isEmpty()) {
 			return;
 		}
-		gc.clear();
+		gc.clear(getBackground());
 
 		PlotData pd = charts.get(0).getDataContext().getPlotData();
 		double minIndex = pd.getMinimumIndex();

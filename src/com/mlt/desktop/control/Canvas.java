@@ -57,13 +57,8 @@ public abstract class Canvas extends Control {
 		private Graphics2D g2d;
 		/** The parent graphics. */
 		private Graphics2D parent;
-		/** Background paint. */
-		private Paint background;
 		/** List of saved rendering hints. */
 		private List<Hint> hints = new ArrayList<>();
-		/** A boolean that indicates whether the image has been flushed. */
-		private boolean flushed = false;
-
 		/**
 		 * A boolean that indicates whether the context is used in an immediate repaint.
 		 */
@@ -75,13 +70,6 @@ public abstract class Canvas extends Control {
 		public Context() {
 			super();
 			refresh();
-		}
-
-		/**
-		 * Clear this canvas with the default background color.
-		 */
-		public void clear() {
-			clear(getBackground());
 		}
 
 		/**
@@ -146,27 +134,12 @@ public abstract class Canvas extends Control {
 			g2d.fill(drawing.getShape());
 			restoreHints();
 		}
-
+		
 		/**
-		 * Flush this buffered graphics context to the underlying canvas.
+		 * Flush the content.
 		 */
-		public void flush() {
-			if (!flushed) {
-				parent.drawImage(getImage(), 0, 0, null);
-			}
-			flushed = true;
-		}
-
-		/**
-		 * Return the component background color.
-		 *
-		 * @return The component background color.
-		 */
-		public Paint getBackground() {
-			if (background == null) {
-				background = Canvas.this.getBackground();
-			}
-			return background;
+		private void flush() {
+			parent.drawImage(gc.img, 0, 0, null);
 		}
 
 		/**
@@ -197,26 +170,6 @@ public abstract class Canvas extends Control {
 		}
 
 		/**
-		 * Returns the image to be applied.
-		 *
-		 * @return The sub-image.
-		 */
-		public BufferedImage getImage() {
-			int width = (int) Numbers.round(getSize().getWidth(), 0);
-			int height = (int) Numbers.round(getSize().getHeight(), 0);
-			return img.getSubimage(0, 0, width, height);
-		}
-
-		/**
-		 * Return this context rendering hints.
-		 *
-		 * @return The rendering hints.
-		 */
-		public RenderingHints getRenderingHints() {
-			return g2d.getRenderingHints();
-		}
-
-		/**
 		 * Return the pixel at.
 		 *
 		 * @param x x coord.
@@ -225,15 +178,6 @@ public abstract class Canvas extends Control {
 		 */
 		public int getRGB(int x, int y) {
 			return img.getRGB(x, y);
-		}
-
-		/**
-		 * Return the dimension of the drawing area.
-		 *
-		 * @return
-		 */
-		public Dimension getSize() {
-			return Canvas.this.getSize();
 		}
 
 		/**
@@ -264,8 +208,10 @@ public abstract class Canvas extends Control {
 			if (sz.getWidth() == 0 || sz.getHeight() == 0) {
 				sz = new Dimension(1.0, 1.0);
 			}
-			if (img == null || g2d == null || img.getWidth() < sz.getWidth()
-				|| img.getHeight() < sz.getHeight()) {
+			if (img == null ||
+				g2d == null ||
+				img.getWidth() < sz.getWidth() ||
+				img.getHeight() < sz.getHeight()) {
 
 				int width = (int) Numbers.round(sz.getWidth(), 0);
 				int height = (int) Numbers.round(sz.getHeight(), 0);
@@ -276,16 +222,6 @@ public abstract class Canvas extends Control {
 				}
 				g2d = img.createGraphics();
 			}
-			flushed = false;
-		}
-
-		/**
-		 * Set the background to clear.
-		 *
-		 * @param background The background.
-		 */
-		public void setBackground(Paint background) {
-			this.background = background;
 		}
 
 		/**
@@ -309,7 +245,7 @@ public abstract class Canvas extends Control {
 	/**
 	 * Internal canvas pane.
 	 */
-	public class CanvasPane extends JPanel {
+	private class CanvasPane extends JPanel {
 
 		/**
 		 * {@inheritDoc}

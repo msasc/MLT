@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.chart;
@@ -42,7 +47,8 @@ import com.mlt.util.Colors;
 import com.mlt.util.Formats;
 
 /**
- * The pane that effectively plots charts. Has an info pane, a vertical axis and the center chart plotter.
+ * The pane that effectively plots charts. Has an info pane, a vertical axis and
+ * the center chart plotter.
  *
  * @author Miquel Sas
  */
@@ -57,7 +63,6 @@ public class PlotterPane extends BorderPane {
 	 * Plot canvas.
 	 */
 	class PlotCanvas extends Canvas {
-
 		@Override
 		protected void paintCanvas(Canvas.Context gc) {
 			plot(gc);
@@ -89,7 +94,8 @@ public class PlotterPane extends BorderPane {
 	/** Cursor. */
 	private Render cursor;
 	/** Cursor stroke. */
-	private Stroke cursorStroke = new Stroke(1.0, Stroke.CAP_BUTT, Stroke.JOIN_MITER, 1, new double[] { 2 }, 0);
+	private Stroke cursorStroke =
+		new Stroke(1.0, Stroke.CAP_BUTT, Stroke.JOIN_MITER, 1, new double[] { 2 }, 0);
 	/** Cursor line color. */
 	private Color cursorColor = Colors.DARKGRAY;
 
@@ -126,7 +132,8 @@ public class PlotterPane extends BorderPane {
 		setRight(verticalAxis);
 
 		/*
-		 * Cursor, vertical and horizontal lines throw a rendering object to save the underlying canvas.
+		 * Cursor, vertical and horizontal lines throw a rendering object to save the
+		 * underlying canvas.
 		 */
 		cursor = new Render();
 		cursor.add(new Composition("HLINE"));
@@ -231,40 +238,40 @@ public class PlotterPane extends BorderPane {
 		if (!gc.isImmediateRepaint()) {
 			List<DataList> dataLists = plotData.getDataLists();
 			dataLists.forEach(dataList -> dataList.setContext(dc));
-			
+
 			/* Separate non indicator lists. */
 			List<DataList> indicators = new ArrayList<>();
 			List<DataList> notIndicators = new ArrayList<>();
 			for (DataList dataList : dataLists) {
 				if (dataList instanceof IndicatorDataList) {
-					indicators.add(dataList);
+					if (dataList.isPlot()) {
+						indicators.add(dataList);
+					}
 				} else {
-					notIndicators.add(dataList);
+					if (dataList.isPlot()) {
+						notIndicators.add(dataList);
+					}
 				}
-			}			
-			
+			}
+
 			gc.clear(Colors.WHITESMOKE);
 			int startIndex = plotData.getStartIndex();
 			int endIndex = plotData.getEndIndex();
-			
+
 			/* Plot not indicators. */
 			for (DataList dataList : notIndicators) {
-				if (dataList.isPlot()) {
-					for (DataPlotter plotter : dataList.getDataPlotters()) {
-						plotter.plot(gc, dataList, startIndex, endIndex);
-					}
+				for (DataPlotter plotter : dataList.getDataPlotters()) {
+					plotter.plot(gc, dataList, startIndex, endIndex);
 				}
 			}
-			
+
 			/* Plot indicators. */
 			for (DataList dataList : indicators) {
-				if (dataList.isPlot()) {
-					for (DataPlotter plotter : dataList.getDataPlotters()) {
-						plotter.plot(gc, dataList, startIndex, endIndex);
-					}
+				for (DataPlotter plotter : dataList.getDataPlotters()) {
+					plotter.plot(gc, dataList, startIndex, endIndex);
 				}
 			}
-			
+
 			cursor.clearSave();
 			setInfo();
 		}
@@ -278,8 +285,7 @@ public class PlotterPane extends BorderPane {
 				cursor.restore(gc);
 			}
 		}
-		
-		gc.flush();
+
 	}
 
 	/**
@@ -319,7 +325,8 @@ public class PlotterPane extends BorderPane {
 	}
 
 	/**
-	 * Set the cursor value, repainting the horizontal and vertical cursor lines, and painting the cursor value on the
+	 * Set the cursor value, repainting the horizontal and vertical cursor lines,
+	 * and painting the cursor value on the
 	 * vertical axis.
 	 *
 	 * @param x The mouse x.

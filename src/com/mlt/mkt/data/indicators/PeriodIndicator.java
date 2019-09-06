@@ -1,15 +1,18 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
- * <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.data.indicators;
 
@@ -42,7 +45,8 @@ import com.mlt.util.Vector;
 public abstract class PeriodIndicator extends Indicator {
 
 	/**
-	 * Returns the EMA data calculated from the begining to the argument index, when index is less that period.
+	 * Returns the EMA data calculated from the begining to the argument index, when
+	 * index is less that period.
 	 * 
 	 * @param ma               The MA indicator.
 	 * @param index            The index to calculate.
@@ -51,7 +55,8 @@ public abstract class PeriodIndicator extends Indicator {
 	 * @return The data element.
 	 */
 	public static Data getEMA(
-		PeriodIndicator ma, int index,
+		PeriodIndicator ma,
+		int index,
 		List<IndicatorSource> indicatorSources,
 		DataList indicatorData) {
 
@@ -64,8 +69,10 @@ public abstract class PeriodIndicator extends Indicator {
 			return getSMA(ma, index, indicatorSources, indicatorData);
 		}
 
-		// Improved performance calculation retrieving from the last calculated average the first value of the series
-		// (divided by the period) and adding the new value of the series (also divided bythe period).
+		// Improved performance calculation retrieving from the last calculated average
+		// the first value of the series
+		// (divided by the period) and adding the new value of the series (also divided
+		// bythe period).
 		double[] averages = new double[numIndexes];
 		Arrays.fill(averages, 0);
 		int averageIndex = 0;
@@ -94,7 +101,8 @@ public abstract class PeriodIndicator extends Indicator {
 	}
 
 	/**
-	 * Returns the SMA data calculated from the begining to the argument index, when index is less that period.
+	 * Returns the SMA data calculated from the begining to the argument index, when
+	 * index is less that period.
 	 * 
 	 * @param ma               The MA indicator.
 	 * @param index            The index to calculate.
@@ -102,13 +110,17 @@ public abstract class PeriodIndicator extends Indicator {
 	 * @param indicatorData    The already indicator calculated data.
 	 * @return The data element.
 	 */
-	public static Data getSMA(PeriodIndicator ma, int index, List<IndicatorSource> indicatorSources,
+	public static Data getSMA(
+		PeriodIndicator ma,
+		int index,
+		List<IndicatorSource> indicatorSources,
 		DataList indicatorData) {
 		return getSMA(ma, index, indicatorSources, indicatorData, false);
 	}
 
 	/**
-	 * Returns the SMA data calculated from the begining to the argument index, when index is less that period.
+	 * Returns the SMA data calculated from the begining to the argument index, when
+	 * index is less that period.
 	 * 
 	 * @param ma               The MA indicator.
 	 * @param index            The index to calculate.
@@ -117,8 +129,12 @@ public abstract class PeriodIndicator extends Indicator {
 	 * @param optimize         A boolean that indicates whether to optimize.
 	 * @return The data element.
 	 */
-	public static Data getSMA(PeriodIndicator ma, int index, List<IndicatorSource> indicatorSources,
-		DataList indicatorData, boolean optimize) {
+	public static Data getSMA(
+		PeriodIndicator ma,
+		int index,
+		List<IndicatorSource> indicatorSources,
+		DataList indicatorData,
+		boolean optimize) {
 
 		// Num indexes and period.
 		int numIndexes = ma.getNumIndexes();
@@ -146,7 +162,8 @@ public abstract class PeriodIndicator extends Indicator {
 						DataList dataList = source.getDataList();
 						List<Integer> indexes = source.getIndexes();
 						for (Integer dataIndex : indexes) {
-							delAvgs[averageIndex] = dataList.get(deleteIndex).getValue(dataIndex) / divisor;
+							delAvgs[averageIndex] =
+								dataList.get(deleteIndex).getValue(dataIndex) / divisor;
 							averageIndex++;
 						}
 					}
@@ -165,7 +182,8 @@ public abstract class PeriodIndicator extends Indicator {
 						DataList dataList = source.getDataList();
 						List<Integer> indexes = source.getIndexes();
 						for (Integer dataIndex : indexes) {
-							addAvgs[averageIndex] = dataList.get(index).getValue(dataIndex) / divisor;
+							addAvgs[averageIndex] =
+								dataList.get(index).getValue(dataIndex) / divisor;
 							averageIndex++;
 						}
 					}
@@ -207,7 +225,8 @@ public abstract class PeriodIndicator extends Indicator {
 	}
 
 	/**
-	 * Returns the WMA data calculated from the begining to the argument index, when index is less that period.
+	 * Returns the WMA data calculated from the begining to the argument index, when
+	 * index is less that period.
 	 * 
 	 * @param ma               The MA indicator.
 	 * @param index            The index to calculate.
@@ -215,7 +234,10 @@ public abstract class PeriodIndicator extends Indicator {
 	 * @param indicatorData    The already indicator calculated data.
 	 * @return The data element.
 	 */
-	public static Data getWMA(PeriodIndicator ma, int index, List<IndicatorSource> indicatorSources,
+	public static Data getWMA(
+		PeriodIndicator ma,
+		int index,
+		List<IndicatorSource> indicatorSources,
 		DataList indicatorData) {
 
 		// Num indexes and period.
@@ -306,7 +328,8 @@ public abstract class PeriodIndicator extends Indicator {
 	}
 
 	/**
-	 * Called before starting calculations to give the indicator the opportunity to initialize any internal res.
+	 * Called before starting calculations to give the indicator the opportunity to
+	 * initialize any internal res.
 	 * 
 	 * @param indicatorSources The list of indicator sources.
 	 */
@@ -345,9 +368,11 @@ public abstract class PeriodIndicator extends Indicator {
 	}
 
 	/**
-	 * Calculates the indicator data at the given index, for the list of indicator sources.
+	 * Calculates the indicator data at the given index, for the list of indicator
+	 * sources.
 	 * <p>
-	 * This indicator already calculated data is passed as a parameter because some indicators may need previous
+	 * This indicator already calculated data is passed as a parameter because some
+	 * indicators may need previous
 	 * calculated values or use them to improve calculation performance.
 	 * 
 	 * @param index            The data index.
@@ -356,7 +381,10 @@ public abstract class PeriodIndicator extends Indicator {
 	 * @return The result data.
 	 */
 	@Override
-	public abstract Data calculate(int index, List<IndicatorSource> indicatorSources, DataList indicatorData);
+	public abstract Data calculate(
+		int index,
+		List<IndicatorSource> indicatorSources,
+		DataList indicatorData);
 
 	/**
 	 * Returns the source data.

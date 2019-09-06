@@ -156,7 +156,7 @@ class VerticalAxis extends GridBagPane {
 				cursor.restore(gc);
 			}
 		} else {
-			gc.clear();
+			gc.clear(getBackground());
 			plotScale(gc);
 			cursor.clearSave();
 		}

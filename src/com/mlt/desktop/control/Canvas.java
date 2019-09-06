@@ -67,9 +67,8 @@ public abstract class Canvas extends Control {
 		/**
 		 * Constructor.
 		 */
-		public Context() {
+		private Context() {
 			super();
-			refresh();
 		}
 
 		/**
@@ -205,9 +204,6 @@ public abstract class Canvas extends Control {
 		 */
 		private void refresh() {
 			Dimension sz = getSize();
-			if (sz.getWidth() == 0 || sz.getHeight() == 0) {
-				sz = new Dimension(1.0, 1.0);
-			}
 			if (img == null ||
 				g2d == null ||
 				img.getWidth() < sz.getWidth() ||
@@ -215,11 +211,7 @@ public abstract class Canvas extends Control {
 
 				int width = (int) Numbers.round(sz.getWidth(), 0);
 				int height = (int) Numbers.round(sz.getHeight(), 0);
-				if (parent != null) {
-					img = parent.getDeviceConfiguration().createCompatibleImage(width, height);
-				} else {
-					img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-				}
+				img = parent.getDeviceConfiguration().createCompatibleImage(width, height);
 				g2d = img.createGraphics();
 			}
 		}

@@ -146,7 +146,6 @@ class VerticalAxis extends GridBagPane {
 	 */
 	private void plot(Canvas.Context gc) {
 		chart.getDataContext().ensureContext();
-		setSizes();
 
 		if (gc.isImmediateRepaint()) {
 			if (cursorOperation == ChartContainer.CURSOR_PLOT) {
@@ -343,6 +342,7 @@ class VerticalAxis extends GridBagPane {
 	 */
 	public void setAxisWidth(double axisWidth) {
 		this.axisWidth = axisWidth;
+		setSizes();
 	}
 
 	/**

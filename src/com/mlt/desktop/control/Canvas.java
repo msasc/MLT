@@ -45,24 +45,39 @@ import com.mlt.util.Numbers;
 public abstract class Canvas extends Control {
 
 	/**
+	 * Internal canvas pane.
+	 */
+	private class CanvasPane extends JPanel {
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void paint(Graphics g) {
+			gc.parent = (Graphics2D) g;
+			gc.refresh();
+			paintCanvas(gc);
+			gc.flush();
+			paintBorder(g);
+		}
+	}
+
+	/**
 	 * The graphics contexts to paint on a <em>Canvas</em>.
 	 *
 	 * @author Miquel Sas
 	 */
 	public class Context {
 
-		/** The buffered image used to paint on. */
-		private BufferedImage img;
 		/** The graphics object. */
 		private Graphics2D g2d;
-		/** The parent graphics. */
-		private Graphics2D parent;
 		/** List of saved rendering hints. */
 		private List<Hint> hints = new ArrayList<>();
-		/**
-		 * A boolean that indicates whether the context is used in an immediate repaint.
-		 */
+		/** The buffered image used to paint on. */
+		private BufferedImage img;
+		/** Indicates whether the context is used in an immediate repaint. */
 		private boolean immediateRepaint = false;
+		/** The parent graphics. */
+		private Graphics2D parent;
 
 		/**
 		 * Constructor.
@@ -80,33 +95,6 @@ public abstract class Canvas extends Control {
 			Rectangle rect = new Rectangle(0, 0, getWidth(), getHeight());
 			rect.setFillPaint(paint);
 			fill(rect);
-		}
-
-		/**
-		 * Restore the save hints.
-		 */
-		private void restoreHints() {
-			for (Hint hint : hints) {
-				g2d.setRenderingHint(hint.getKey(), hint.getValue());
-			}
-			hints.clear();
-		}
-
-		/**
-		 * Save the current rendering hints and set the argument ones.
-		 * 
-		 * @param drawingHints The drawing hints.
-		 */
-		private void saveAntSetHints(List<Hint> drawingHints) {
-			if (!drawingHints.isEmpty()) {
-				hints.clear();
-				for (Hint hint : drawingHints) {
-					RenderingHints.Key key = hint.getKey();
-					Object value = g2d.getRenderingHint(key);
-					hints.add(new Hint(key, value));
-					g2d.setRenderingHint(key, hint.getValue());
-				}
-			}
 		}
 
 		/**
@@ -133,7 +121,7 @@ public abstract class Canvas extends Control {
 			g2d.fill(drawing.getShape());
 			restoreHints();
 		}
-		
+
 		/**
 		 * Flush the content.
 		 */
@@ -217,6 +205,33 @@ public abstract class Canvas extends Control {
 		}
 
 		/**
+		 * Restore the save hints.
+		 */
+		private void restoreHints() {
+			for (Hint hint : hints) {
+				g2d.setRenderingHint(hint.getKey(), hint.getValue());
+			}
+			hints.clear();
+		}
+
+		/**
+		 * Save the current rendering hints and set the argument ones.
+		 * 
+		 * @param drawingHints The drawing hints.
+		 */
+		private void saveAntSetHints(List<Hint> drawingHints) {
+			if (!drawingHints.isEmpty()) {
+				hints.clear();
+				for (Hint hint : drawingHints) {
+					RenderingHints.Key key = hint.getKey();
+					Object value = g2d.getRenderingHint(key);
+					hints.add(new Hint(key, value));
+					g2d.setRenderingHint(key, hint.getValue());
+				}
+			}
+		}
+
+		/**
 		 * Set the pixel color.
 		 *
 		 * @param x   x coord.
@@ -233,25 +248,6 @@ public abstract class Canvas extends Control {
 	public static final int JOIN_MITER = BasicStroke.JOIN_MITER;
 	/** Shortcut to BasicStroke.JOIN_ROUND. */
 	public static final int JOIN_ROUND = BasicStroke.JOIN_ROUND;
-
-	/**
-	 * Internal canvas pane.
-	 */
-	private class CanvasPane extends JPanel {
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public void paint(Graphics g) {
-			gc.parent = (Graphics2D) g;
-			gc.refresh();
-			paintCanvas(gc);
-			gc.flush();
-			paintBorder(g);
-		}
-	}
-
 	/** The canvas context used to paint. */
 	private Context gc;
 

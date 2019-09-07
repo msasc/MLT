@@ -20,7 +20,6 @@ package app.mlt.plaf.action;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.util.List;
 
 import javax.swing.Icon;
 
@@ -176,15 +175,15 @@ public class ActionTickers extends ActionRun {
 				PlotData plotDataPrice = new PlotData();
 				plotDataPrice.add(price);
 
-				IndicatorDataList wma50 = IndicatorUtils.getSmoothedWeightedMovingAverage(
+				IndicatorDataList wma50 = IndicatorUtils.getSmoothedSimpleMovingAverage(
 					price, Data.CLOSE, Colors.DARKRED, 50, 5, 5, 5);
-//				plotDataPrice.add(wma50);
+				plotDataPrice.add(wma50);
 
 				/* A smoothed WMA of 200 periods. */
 				IndicatorDataList wma200 =
-					IndicatorUtils.getSmoothedWeightedMovingAverage(
+					IndicatorUtils.getSmoothedSimpleMovingAverage(
 						price, Data.CLOSE, Colors.DARKBLUE, 200, 5, 5, 5);
-//				plotDataPrice.add(wma200);
+				plotDataPrice.add(wma200);
 				
 //				List<IndicatorDataList> wmas =
 //					IndicatorUtils.getSmoothedWeightedMovingAverages(

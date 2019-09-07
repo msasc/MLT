@@ -145,6 +145,10 @@ class HorizontalAxis extends GridBagPane {
 	 * {@inheritDoc}
 	 */
 	private void plot(Canvas.Context gc) {
+		if (charts.isEmpty()) {
+			gc.clear(getBackground());
+			return;
+		}
 		getDC().ensureContext();
 		setSizes();
 

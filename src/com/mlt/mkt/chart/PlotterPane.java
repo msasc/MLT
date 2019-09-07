@@ -60,9 +60,9 @@ public class PlotterPane extends BorderPane {
 	private static final int CURSOR_VLINE = 1;
 
 	/**
-	 * Plot canvas.
+	 * Plotter canvas.
 	 */
-	class PlotCanvas extends Canvas {
+	private class PlotterCanvas extends Canvas {
 		@Override
 		protected void paintCanvas(Canvas.Context gc) {
 			plot(gc);
@@ -84,7 +84,7 @@ public class PlotterPane extends BorderPane {
 	/** Inset factors to calculate the effective plot area. */
 	private Insets insetFactors = new Insets(0.05, 0.02, 0.05, 0.02);
 	/** Plot canvas. */
-	private PlotCanvas plotCanvas;
+	private PlotterCanvas plotCanvas;
 
 	/** Last mouse x. */
 	private double lastX;
@@ -114,7 +114,7 @@ public class PlotterPane extends BorderPane {
 		this.dc = new DataContext(this, plotData);
 
 		/* Plot canvas on the center. */
-		plotCanvas = new PlotCanvas();
+		plotCanvas = new PlotterCanvas();
 		GridBagPane pane = new GridBagPane();
 		pane.add(plotCanvas, new Constraints(Anchor.CENTER, Fill.BOTH, 0, 0, Insets.EMPTY));
 		setCenter(pane);
@@ -236,8 +236,15 @@ public class PlotterPane extends BorderPane {
 		PlotData plotData = dc.getPlotData();
 
 		if (!gc.isImmediateRepaint()) {
+			setInfo();
+
 			List<DataList> dataLists = plotData.getDataLists();
 			dataLists.forEach(dataList -> dataList.setContext(dc));
+
+			Color background = Colors.WHITESMOKE;
+			gc.clear(background);
+			int startIndex = plotData.getStartIndex();
+			int endIndex = plotData.getEndIndex();
 
 			/* Separate non indicator lists. */
 			List<DataList> indicators = new ArrayList<>();
@@ -254,10 +261,6 @@ public class PlotterPane extends BorderPane {
 				}
 			}
 
-			gc.clear(Colors.WHITESMOKE);
-			int startIndex = plotData.getStartIndex();
-			int endIndex = plotData.getEndIndex();
-
 			/* Plot not indicators. */
 			for (DataList dataList : notIndicators) {
 				for (DataPlotter plotter : dataList.getDataPlotters()) {
@@ -273,7 +276,6 @@ public class PlotterPane extends BorderPane {
 			}
 
 			cursor.clearSave();
-			setInfo();
 		}
 
 		if (gc.isImmediateRepaint()) {
@@ -285,7 +287,6 @@ public class PlotterPane extends BorderPane {
 				cursor.restore(gc);
 			}
 		}
-
 	}
 
 	/**

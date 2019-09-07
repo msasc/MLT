@@ -99,6 +99,9 @@ public class ChartContainer extends BorderPane {
 
 		@Override
 		public void run() {
+			if (charts.isEmpty()) {
+				return;
+			}
 			PlotData plotData = charts.get(0).getDataContext().getPlotData();
 			switch (id) {
 			case SCROLL_BACK:
@@ -224,10 +227,22 @@ public class ChartContainer extends BorderPane {
 	 * @param plotData The plot data.
 	 */
 	public void addPlotData(PlotData plotData) {
+		addPlotData(plotData, false);
+	}
+
+	/**
+	 * Add a chart to the list of charts indicating whether to force a layout.
+	 *
+	 * @param plotData The plot data.
+	 * @param layout A boolean.
+	 */
+	public void addPlotData(PlotData plotData, boolean layout) {
 		PlotterPane chart = new PlotterPane(this, plotData);
 		chart.addMouseHandler(new MouseListener(chart));
 		charts.add(chart);
-		if (isVisible()) layoutCharts();
+		if (layout) {
+			layoutCharts();
+		}
 	}
 
 	/**
@@ -282,6 +297,8 @@ public class ChartContainer extends BorderPane {
 
 		/* Nothing to layout. */
 		if (charts.isEmpty()) {
+			revalidate();
+			repaint();
 			return;
 		}
 
@@ -356,20 +373,7 @@ public class ChartContainer extends BorderPane {
 			PlotterPane chart = charts.get(i);
 			chart.getVerticalAxis().setAxisWidth(verticalAxisWidth);
 		}
-
-		/* Invoke plot. */
-		EventQueue.invokeLater(() -> {
-			revalidate();
-			repaint();
-			for (int i = 0; i < charts.size(); i++) {
-				PlotterPane chart = charts.get(i);
-				chart.repaint();
-				chart.setInfo();
-			}
-			horizontalAxis.revalidate();
-			horizontalAxis.repaint();
-			zoomPane.revalidate();
-			zoomPane.repaint();
-		});
+		revalidate();
+		repaint();
 	}
 }

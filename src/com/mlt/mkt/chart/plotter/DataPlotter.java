@@ -1,18 +1,15 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.chart.plotter;
 
@@ -37,35 +34,32 @@ public abstract class DataPlotter extends Plotter {
 	 */
 	private int[] indexes;
 	/**
-	 * The color used for a bearish line bar candle is an even period. For periods
-	 * lower than day, the color changes when the day changes, for the day period
-	 * when the week changes, for the week the month and for the month of the year.
+	 * The color used for a bearish line bar candle is an even period. For periods lower than day, the color changes
+	 * when the day changes, for the day period when the week changes, for the week the month and for the month of the
+	 * year.
 	 */
 	private Color colorBearishEven = new Color(160, 32, 32);
 	/**
-	 * The color used for a bearish line bar candle is an odd period. For periods
-	 * lower than day, the color changes when the day changes, for the day period
-	 * when the week changes, for the week the month and for the month of the year.
+	 * The color used for a bearish line bar candle is an odd period. For periods lower than day, the color changes when
+	 * the day changes, for the day period when the week changes, for the week the month and for the month of the year.
 	 */
 	private Color colorBearishOdd = new Color(160, 32, 32);
 	// private Color colorBearishOdd = new Color(25, 25, 25);
 	/**
-	 * The color used for a bullish line/bar/candle in an even period. For periods
-	 * lower than day, the color changes when the day changes, for the day period
-	 * when the week changes, for the week the month and for the month of the year.
+	 * The color used for a bullish line/bar/candle in an even period. For periods lower than day, the color changes
+	 * when the day changes, for the day period when the week changes, for the week the month and for the month of the
+	 * year.
 	 */
 	private Color colorBullishEven = new Color(32, 160, 32);
 	/**
-	 * The color used for a bullish line/bar/candle in an odd period. For periods
-	 * lower than day, the color changes when the day changes, for the day period
-	 * when the week changes, for the week the month and for the monthof the year.
+	 * The color used for a bullish line/bar/candle in an odd period. For periods lower than day, the color changes when
+	 * the day changes, for the day period when the week changes, for the week the month and for the monthof the year.
 	 */
 	private Color colorBullishOdd = new Color(32, 160, 32);
 	// private Color colorBullishOdd = new Color(215, 215, 215);
 
 	/**
-	 * A boolean to control if the plotter should plot, thus allowing to hide/show
-	 * plot actions.
+	 * A boolean to control if the plotter should plot, thus allowing to hide/show plot actions.
 	 */
 	private boolean plot = true;
 	/**
@@ -209,104 +203,88 @@ public abstract class DataPlotter extends Plotter {
 	public abstract void plot(Canvas.Context ctx, DataList dataList, int startIndex, int endIndex);
 
 	/**
-	 * Sets the color used for a bearish line bar candle is an even period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week of the month and for the month of
-	 * the year.
+	 * Sets the color used for a bearish line bar candle is an even period. For periods lower than day, the color
+	 * changes when the day changes, for the day period when the week changes, for the week of the month and for the
+	 * month of the year.
 	 * 
-	 * @param colorBearishEven The color used for a bearish line bar candle is an
-	 *                         even period.
+	 * @param colorBearishEven The color used for a bearish line bar candle is an even period.
 	 */
 	public void setColorBearishEven(Color colorBearishEven) {
 		this.colorBearishEven = colorBearishEven;
 	}
 
 	/**
-	 * Sets the color used for a bearish line bar candle is an odd period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week the month and for the month of the
+	 * Sets the color used for a bearish line bar candle is an odd period. For periods lower than day, the color changes
+	 * when the day changes, for the day period when the week changes, for the week the month and for the month of the
 	 * year.
 	 * 
-	 * @param colorBearishOdd The color used for a bearish line bar candle is an odd
-	 *                        period.
+	 * @param colorBearishOdd The color used for a bearish line bar candle is an odd period.
 	 */
 	public void setColorBearishOdd(Color colorBearishOdd) {
 		this.colorBearishOdd = colorBearishOdd;
 	}
 
 	/**
-	 * Sets the color used for a bullish line/bar/candle in an even period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week the month and for the month of the
-	 * year.
+	 * Sets the color used for a bullish line/bar/candle in an even period. For periods lower than day, the color
+	 * changes when the day changes, for the day period when the week changes, for the week the month and for the month
+	 * of the year.
 	 * 
-	 * @param colorBullishEven The color used for a bullish line/bar/candle in an
-	 *                         even period.
+	 * @param colorBullishEven The color used for a bullish line/bar/candle in an even period.
 	 */
 	public void setColorBullishEven(Color colorBullishEven) {
 		this.colorBullishEven = colorBullishEven;
 	}
 
 	/**
-	 * Sets the color used for a bullish line/bar/candle in an odd period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week the month and for the month of the
+	 * Sets the color used for a bullish line/bar/candle in an odd period. For periods lower than day, the color changes
+	 * when the day changes, for the day period when the week changes, for the week the month and for the month of the
 	 * year.
 	 * 
-	 * @param colorBullishOdd The color used for a bullish line/bar/candle in an odd
-	 *                        period.
+	 * @param colorBullishOdd The color used for a bullish line/bar/candle in an odd period.
 	 */
 	public void setColorBullishOdd(Color colorBullishOdd) {
 		this.colorBullishOdd = colorBullishOdd;
 	}
 
 	/**
-	 * Returns the color used for a bearish line bar candle is an even period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week the month and for the month of the
-	 * year.
+	 * Returns the color used for a bearish line bar candle is an even period. For periods lower than day, the color
+	 * changes when the day changes, for the day period when the week changes, for the week the month and for the month
+	 * of the year.
 	 * 
-	 * @return the colorBearishEven The color used for a bearish line bar candle is
-	 *         an even period.
+	 * @return the colorBearishEven The color used for a bearish line bar candle is an even period.
 	 */
 	public Color getColorBearishEven() {
 		return colorBearishEven;
 	}
 
 	/**
-	 * Returns the color used for a bearish line bar candle is an odd period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week the month and for the month of the
-	 * year.
+	 * Returns the color used for a bearish line bar candle is an odd period. For periods lower than day, the color
+	 * changes when the day changes, for the day period when the week changes, for the week the month and for the month
+	 * of the year.
 	 * 
-	 * @return the colorBearishOdd The color used for a bearish line bar candle is
-	 *         an odd period.
+	 * @return the colorBearishOdd The color used for a bearish line bar candle is an odd period.
 	 */
 	public Color getColorBearishOdd() {
 		return colorBearishOdd;
 	}
 
 	/**
-	 * Returns the color used for a bullish line/bar/candle in an even period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week the month and for the month of the
-	 * year.
+	 * Returns the color used for a bullish line/bar/candle in an even period. For periods lower than day, the color
+	 * changes when the day changes, for the day period when the week changes, for the week the month and for the month
+	 * of the year.
 	 * 
-	 * @return the colorBullishEven The color used for a bullish line/bar/candle in
-	 *         an even period.
+	 * @return the colorBullishEven The color used for a bullish line/bar/candle in an even period.
 	 */
 	public Color getColorBullishEven() {
 		return colorBullishEven;
 	}
 
 	/**
-	 * Returns the color used for a bullish line/bar/candle in an odd period. For
-	 * periods lower than day, the color changes when the day changes, for the day
-	 * period when the week changes, for the week the month and for the month, the
-	 * year.
+	 * Returns the color used for a bullish line/bar/candle in an odd period. For periods lower than day, the color
+	 * changes when the day changes, for the day period when the week changes, for the week the month and for the month,
+	 * the year.
 	 * 
-	 * @return the colorBullishOdd The color used for a bullish line/bar/candle in
-	 *         an odd period.
+	 * @return the colorBullishOdd The color used for a bullish line/bar/candle in an odd period.
 	 */
 	public Color getColorBullishOdd() {
 		return colorBullishOdd;

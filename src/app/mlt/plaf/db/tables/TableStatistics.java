@@ -26,7 +26,6 @@ import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.fields.FieldInstrumentId;
 import app.mlt.plaf.db.fields.FieldPeriodId;
 import app.mlt.plaf.db.fields.FieldServerId;
-import app.mlt.plaf.db.fields.FieldStatisticsClass;
 import app.mlt.plaf.db.fields.FieldStatisticsId;
 import app.mlt.plaf.db.fields.FieldStatisticsParams;
 
@@ -50,7 +49,6 @@ public class TableStatistics extends Table {
 		addField(new FieldInstrumentId(Fields.INSTRUMENT_ID));
 		addField(new FieldPeriodId(Fields.PERIOD_ID));
 		addField(new FieldStatisticsId(Fields.STATISTICS_ID));
-		addField(new FieldStatisticsClass(Fields.STATISTICS_CLASS));
 		addField(new FieldStatisticsParams(Fields.STATISTICS_PARAMS));
 
 		getField(Fields.SERVER_ID).setPrimaryKey(true);

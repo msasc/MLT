@@ -37,7 +37,7 @@ public class Path extends Drawing {
 	 */
 	public Path() {
 		super();
-		this.path = new GeneralPath();
+		this.path = new GeneralPath(WIND_NON_ZERO, 20);
 	}
 
 	/**

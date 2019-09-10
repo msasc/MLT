@@ -69,6 +69,20 @@ public class PlotterPane extends BorderPane {
 		}
 	}
 
+	/**
+	 * Data plotter and data list pair.
+	 */
+	private class PlotterList {
+		private DataPlotter plotter;
+		private DataList dataList;
+
+		private PlotterList(DataPlotter plotter, DataList dataList) {
+			super();
+			this.plotter = plotter;
+			this.dataList = dataList;
+		}
+	}
+
 	/** Parent chart container. */
 	private ChartContainer container;
 	/** Data context. */
@@ -246,33 +260,36 @@ public class PlotterPane extends BorderPane {
 			int startIndex = plotData.getStartIndex();
 			int endIndex = plotData.getEndIndex();
 
-			/* Separate non indicator lists. */
-			List<DataList> indicators = new ArrayList<>();
-			List<DataList> notIndicators = new ArrayList<>();
+			/* List of plotters ordered, first non indicators and then indicators. */
+			List<PlotterList> plotterLists = new ArrayList<>();
 			for (DataList dataList : dataLists) {
-				if (dataList instanceof IndicatorDataList) {
-					if (dataList.isPlot()) {
-						indicators.add(dataList);
+				if (!dataList.isPlot()) {
+					continue;
+				}
+				boolean indicator = (dataList instanceof IndicatorDataList);
+				if (!indicator) {
+					for (DataPlotter plotter : dataList.getDataPlotters()) {
+						plotterLists.add(new PlotterList(plotter, dataList));
 					}
-				} else {
-					if (dataList.isPlot()) {
-						notIndicators.add(dataList);
+				}
+			}
+			for (DataList dataList : dataLists) {
+				if (!dataList.isPlot()) {
+					continue;
+				}
+				boolean indicator = (dataList instanceof IndicatorDataList);
+				if (indicator) {
+					for (DataPlotter plotter : dataList.getDataPlotters()) {
+						plotterLists.add(new PlotterList(plotter, dataList));
 					}
 				}
 			}
 
-			/* Plot not indicators. */
-			for (DataList dataList : notIndicators) {
-				for (DataPlotter plotter : dataList.getDataPlotters()) {
-					plotter.plot(gc, dataList, startIndex, endIndex);
-				}
-			}
-
-			/* Plot indicators. */
-			for (DataList dataList : indicators) {
-				for (DataPlotter plotter : dataList.getDataPlotters()) {
-					plotter.plot(gc, dataList, startIndex, endIndex);
-				}
+			/* Do plot. */
+			for (PlotterList plotterList : plotterLists) {
+				DataPlotter plotter = plotterList.plotter;
+				DataList dataList = plotterList.dataList;
+				plotter.plot(gc, dataList, startIndex, endIndex);
 			}
 
 			cursor.clearSave();

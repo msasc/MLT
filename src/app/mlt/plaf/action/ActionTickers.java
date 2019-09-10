@@ -182,7 +182,7 @@ public class ActionTickers extends ActionRun {
 				/* A smoothed WMA of 200 periods. */
 				IndicatorDataList wma200 =
 					IndicatorUtils.getSmoothedSimpleMovingAverage(
-						price, Data.CLOSE, Colors.DARKBLUE, 200, 5, 5, 5);
+						price, Data.CLOSE, Colors.DARKBLUE, 200, 20, 10, 5);
 				plotDataPrice.add(wma200);
 				
 //				List<IndicatorDataList> wmas =

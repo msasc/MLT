@@ -30,5 +30,6 @@ public class FieldStatisticsId extends Field {
 	 */
 	public FieldStatisticsId(String name) {
 		super(Domains.getString(name, 20, "Statistics id", "Statistics id"));
+		addPossibleValue("STAT_AVG", "Statistics averages");
 	}
 }

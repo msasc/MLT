@@ -103,7 +103,6 @@ public class Fields {
 	 */
 
 	public static final String STATISTICS_ID = "stats_id";
-	public static final String STATISTICS_CLASS = "stats_class";
 	public static final String STATISTICS_PARAMS = "stats_params";
 	
 	/*

@@ -75,9 +75,9 @@ public abstract class Task implements Runnable, Callable<Void> {
 	/** Time remaining, set on the call to <code>updateMessageTime()</code>. */
 	private double timeRemaining = -1;
 	/** Work done. */
-	private long workDone = -1;
+	private long workDone = 0;
 	/** Total work. */
-	private long totalWork = -1;
+	private long totalWork = 0;
 
 	/** Progress decimals for the progress message. */
 	private int progressDecimals = 1;
@@ -953,16 +953,16 @@ public abstract class Task implements Runnable, Callable<Void> {
 			 */
 			// Adjustments.
 			if (Double.isInfinite(workDone) || Double.isNaN(workDone)) {
-				workDone = -1;
+				workDone = 0;
 			}
 			if (Double.isInfinite(totalWork) || Double.isNaN(totalWork)) {
-				totalWork = -1;
+				totalWork = 0;
 			}
 			if (workDone < 0) {
-				workDone = -1;
+				workDone = 0;
 			}
 			if (totalWork < 0) {
-				totalWork = -1;
+				totalWork = 0;
 			}
 			if (workDone > totalWork) {
 				workDone = totalWork;

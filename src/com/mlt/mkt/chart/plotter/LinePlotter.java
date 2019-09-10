@@ -63,19 +63,7 @@ public class LinePlotter extends DataPlotter {
 	public void plot(Canvas.Context gc, DataList dataList, int startIndex, int endIndex) {
 
 		DataContext dc = getContext();
-		boolean colorChange = false;
-		if (!getColorBullishOdd().equals(getColorBearishOdd())) {
-			colorChange = true;
-		}
-		if (!getColorBullishEven().equals(getColorBearishEven())) {
-			colorChange = true;
-		}
-
-		int size = 100;
-		if (!colorChange) {
-			size += dc.getPlotData().getMaximumIndex() - dc.getPlotData().getMinimumIndex();
-		}
-		Path path = new Path(Path.WIND_NON_ZERO, size);
+		Path path = new Path();
 		path.setStroke(stroke);
 		path.setDrawPaint(linePaint);
 		path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

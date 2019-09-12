@@ -24,8 +24,8 @@ public class TestFormRecordPane {
 	}
 	
 	private static boolean pack = false;
-	private static boolean group = true;
-	private static boolean columns = true;
+	private static boolean group = false;
+	private static boolean columns = false;
 	private static boolean rows = true;
 
 	public static void main(String[] args) {

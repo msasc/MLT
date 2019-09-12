@@ -30,6 +30,7 @@ import com.mlt.db.FieldList;
 import com.mlt.db.Record;
 import com.mlt.db.Value;
 import com.mlt.desktop.EditContext;
+import com.mlt.desktop.EditField;
 import com.mlt.desktop.EditMode;
 import com.mlt.desktop.border.LineBorderSides;
 import com.mlt.desktop.graphic.Stroke;
@@ -49,7 +50,7 @@ import com.mlt.util.Numbers;
  * @author Miquel Sas
  */
 public class FormRecordPane {
-
+	
 	/**
 	 * Grid of fields. It is a box that contains a list of fields laid out
 	 * vertically. Each row contains a label and an input control.
@@ -258,6 +259,25 @@ public class FormRecordPane {
 
 		/* Sort the groups to always ensure the proper order. */
 		groups.sort(null);
+	}
+
+	/**
+	 * Return a list with all edit contexts.
+	 * 
+	 * @return The list of edit contexts.
+	 */
+	private List<EditContext> getAllEditContexts() {
+		List<EditContext> contexts = new ArrayList<>();
+		for (Group group : groups) {
+			for (Grid grid : group.grids) {
+				for (EditContext context : grid.contexts) {
+					if (!contexts.contains(context)) {
+						contexts.add(context);
+					}
+				}
+			}
+		}
+		return contexts;
 	}
 
 	/**
@@ -700,6 +720,7 @@ public class FormRecordPane {
 			Insets insets = new Insets(0, 0, 0, 0);
 			Constraints constraints = new Constraints(Anchor.TOP, Fill.BOTH, 0, 0, insets);
 			pane.add(getGroupPane(groups.get(0)), constraints);
+			setEditMode();
 			return;
 		}
 
@@ -716,6 +737,38 @@ public class FormRecordPane {
 		Insets insets = new Insets(0, 0, 0, 0);
 		Constraints constraints = new Constraints(Anchor.TOP, Fill.BOTH, 0, 0, insets);
 		pane.add(tabPane, constraints);
+
+		setEditMode();
+		
+	}
+	
+	/**
+	 * Apply the current edit mode.
+	 */
+	private void setEditMode() {
+		List<EditContext> contexts = getAllEditContexts();
+		for (EditContext context : contexts) {
+			if (editMode == EditMode.DELETE || editMode == EditMode.READ_ONLY) {
+				context.getEditField().setEnabled(false);
+				continue;
+			}
+			if (editMode == EditMode.UPDATE && context.getField().isPrimaryKey()) {
+				context.getEditField().setEnabled(false);
+				continue;
+			}
+		}
+		List<Control> controls = Control.getAllChildControls(pane);
+		for (Control control : controls) {
+			if (control instanceof EditField && control.isEnabled()) {
+				control.setFocusable(true);
+				continue;
+			}
+			if (control instanceof Button && control.isEnabled()) {
+				control.setFocusable(true);
+				continue;
+			}
+			control.setFocusable(false);
+		}
 	}
 
 	/**
@@ -725,8 +778,9 @@ public class FormRecordPane {
 	 */
 	public void setEditMode(EditMode editMode) {
 		this.editMode = editMode;
+		setEditMode();
 	}
-
+	
 	/**
 	 * Set the layout of the field group.
 	 * 

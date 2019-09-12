@@ -17,19 +17,19 @@ import app.mlt.plaf.db.Domains;
 import com.mlt.db.Field;
 
 /**
- * Statistics id field.
+ * Statistics key field, 2 chars left padded with zeros.
  *
  * @author Miquel Sas
  */
-public class FieldStatisticsId extends Field {
+public class FieldStatisticsKey extends Field {
 
 	/**
 	 * Constructor.
 	 * 
 	 * @param name Field name.
 	 */
-	public FieldStatisticsId(String name) {
-		super(Domains.getString(name, 5, "Id", "Statistics id"));
-		addPossibleValue("AVG", "Averages");
+	public FieldStatisticsKey(String name) {
+		super(Domains.getString(name, 2, "Key", "Statistics key"));
+		setUppercase(true);
 	}
 }

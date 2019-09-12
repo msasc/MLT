@@ -108,6 +108,7 @@ public class ActionStatistics extends ActionRun {
 				form.addField(Fields.INSTRUMENT_ID);
 				form.addField(Fields.PERIOD_NAME);
 				form.addField(Fields.STATISTICS_ID);
+				form.addField(Fields.STATISTICS_KEY);
 
 				form.getEditContext(Fields.SERVER_ID).getEditField().setEnabled(false);
 				form.getEditContext(Fields.INSTRUMENT_ID).getEditField().setEnabled(false);

@@ -51,28 +51,14 @@ public abstract class Action implements ActionListener {
 	}
 
 	/**
-	 * Return the property.
+	 * Return the properties.
 	 * 
-	 * @param key The string key.
-	 * @return The property.
+	 * @return The properties container.
 	 */
-	public Object getProperty(String key) {
-		if (properties == null) {
-			return null;
-		}
-		return properties.getObject(key);
-	}
-
-	/**
-	 * Set the property.
-	 * 
-	 * @param key      The key.
-	 * @param property The property.
-	 */
-	public void setProperty(String key, Object property) {
+	public Properties getProperties() {
 		if (properties == null) {
 			properties = new Properties();
 		}
-		properties.setObject(key, property);
+		return properties;
 	}
 }

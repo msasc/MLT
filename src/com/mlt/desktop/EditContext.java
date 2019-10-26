@@ -60,7 +60,7 @@ public class EditContext {
 	 * @return The current value.
 	 */
 	public static Value getCurrentValue(Action action) {
-		return (Value) action.getProperty(CURRENT_VALUE);
+		return (Value) action.getProperties().getObject(CURRENT_VALUE);
 	}
 
 	/**
@@ -71,7 +71,7 @@ public class EditContext {
 	 * @return The edit context.
 	 */
 	public static EditContext getEditMode(Action action) {
-		return (EditContext) action.getProperty(EDIT_CONTEXT);
+		return (EditContext) action.getProperties().getObject(EDIT_CONTEXT);
 	}
 
 	/**
@@ -82,7 +82,7 @@ public class EditContext {
 	 * @return The previous value.
 	 */
 	public static Value getPreviousValue(Action action) {
-		return (Value) action.getProperty(PREVIOUS_VALUE);
+		return (Value) action.getProperties().getObject(PREVIOUS_VALUE);
 	}
 
 	/** Edited field. */
@@ -110,7 +110,7 @@ public class EditContext {
 	 * @param action The action.
 	 */
 	public void addValueAction(Action action) {
-		action.setProperty(EDIT_CONTEXT, this);
+		action.getProperties().setObject(EDIT_CONTEXT, this);
 		valueActions.add(action);
 	}
 
@@ -123,8 +123,8 @@ public class EditContext {
 	 */
 	public void fireValueActions(Control control, Value previousValue, Value currentValue) {
 		for (Action action : valueActions) {
-			action.setProperty(PREVIOUS_VALUE, previousValue);
-			action.setProperty(CURRENT_VALUE, currentValue);
+			action.getProperties().setObject(PREVIOUS_VALUE, previousValue);
+			action.getProperties().setObject(CURRENT_VALUE, currentValue);
 			action.actionPerformed(Action.event(control));
 		}
 	}

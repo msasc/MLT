@@ -175,23 +175,19 @@ public class ActionTickers extends ActionRun {
 				PlotData plotDataPrice = new PlotData();
 				plotDataPrice.add(price);
 
+				IndicatorDataList wma5 = IndicatorUtils.getSmoothedSimpleMovingAverage(
+					price, Data.CLOSE, Colors.GREEN, 5, 3, 2);
+				plotDataPrice.add(wma5);
+
 				IndicatorDataList wma50 = IndicatorUtils.getSmoothedSimpleMovingAverage(
 					price, Data.CLOSE, Colors.DARKRED, 50, 5, 5, 5);
 				plotDataPrice.add(wma50);
 
-				/* A smoothed WMA of 200 periods. */
 				IndicatorDataList wma200 =
 					IndicatorUtils.getSmoothedSimpleMovingAverage(
 						price, Data.CLOSE, Colors.DARKBLUE, 200, 20, 10, 5);
 				plotDataPrice.add(wma200);
 				
-//				List<IndicatorDataList> wmas =
-//					IndicatorUtils.getSmoothedWeightedMovingAverages(
-//						price, Data.CLOSE, Colors.DARKBLUE, 5, 3, 3);
-//				for (IndicatorDataList wma : wmas) {
-//					plotDataPrice.add(wma);
-//				}
-
 				/* Volume plot data. */
 				VolumeInfo infoVolume = new VolumeInfo(instrument, period);
 				DataListSource volume = new DataListSource(infoVolume, persistor);

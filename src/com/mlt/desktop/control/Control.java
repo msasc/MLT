@@ -122,11 +122,11 @@ public class Control {
 	 */
 	private static Properties getProperties(JComponent component) {
 		InputMap map = component.getInputMap();
-		Properties properties =
-			(Properties) map.get(KeyStroke.getKeyStroke(Numbers.MIN_INTEGER, 0));
+		KeyStroke key = KeyStroke.getKeyStroke(Numbers.MIN_INTEGER, 0);
+		Properties properties =	(Properties) map.get(key);
 		if (properties == null) {
 			properties = new Properties();
-			map.put(KeyStroke.getKeyStroke(Numbers.MIN_INTEGER, 0), properties);
+			map.put(key, properties);
 		}
 		return properties;
 	}

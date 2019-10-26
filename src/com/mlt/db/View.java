@@ -38,47 +38,25 @@ public class View implements Comparable<Object> {
 		return masterTableRecord;
 	}
 
-	/**
-	 * The name of the table.
-	 */
+	/** The name of the table. */
 	private String name = null;
-	/**
-	 * The alias.
-	 */
+	/** The alias. */
 	private String alias = null;
-	/**
-	 * An optional description.
-	 */
+	/** An optional description. */
 	private String description = null;
-	/**
-	 * The master table.
-	 */
+	/** The master table. */
 	private Table masterTable = null;
-	/**
-	 * The array of relations.
-	 */
+	/** The array of relations. */
 	private final List<Relation> relations = new ArrayList<>();
-
-	/**
-	 * The list of fields.
-	 */
+	/** The list of fields. */
 	private final FieldList fields = new FieldList();
-
-	/**
-	 * The array of group by fields.
-	 */
+	/** The array of group by fields. */
 	private final List<Field> groupBy = new ArrayList<>();
-	/**
-	 * The order.
-	 */
+	/** The order. */
 	private Order orderBy = null;
-	/**
-	 * Having clause for group by views.
-	 */
+	/** Having clause for group by views. */
 	private String having;
-	/**
-	 * The persistor that provides persistence to this table.
-	 */
+	/** The persistor that provides persistence to this table. */
 	private Persistor persistor;
 
 	/**

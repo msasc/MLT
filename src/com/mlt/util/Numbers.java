@@ -30,30 +30,17 @@ import java.util.List;
  */
 public class Numbers {
 
-	/**
-	 * Maximum positive double.
-	 */
+	/** Maximum positive double. */
 	public static final double MAX_DOUBLE = Double.MAX_VALUE;
-	/**
-	 * Minimum negative double.
-	 */
+	/** Minimum negative double. */
 	public static final double MIN_DOUBLE = -Double.MAX_VALUE;
-	/**
-	 * Maximum positive integer.
-	 */
+	/** Maximum positive integer. */
 	public static final int MAX_INTEGER = Integer.MAX_VALUE;
-	/**
-	 * Minimum negative integer.
-	 */
+	/** Minimum negative integer. */
 	public static final int MIN_INTEGER = -Integer.MAX_VALUE;
-	/**
-	 * Too small of a number. Useful to prevent numbers to become too small or
-	 * negative infinite.
-	 */
+	/** Too small of a number. */
 	public static final double TOO_SMALL = -1.0E50;
-	/**
-	 * Too big of a number. Useful to prevent numbers to become too big or infinite.
-	 */
+	/** Too big of a number. */
 	public static final double TOO_BIG = 1.0E50;
 
 	/**
@@ -121,7 +108,10 @@ public class Numbers {
 	 * @param multipliers   The list of multipliers.
 	 * @return The list of increases.
 	 */
-	public static List<BigDecimal> getIncreases(int integerDigits, int decimalDigits, int... multipliers) {
+	public static List<BigDecimal> getIncreases(
+		int integerDigits,
+		int decimalDigits,
+		int... multipliers) {
 
 		List<BigDecimal> increaments = new ArrayList<>();
 		int upperScale = decimalDigits;
@@ -131,7 +121,8 @@ public class Numbers {
 				double number = Math.pow(10, -scale);
 				if (Double.isFinite(number)) {
 					BigDecimal value = Numbers.getBigDecimal(number, scale);
-					BigDecimal multiplicand = new BigDecimal(multiplier).setScale(0, RoundingMode.HALF_UP);
+					BigDecimal multiplicand =
+						new BigDecimal(multiplier).setScale(0, RoundingMode.HALF_UP);
 					increaments.add(value.multiply(multiplicand));
 				}
 			}

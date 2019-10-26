@@ -690,7 +690,7 @@ public class ListPersistor implements Persistor {
 			}
 
 			/*
-			 * The calculated approximate time does not correspond to a physical record.
+			 * The calculated approximate key does not correspond to a physical record.
 			 * Count records before and after and decide the direction and the number of
 			 * records to skip to find the record with the required index.
 			 * 

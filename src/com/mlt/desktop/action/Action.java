@@ -29,6 +29,9 @@ import com.mlt.util.Properties;
  * @author Miquel Sas
  */
 public abstract class Action implements ActionListener {
+	
+	/** Key to get/set the can continue value. */
+	public static final String CAN_CONTINUE = "CAN_CONTINUE";
 
 	/**
 	 * Create a new action event triggered by the source.

@@ -33,9 +33,6 @@ import java.util.List;
  */
 public class ActionList extends Action {
 	
-	/** Key to get/set the can continue value. */
-	public static final String CAN_CONTINUE = "CAN_CONTINUE";
-
 	/** List of actions to execute. */
 	private List<ActionListener> actions = new ArrayList<>();
 

@@ -71,7 +71,17 @@ public class StatisticsAverages extends StatisticsTicker {
 	/**
 	 * Parameters handler.
 	 */
-	class ParametersHandler extends ParserHandler {
+	public static class ParametersHandler extends ParserHandler {
+		/** List of averages. */
+		private List<Average> averages = new ArrayList<>();
+
+		/**
+		 * Constructor.
+		 */
+		public ParametersHandler() {
+			super();
+		}
+
 		/**
 		 * Called to notify an element start.
 		 */
@@ -81,15 +91,45 @@ public class StatisticsAverages extends StatisticsTicker {
 			String elementName,
 			String path,
 			Attributes attributes) throws SAXException {
+
+			/* Validate the path. */
+			if (!path.equals("averages") && !path.equals("averages/average")) {
+				throw new SAXException("Invalid path: " + path);
+			}
+
+			/* Validate that the average path has no attributes. */
+			if (path.equals("averages")) {
+				if (attributes.getLength() > 0) {
+					throw new SAXException("Path \"" + averages + "\" can not have attributes");
+				}
+			}
+
+			/* Validate and retrieve attributes of averages/average path. */
 			if (path.equals("averages/average")) {
 
+				/*
+				 * Attributes must be type, period, optionally smooths. Any attribute that is
+				 * not one of these is not valid.
+				 */
+				for (int i = 0; i < attributes.getLength(); i++) {
+					String name = attributes.getQName(i);
+					if (!Strings.in(name, "type", "period", "smooths")) {
+						throw new SAXException("Invalid attribute " + name + " in path "+ path);
+					}
+				}
+				 
 				/* Type. */
 				String attrType = attributes.getValue("type");
 				Average.Type type = Average.Type.valueOf(attrType);
 
 				/* Period. */
 				String attrPeriod = attributes.getValue("period");
-				int period = Integer.parseInt(attrPeriod);
+				int period = 0;
+				try {
+					period = Integer.parseInt(attrPeriod);
+				} catch (NumberFormatException exc) {
+					throw new SAXException("Invalid period " + attrPeriod, exc);
+				}
 
 				/* Smooths. */
 				String attrSmooths = attributes.getValue("smooths");
@@ -105,6 +145,15 @@ public class StatisticsAverages extends StatisticsTicker {
 				/* Add the average. */
 				averages.add(new Average(type, period, smooths));
 			}
+		}
+
+		/**
+		 * Return the list of averages.
+		 * 
+		 * @return The list of averages.
+		 */
+		public List<Average> getAverages() {
+			return averages;
 		}
 	}
 
@@ -493,11 +542,12 @@ public class StatisticsAverages extends StatisticsTicker {
 	public void setParameters(String parameters) {
 		ParametersHandler handler = new ParametersHandler();
 		Parser parser = new Parser();
-		averages.clear();
 		try {
 			parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
 		} catch (ParserConfigurationException | SAXException | IOException e) {
 			e.printStackTrace();
 		}
+		averages.clear();
+		averages.addAll(handler.getAverages());
 	}
 }

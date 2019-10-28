@@ -66,31 +66,6 @@ public class ActionStatistics extends ActionRun {
 	 * Create a new ticker.
 	 */
 	class ActionCreate extends ActionRun {
-		
-		/**
-		 * Form statistics validator.
-		 */
-		class ValidatorStats extends Action {
-
-			/**
-			 * {@inheritDoc}
-			 */
-			@Override
-			public void actionPerformed(ActionEvent e) {
-			}
-			
-		}
-		
-		/**
-		 * Return the record of statistics, without parameters
-		 * @param instrument
-		 * @param period
-		 * @return
-		 */
-		Record getRecordStats(Instrument instrument, Period period) {
-			
-			return null;
-		}
 
 		/**
 		 * {@inheritDoc}
@@ -98,7 +73,7 @@ public class ActionStatistics extends ActionRun {
 		@Override
 		public void run() {
 			try {
-				
+
 				/* Instrument. */
 				Record rcInstrument = DB.lookup_instrument();
 				if (rcInstrument == null) {
@@ -112,7 +87,7 @@ public class ActionStatistics extends ActionRun {
 					return;
 				}
 				Period period = DB.to_period(rcPeriod);
-				
+
 				/* Statistics persistor. */
 				Persistor pStats = DB.persistor_statistics();
 
@@ -146,11 +121,12 @@ public class ActionStatistics extends ActionRun {
 				wnd.setOptionsBottom();
 
 				wnd.setCenter(form.getPane());
-				
+
 				Option accept = Option.option_ACCEPT();
 				accept.setCloseWindow(true);
+				accept.setAction(new ValidatorStats(form));
 				wnd.getOptionPane().add(accept);
-				
+
 				Option cancel = Option.option_CANCEL();
 				wnd.getOptionPane().add(cancel);
 				wnd.getOptionPane().setMnemonics();
@@ -158,30 +134,47 @@ public class ActionStatistics extends ActionRun {
 				wnd.pack();
 				wnd.centerOnScreen();
 				wnd.show();
-				
+
 				Option option = wnd.getOptionExecuted();
 				if (Option.isCancel(option)) {
 					return;
 				}
-				
-				/* Statistics id. */
-				Value vStatId = rcStats.getValue(Fields.STATISTICS_ID);
-				if (vStatId.isEmpty()) {
-					Alert.error("Statistics id can not be empty");
-					return;
-				}
-				
-				/* Validate that the statistics does not exist. */
-				if (pStats.exists(rcStats)) {
-					Alert.error("Statistics " + vStatId + " already exists!");
-					return;
-				}
-				
 
 			} catch (PersistorException exc) {
 				Logs.catching(exc);
 			}
 		}
+	}
+
+	/**
+	 * Form statistics validator.
+	 */
+	class ValidatorStats extends Action {
+		FormRecordPane form;
+		ValidatorStats(FormRecordPane form) {
+			super();
+			this.form = form;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			/* Statistics id. */
+			Value vStatId = form.getEditContext(Fields.STATISTICS_ID).getValue();
+			if (vStatId.isEmpty()) {
+				Alert.error("Statistics id can not be empty");
+				getProperties().setBoolean(CAN_CONTINUE, false);
+				return;
+			}
+			/* Statistics key. */
+			Value vStatKey = form.getEditContext(Fields.STATISTICS_KEY).getValue();
+			if (vStatKey.isEmpty()) {
+				Alert.error("Statistics key can not be empty");
+				getProperties().setBoolean(CAN_CONTINUE, false);
+				return;
+			}
+			
+		}
+
 	}
 
 	/**

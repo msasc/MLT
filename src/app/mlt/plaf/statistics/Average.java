@@ -52,7 +52,7 @@ public class Average implements Comparable<Average> {
 		super();
 		this.type = type;
 		this.period = period;
-		this.smooths = smooths;
+		this.smooths = (smooths == null ? new int[0] : smooths);
 	}
 
 

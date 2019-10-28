@@ -672,7 +672,7 @@ public class FormRecordPane {
 	 * 
 	 * @return The record.
 	 */
-	protected Record getRecord() {
+	public Record getRecord() {
 		return record;
 	}
 

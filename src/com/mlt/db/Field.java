@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mlt.util.Strings;
+import com.mlt.util.Properties;
 import com.mlt.util.StringConverter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -62,174 +63,104 @@ public class Field implements Comparable<Object> {
 		return relations;
 	}
 
-	/**
-	 * Field name.
-	 */
+	/** Field name. */
 	private String name;
-	/**
-	 * Optional field alias, if not set the name is used.
-	 */
+	/** Optional field alias, if not set the name is used. */
 	private String alias;
-	/**
-	 * Length if applicable, otherwise -1.
-	 */
+	/** Length if applicable, otherwise -1. */
 	private int length = -1;
-	/**
-	 * Decimals if applicable, otherwise -1.
-	 */
+	/** Decimals if applicable, otherwise -1. */
 	private int decimals = -1;
-	/**
-	 * Type.
-	 */
+	/** Type. */
 	private Types type;
 
-	/**
-	 * Description, normally the longer description.
-	 */
+	/** Description, normally the longer description. */
 	private String description;
-	/**
-	 * Label on forms.
-	 */
+	/** Label on forms. */
 	private String label;
-	/**
-	 * Header on grids.
-	 */
+	/** Header on grids. */
 	private String header;
-	/**
-	 * Title or short description.
-	 */
+	/** Title or short description. */
 	private String title;
-	/**
-	 * Adjusted display length.
-	 */
+	/** Adjusted display length. */
 	private int displayLength;
-	/**
-	 * Display decimals, normally used for DOUBLE, INTEGER and LONG types.
-	 */
+	/** Display decimals, normally used for DOUBLE, INTEGER and LONG types. */
 	private int displayDecimals = -1;
-	/**
-	 * A boolean that indicates whether the field is fixed width.
-	 */
+	/** A boolean that indicates whether the field is fixed width. */
 	private boolean fixedWidth = true;
-	/**
-	 * Field group.
-	 */
+	/** Field group. */
 	private FieldGroup fieldGroup;
-	/**
-	 * A boolean that indicates if this field is the main description of the
-	 * possible parent record. It is useful in
-	 * lookup actions to show the description beside the code. I no main description
-	 * is found for the record, the first
-	 * non-fixed with field is taken. If no non-fixed field exists, then no
-	 * description is shown beside the lookup code.
-	 */
-	private boolean mainDescription = false;
-	/**
-	 * A boolean that indicates if this fields should be used in lookups.
-	 */
-	private boolean lookup = false;
-	/**
-	 * A boolean that indicates whether this field is a password field.
-	 */
-	private boolean password = false;
 
 	/**
-	 * Initial value.
+	 * A boolean that indicates if this field is the main description of the
+	 * possible parent record. It is useful in lookup actions to show the
+	 * description beside the code. I no main description is found for the record,
+	 * the first non-fixed with field is taken. If no non-fixed field exists, then
+	 * no description is shown beside the lookup code.
 	 */
+	private boolean mainDescription = false;
+	/** A boolean that indicates if this fields should be used in lookups. */
+	private boolean lookup = false;
+	/** A boolean that indicates whether this field is a password field. */
+	private boolean password = false;
+
+	/** Initial value. */
 	private Value initialValue;
-	/**
-	 * Maximum value.
-	 */
+	/** Maximum value. */
 	private Value maximumValue;
-	/**
-	 * Minimum value.
-	 */
+	/** Minimum value. */
 	private Value minimumValue;
-	/**
-	 * List of possible values.
-	 */
+	/** List of possible values. */
 	private List<Value> possibleValues = new ArrayList<>();
-	/**
-	 * A flag indicating whether a non empty value is required for this field.
-	 */
+	/** A flag indicating whether a non empty value is required for this field. */
 	private boolean required;
-	/**
-	 * Case modifier for strings.
-	 */
+	/** Case modifier for strings. */
 	private String caseModifier = "NONE";
-	/**
-	 * Optional calculator.
-	 */
+	/** Optional calculator. */
 	private Calculator calculator;
-	/**
-	 * A boolean that indicates whether a boolean field is displayed/edited in a
-	 * check or combo box.
-	 */
+	/** Displayed/edited in a check or combo box for booleans. */
 	private boolean editBooleanInCheckBox = true;
-	/**
-	 * List of validators.
-	 */
+	/** List of validators. */
 	private List<Validator<Value>> validators;
-	/**
-	 * Optional string converter.
-	 */
+	/** Optional string converter. */
 	private StringConverter stringConverter;
-	/**
-	 * Horizontal alignment.
-	 */
+	/** Horizontal alignment. */
 	private String horizontalAlignment = "LEFT";
-	/**
-	 * Edit mask.
-	 */
+	/** Edit mask. */
 	private String editMask;
 	/**
 	 * A pattern used to generate random values of this field (see
 	 * <em>RandomData.getCode</em>)
 	 */
 	private RandomData.CodePattern randomPattern;
-	/**
-	 * An optional font name for the field in views.
-	 */
+	/** An optional font name for the field in views. */
 	private String fontName;
-	/**
-	 * An optional font style for the field in views.
-	 */
+	/** An optional font style for the field in views. */
 	private int fontStyle = -1;
-	/**
-	 * An optional font size for the field in views.
-	 */
+	/** An optional font size for the field in views. */
 	private int fontSize = -1;
 
 	/**
 	 * A boolean that indicates if the field, when not present in an insert clause
-	 * (DEFAULT) should be initialized with
-	 * the database function for a date, time or time-stamp.
+	 * (DEFAULT) should be initialized with the database function for a date, time
+	 * or time-stamp.
 	 */
 	private boolean currentDateTimeOrTimestamp = false;
-	/**
-	 * A flag that indicates whether this field is persistent.
-	 */
+	/** A flag that indicates whether this field is persistent. */
 	private boolean persistent = true;
-	/**
-	 * A flag that indicates whether this field can be null.
-	 */
+	/** A flag that indicates whether this field can be null. */
 	private boolean nullable = true;
-	/**
-	 * A flag that indicates whether this field is a primary key field.
-	 */
+	/** A flag that indicates whether this field is a primary key field. */
 	private boolean primaryKey = false;
-	/**
-	 * A supported database function if the column is virtual or calculated.
-	 */
+	/** A supported database function if the column is virtual or calculated. */
 	private String function;
-	/**
-	 * Optional parent table.
-	 */
+	/** Optional parent table. */
 	private Table table;
-	/**
-	 * Optional parent view.
-	 */
+	/** Optional parent view. */
 	private View view;
+
+	/** Additional properties. */
+	private Properties properties;
 
 	/**
 	 * Default constructor.
@@ -295,6 +226,12 @@ public class Field implements Comparable<Object> {
 		this.function = field.function;
 		this.table = field.table;
 		this.view = field.view;
+		
+		// Properies.
+		if (field.properties != null) {
+			this.properties = new Properties();
+			this.properties.putAll(field.properties);
+		}
 	}
 
 	/**
@@ -998,6 +935,18 @@ public class Field implements Comparable<Object> {
 	 */
 	public List<Value> getPossibleValues() {
 		return new ArrayList<>(possibleValues);
+	}
+
+	/**
+	 * Return the additional properties containers.
+	 * 
+	 * @return The properties container.
+	 */
+	public Properties getProperties() {
+		if (properties == null) {
+			properties = new Properties();
+		}
+		return properties;
 	}
 
 	/**

@@ -103,5 +103,4 @@ public class StringField extends TextField implements EditField {
 			getEditContext().fireValueActions(this, previousValue, value);
 		}
 	}
-
 }

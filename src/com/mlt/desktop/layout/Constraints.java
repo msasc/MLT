@@ -50,7 +50,6 @@ public class Constraints {
 	 */
 	public Constraints(Anchor anchor, Fill fill, int x, int y, Insets insets) {
 		super();
-
 		this.anchor = anchor;
 		this.fill = fill;
 		this.x = x;
@@ -75,7 +74,6 @@ public class Constraints {
 	 */
 	public Constraints(Anchor anchor, Fill fill, int x, int y, int width, int height, Insets insets) {
 		super();
-
 		this.anchor = anchor;
 		this.fill = fill;
 		this.x = x;

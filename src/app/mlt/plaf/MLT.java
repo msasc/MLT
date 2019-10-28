@@ -29,7 +29,6 @@ import com.mlt.db.Record;
 import com.mlt.db.Value;
 import com.mlt.db.rdbms.DBEngine;
 import com.mlt.db.rdbms.DBEngineAdapter;
-import com.mlt.db.rdbms.DBPersistorDDL;
 import com.mlt.db.rdbms.DataSourceInfo;
 import com.mlt.db.rdbms.adapters.PostgreSQLAdapter;
 import com.mlt.desktop.Alert;

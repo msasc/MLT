@@ -19,9 +19,7 @@ package app.mlt.plaf.action;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.event.KeyEvent;
-
-import javax.swing.KeyStroke;
+import java.awt.event.ActionEvent;
 
 import com.mlt.db.FieldGroup;
 import com.mlt.db.Persistor;
@@ -33,10 +31,10 @@ import com.mlt.desktop.Alert;
 import com.mlt.desktop.Option;
 import com.mlt.desktop.Option.Group;
 import com.mlt.desktop.OptionWindow;
+import com.mlt.desktop.action.Action;
 import com.mlt.desktop.action.ActionRun;
 import com.mlt.desktop.control.Dialog;
 import com.mlt.desktop.control.FormRecordPane;
-import com.mlt.desktop.control.Frame;
 import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.OptionPane;
 import com.mlt.desktop.control.TablePane;
@@ -68,6 +66,31 @@ public class ActionStatistics extends ActionRun {
 	 * Create a new ticker.
 	 */
 	class ActionCreate extends ActionRun {
+		
+		/**
+		 * Form statistics validator.
+		 */
+		class ValidatorStats extends Action {
+
+			/**
+			 * {@inheritDoc}
+			 */
+			@Override
+			public void actionPerformed(ActionEvent e) {
+			}
+			
+		}
+		
+		/**
+		 * Return the record of statistics, without parameters
+		 * @param instrument
+		 * @param period
+		 * @return
+		 */
+		Record getRecordStats(Instrument instrument, Period period) {
+			
+			return null;
+		}
 
 		/**
 		 * {@inheritDoc}
@@ -109,6 +132,7 @@ public class ActionStatistics extends ActionRun {
 				form.addField(Fields.PERIOD_NAME);
 				form.addField(Fields.STATISTICS_ID);
 				form.addField(Fields.STATISTICS_KEY);
+				form.addField(Fields.STATISTICS_PARAMS);
 
 				form.getEditContext(Fields.SERVER_ID).getEditField().setEnabled(false);
 				form.getEditContext(Fields.INSTRUMENT_ID).getEditField().setEnabled(false);
@@ -142,6 +166,10 @@ public class ActionStatistics extends ActionRun {
 				
 				/* Statistics id. */
 				Value vStatId = rcStats.getValue(Fields.STATISTICS_ID);
+				if (vStatId.isEmpty()) {
+					Alert.error("Statistics id can not be empty");
+					return;
+				}
 				
 				/* Validate that the statistics does not exist. */
 				if (pStats.exists(rcStats)) {

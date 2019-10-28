@@ -41,7 +41,7 @@ public class Properties {
 	/**
 	 * The properties map.
 	 */
-	private final Map<String, Object> properties = new HashMap<>();
+	private final Map<Object, Object> properties = new HashMap<>();
 
 	/**
 	 * Constructor.
@@ -66,19 +66,19 @@ public class Properties {
 	@Override
 	public Properties clone() {
 		Properties p = new Properties();
-		Iterator<String> keys = properties.keySet().iterator();
+		Iterator<Object> keys = properties.keySet().iterator();
 		while (keys.hasNext()) {
-			String key = keys.next();
+			Object key = keys.next();
 			Object value = properties.get(key);
 
 			/*
 			 * Types Boolean, Double, Integer, Long and String are immutable, so
-			 * they can be
-			 * directly assigned.
+			 * they can be directly assigned.
 			 */
-			if (value instanceof Boolean || value instanceof Integer
-				|| value instanceof Long
-				|| value instanceof String) {
+			if (value instanceof Boolean ||
+				value instanceof Integer ||
+				value instanceof Long ||
+				value instanceof String) {
 				p.properties.put(key, value);
 				continue;
 			}
@@ -117,7 +117,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The stored boolean value.
 	 */
-	public boolean getBoolean(String key) {
+	public boolean getBoolean(Object key) {
 		return getBoolean(key, false);
 	}
 
@@ -128,7 +128,7 @@ public class Properties {
 	 * @param defaultValue The default value.
 	 * @return The stored boolean value.
 	 */
-	public boolean getBoolean(String key, boolean defaultValue) {
+	public boolean getBoolean(Object key, boolean defaultValue) {
 		Boolean value = (Boolean) properties.get(key);
 		return (value == null ? defaultValue : value);
 	}
@@ -139,7 +139,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The stored double value.
 	 */
-	public double getDouble(String key) {
+	public double getDouble(Object key) {
 		return getDouble(key, 0);
 	}
 
@@ -150,7 +150,7 @@ public class Properties {
 	 * @param defaultValue The default value.
 	 * @return The stored double value.
 	 */
-	public double getDouble(String key, double defaultValue) {
+	public double getDouble(Object key, double defaultValue) {
 		Double value = (Double) properties.get(key);
 		return (value == null ? defaultValue : value);
 	}
@@ -161,7 +161,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The double 2d matrix.
 	 */
-	public double[][] getDouble2A(String key) {
+	public double[][] getDouble2A(Object key) {
 		return (double[][]) properties.get(key);
 	}
 
@@ -171,7 +171,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The double vector.
 	 */
-	public double[] getDouble1A(String key) {
+	public double[] getDouble1A(Object key) {
 		return (double[]) properties.get(key);
 	}
 
@@ -181,7 +181,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The stored integer value.
 	 */
-	public int getInteger(String key) {
+	public int getInteger(Object key) {
 		return getInteger(key, 0);
 	}
 
@@ -192,7 +192,7 @@ public class Properties {
 	 * @param defaultValue The default value.
 	 * @return The stored integer value.
 	 */
-	public int getInteger(String key, int defaultValue) {
+	public int getInteger(Object key, int defaultValue) {
 		Integer value = (Integer) properties.get(key);
 		return (value == null ? defaultValue : value);
 	}
@@ -203,7 +203,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The stored long value.
 	 */
-	public long getLong(String key) {
+	public long getLong(Object key) {
 		return getLong(key, 0);
 	}
 
@@ -214,7 +214,7 @@ public class Properties {
 	 * @param defaultValue The default value.
 	 * @return The stored long value.
 	 */
-	public long getLong(String key, long defaultValue) {
+	public long getLong(Object key, long defaultValue) {
 		Long value = (Long) properties.get(key);
 		return (value == null ? defaultValue : value);
 	}
@@ -225,7 +225,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The stored object.
 	 */
-	public Object getObject(String key) {
+	public Object getObject(Object key) {
 		return getObject(key, null);
 	}
 
@@ -236,7 +236,7 @@ public class Properties {
 	 * @param defaultValue The default value.
 	 * @return The stored object.
 	 */
-	public Object getObject(String key, Object defaultValue) {
+	public Object getObject(Object key, Object defaultValue) {
 		Object value = properties.get(key);
 		return (value == null ? defaultValue : value);
 	}
@@ -247,7 +247,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The stored string value.
 	 */
-	public String getString(String key) {
+	public String getString(Object key) {
 		return getString(key, null);
 	}
 
@@ -258,7 +258,7 @@ public class Properties {
 	 * @param defaultValue The default value.
 	 * @return The stored string value.
 	 */
-	public String getString(String key, String defaultValue) {
+	public String getString(Object key, String defaultValue) {
 		String value = (String) properties.get(key);
 		return (value == null ? defaultValue : value);
 	}
@@ -268,7 +268,7 @@ public class Properties {
 	 * 
 	 * @return The set of keys.
 	 */
-	public Set<String> keySet() {
+	public Set<Object> keySet() {
 		return properties.keySet();
 	}
 
@@ -278,9 +278,9 @@ public class Properties {
 	 * @param properties The properties used to fill this properties.
 	 */
 	public void putAll(Properties properties) {
-		Iterator<String> keys = properties.properties.keySet().iterator();
+		Iterator<Object> keys = properties.properties.keySet().iterator();
 		while (keys.hasNext()) {
-			String key = keys.next();
+			Object key = keys.next();
 			Object value = properties.properties.get(key);
 			this.properties.put(key, value);
 		}
@@ -292,7 +292,7 @@ public class Properties {
 	 * @param key The key.
 	 * @return The removed property or null.
 	 */
-	public Object remove(String key) {
+	public Object remove(Object key) {
 		return properties.remove(key);
 	}
 
@@ -302,7 +302,7 @@ public class Properties {
 	 * @param key   The key.
 	 * @param value The value.
 	 */
-	public void setBoolean(String key, boolean value) {
+	public void setBoolean(Object key, boolean value) {
 		properties.put(key, value);
 	}
 
@@ -312,7 +312,7 @@ public class Properties {
 	 * @param key   The key.
 	 * @param value The value.
 	 */
-	public void setDouble(String key, double value) {
+	public void setDouble(Object key, double value) {
 		properties.put(key, value);
 	}
 
@@ -322,7 +322,7 @@ public class Properties {
 	 * @param key The key.
 	 * @param a   The 2d matrix.
 	 */
-	public void setDouble2A(String key, double[][] a) {
+	public void setDouble2A(Object key, double[][] a) {
 		properties.put(key, a);
 	}
 
@@ -332,7 +332,7 @@ public class Properties {
 	 * @param key The key.
 	 * @param v   The vector.
 	 */
-	public void setDouble1A(String key, double[] v) {
+	public void setDouble1A(Object key, double[] v) {
 		properties.put(key, v);
 	}
 
@@ -342,7 +342,7 @@ public class Properties {
 	 * @param key   The key.
 	 * @param value The value.
 	 */
-	public void setInteger(String key, int value) {
+	public void setInteger(Object key, int value) {
 		properties.put(key, value);
 	}
 
@@ -352,7 +352,7 @@ public class Properties {
 	 * @param key   The key.
 	 * @param value The value.
 	 */
-	public void setLong(String key, long value) {
+	public void setLong(Object key, long value) {
 		properties.put(key, value);
 	}
 
@@ -362,7 +362,7 @@ public class Properties {
 	 * @param key   The key.
 	 * @param value The object.
 	 */
-	public void setObject(String key, Object value) {
+	public void setObject(Object key, Object value) {
 		properties.put(key, value);
 	}
 
@@ -372,7 +372,7 @@ public class Properties {
 	 * @param key   The key.
 	 * @param value The value.
 	 */
-	public void setString(String key, String value) {
+	public void setString(Object key, String value) {
 		properties.put(key, value);
 	}
 }

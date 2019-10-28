@@ -16,21 +16,32 @@
  */
 package com.mlt.desktop.control;
 
+import java.awt.event.KeyEvent;
+
 import javax.swing.JTextArea;
+import javax.swing.KeyStroke;
+
+import com.mlt.db.Value;
+import com.mlt.desktop.EditContext;
+import com.mlt.desktop.EditField;
+import com.mlt.desktop.layout.Dimension;
 
 /**
- * Text area extension.
+ * Text area hosted in a scroll pane.
  *
  * @author Miquel Sas
  */
-public class TextArea extends Control {
+public class TextArea extends Control implements EditField {
+
+	/** Scrollpane for the edit field. */
+	private ScrollPane scrollPane;
 
 	/**
 	 * Constructor.
 	 */
 	public TextArea() {
 		super();
-		setComponent(new JTextArea());
+		setComponent(configure(new JTextArea()));
 	}
 
 	/**
@@ -40,7 +51,7 @@ public class TextArea extends Control {
 	 */
 	public TextArea(String text) {
 		super();
-		setComponent(new JTextArea(text));
+		setComponent(configure(new JTextArea(text)));
 	}
 
 	/**
@@ -51,7 +62,7 @@ public class TextArea extends Control {
 	 */
 	public TextArea(int rows, int columns) {
 		super();
-		setComponent(new JTextArea(rows, columns));
+		setComponent(configure(new JTextArea(rows, columns)));
 	}
 
 	/**
@@ -63,7 +74,17 @@ public class TextArea extends Control {
 	 */
 	public TextArea(String text, int rows, int columns) {
 		super();
-		setComponent(new JTextArea(text, rows, columns));
+		setComponent(configure(new JTextArea(text, rows, columns)));
+	}
+
+	private JTextArea configure(JTextArea textArea) {
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "");
+		textArea.getInputMap().put(
+			KeyStroke.getKeyStroke(
+				KeyEvent.VK_ENTER,
+				KeyEvent.ALT_DOWN_MASK),
+			"insert-break");
+		return textArea;
 	}
 
 	/**
@@ -74,9 +95,65 @@ public class TextArea extends Control {
 		return (JTextArea) super.getComponent();
 	}
 
-	/*
-	 * Specific text ares functionality.
+	/**
+	 * {@inheritDoc}
 	 */
+	@Override
+	public Control getControl() {
+		if (scrollPane == null) {
+			scrollPane = new ScrollPane(this);
+		}
+		return scrollPane;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public EditContext getEditContext() {
+		return (EditContext) getProperty(EditContext.EDIT_CONTEXT);
+	}
+
+	/**
+	 * Return the line wrap policy.
+	 * 
+	 * @return A boolean.
+	 */
+	public boolean getLineWrap() {
+		return getComponent().getLineWrap();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Dimension getMaximumSize() {
+		return getControl().getMaximumSize();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Dimension getMinimumSize() {
+		return getControl().getMinimumSize();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Dimension getPreferredSize() {
+		return getControl().getPreferredSize();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Value getValue() {
+		return new Value(getComponent().getText());
+	}
 
 	/**
 	 * Check editable.
@@ -96,4 +173,48 @@ public class TextArea extends Control {
 		getComponent().setEditable(b);
 	}
 
+	/**
+	 * Set the line wrap policy.
+	 * 
+	 * @param wrap A boolean.
+	 */
+	public void setLineWrap(boolean wrap) {
+		getComponent().setLineWrap(wrap);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void setMaximumSize(Dimension size) {
+		getControl().setMaximumSize(size);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void setMinimumSize(Dimension size) {
+		getControl().setMinimumSize(size);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void setPreferredSize(Dimension size) {
+		getControl().setPreferredSize(size);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void setValue(Value value) {
+		Value previousValue = getValue();
+		getComponent().setText(value.toString());
+		if (getEditContext() != null) {
+			getEditContext().fireValueActions(this, previousValue, value);
+		}
+	}
 }

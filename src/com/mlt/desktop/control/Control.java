@@ -598,7 +598,7 @@ public class Control {
 	 *
 	 * @param size The preferred size.
 	 */
-	public final void setPreferredSize(Dimension size) {
+	public void setPreferredSize(Dimension size) {
 		component.setPreferredSize(AWT.toAWT(size));
 	}
 

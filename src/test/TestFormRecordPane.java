@@ -23,7 +23,7 @@ public class TestFormRecordPane {
 		Locale.setDefault(Locale.US);
 	}
 	
-	private static boolean pack = false;
+	private static boolean pack = true;
 	private static boolean group = false;
 	private static boolean columns = false;
 	private static boolean rows = true;
@@ -38,6 +38,7 @@ public class TestFormRecordPane {
 		if (rows) {
 			showWindowGridRows();
 		}
+//		showWindow("Only pane");
 	}
 
 	private static Option getOptionClose(OptionWindow wnd) {
@@ -118,7 +119,6 @@ public class TestFormRecordPane {
 		rp.addField(RandomData.Test.IREQUIRED, 1, 1);
 		rp.addField(RandomData.Test.ISTATUS, 1, 1);
 
-		
 		showWindow(rp, "Form pane grids organized by rows");
 	}
 

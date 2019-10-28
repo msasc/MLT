@@ -18,6 +18,7 @@
  */
 package com.mlt.db;
 
+import java.awt.Font;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -28,6 +29,10 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.LongStream;
 
+import com.mlt.desktop.EditContext;
+import com.mlt.desktop.control.TextArea;
+import com.mlt.desktop.layout.Dimension;
+import com.mlt.desktop.layout.Fill;
 import com.mlt.util.Strings;
 
 /**
@@ -81,15 +86,39 @@ public class RandomData {
 			fCARTICLE.setUppercase(true);
 			fields.addField(fCARTICLE);
 
+			Field fDTITLE = new Field();
+			fDTITLE.setName("DTITLE");
+			fDTITLE.setAlias("DTITLE");
+			fDTITLE.setTitle("Title");
+			fDTITLE.setLabel("Title");
+			fDTITLE.setHeader("Title");
+			fDTITLE.setType(Types.STRING);
+			fDTITLE.setLength(100);
+			fDTITLE.setFixedWidth(false);
+			fields.addField(fDTITLE);
+
 			Field fDARTICLE = new Field();
 			fDARTICLE.setName("DARTICLE");
 			fDARTICLE.setAlias("DARTICLE");
-			fDARTICLE.setTitle("Artice description");
-			fDARTICLE.setLabel("Artice description");
-			fDARTICLE.setHeader("Artice description");
+			fDARTICLE.setTitle("Description");
+			fDARTICLE.setLabel("Description");
+			fDARTICLE.setHeader("Description");
 			fDARTICLE.setType(Types.STRING);
-			fDARTICLE.setLength(100);
+			fDARTICLE.setLength(1000);
 			fDARTICLE.setFixedWidth(false);
+			TextArea textArea = new TextArea();
+			textArea.setPreferredSize(new Dimension(300, 200));
+			textArea.setMinimumSize(new Dimension(300, 200));
+			textArea.setFont(new Font("Courier", Font.PLAIN, 14));
+			textArea.setLineWrap(true);
+			fDARTICLE.getProperties().setObject(EditContext.EDIT_FIELD, textArea);
+			fDARTICLE.getProperties().setObject(EditContext.FILL, Fill.BOTH);
+//			TextPane textPane = new TextPane();
+//			textPane.setPreferredSize(new Dimension(300, 400));
+//			textPane.setMinimumSize(new Dimension(300, 400));
+//			textPane.setFont(new Font("Courier", Font.PLAIN, 14));
+//			fDARTICLE.getProperties().setObject(EditContext.EDIT_FIELD, textPane);
+//			fDARTICLE.getProperties().setObject(EditContext.FILL, Fill.BOTH);
 			fields.addField(fDARTICLE);
 
 			Field fCBUSINESS = new Field();
@@ -399,12 +428,21 @@ public class RandomData {
 		return getString(length, source);
 	}
 
+	/**
+	 * Return a text made of token.
+	 * 
+	 * @param length Text length.
+	 * @return The tokens.
+	 */
 	public String getTokens(int length) {
 		StringBuilder b = new StringBuilder();
 		while (b.length() < length) {
 			int bound = (length - b.length()) / 4;
 			if (bound < 5) {
 				bound = 5;
+			}
+			if (bound > 30) {
+				bound = 30;
 			}
 			int tokenLength = random.nextInt(bound);
 			while (tokenLength < 2) {

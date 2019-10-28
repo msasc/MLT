@@ -18,22 +18,11 @@
  */
 package com.mlt.desktop;
 
-import com.mlt.desktop.control.Control;
-import com.mlt.desktop.control.Stage;
-import com.mlt.desktop.control.TextArea;
-import com.mlt.desktop.layout.Alignment;
-import com.mlt.desktop.layout.Dimension;
-import com.mlt.desktop.layout.Anchor;
-import com.mlt.desktop.layout.Constraints;
-import com.mlt.desktop.layout.Fill;
-import com.mlt.desktop.layout.Insets;
-import com.mlt.desktop.layout.Orientation;
-import com.mlt.util.Numbers;
-
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.GridBagConstraints;
 import java.awt.Window;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -49,9 +38,18 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JWindow;
 import javax.swing.KeyStroke;
-
-import java.awt.GridBagConstraints;
 import javax.swing.SwingConstants;
+
+import com.mlt.desktop.control.Control;
+import com.mlt.desktop.control.Stage;
+import com.mlt.desktop.layout.Alignment;
+import com.mlt.desktop.layout.Anchor;
+import com.mlt.desktop.layout.Constraints;
+import com.mlt.desktop.layout.Dimension;
+import com.mlt.desktop.layout.Fill;
+import com.mlt.desktop.layout.Insets;
+import com.mlt.desktop.layout.Orientation;
+import com.mlt.util.Numbers;
 
 /**
  * AWT and Swing utilities.
@@ -141,17 +139,6 @@ public class AWT {
 			int keyCode = e.getKeyCode();
 			int modifiers = e.getModifiersEx();
 			KeyStroke keyStroke = KeyStroke.getKeyStroke(keyCode, modifiers);
-
-			// Manage special components that do not fire accelerator keys like, for
-			// instance, VK_ENTER.
-			if (e.getSource() instanceof TextArea) {
-				TextArea textArea = (TextArea) e.getSource();
-				if (textArea.isEditable()) {
-					if (keyCode == KeyEvent.VK_ENTER) {
-						return;
-					}
-				}
-			}
 
 			Option option = getKeyStrokesMap(e.getSource()).get(keyStroke);
 			if (option != null) {

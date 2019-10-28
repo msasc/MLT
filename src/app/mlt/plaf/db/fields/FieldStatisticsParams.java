@@ -18,9 +18,16 @@
  */
 package app.mlt.plaf.db.fields;
 
-import app.mlt.plaf.db.Domains;
+import java.awt.Font;
+
 import com.mlt.db.Field;
 import com.mlt.db.Types;
+import com.mlt.desktop.EditContext;
+import com.mlt.desktop.control.TextArea;
+import com.mlt.desktop.layout.Dimension;
+import com.mlt.desktop.layout.Fill;
+
+import app.mlt.plaf.db.Domains;
 
 /**
  * Statistics params field.
@@ -40,5 +47,11 @@ public class FieldStatisticsParams extends Field {
 			Types.FIXED_LENGTH * 10,
 			"Statistics params",
 			"Statistics params"));
+		
+		TextArea textArea = new TextArea();
+		textArea.setPreferredSize(new Dimension(600, 300));
+		textArea.setFont(new Font("Courier", Font.PLAIN, 14));
+		getProperties().setObject(EditContext.EDIT_FIELD, textArea);
+		getProperties().setObject(EditContext.FILL, Fill.BOTH);
 	}
 }

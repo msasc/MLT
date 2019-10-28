@@ -1,26 +1,35 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control;
 
 import javax.swing.JTextPane;
 
+import com.mlt.db.Value;
+import com.mlt.desktop.EditContext;
+import com.mlt.desktop.EditField;
+
 /**
- * TextPane extension.
+ * Text pane extension.
  *
  * @author Miquel Sas
  */
-public class TextPane extends Control {
+public class TextPane extends Control implements EditField {
 
 	/**
 	 * Constructor.
@@ -38,10 +47,6 @@ public class TextPane extends Control {
 		return (JTextPane) super.getComponent();
 	}
 
-	/*
-	 * Specific text pane functionality.
-	 */
-
 	/**
 	 * Return the content type.
 	 * 
@@ -50,6 +55,30 @@ public class TextPane extends Control {
 	 */
 	public String getContentType() {
 		return getComponent().getContentType();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Control getControl() {
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public EditContext getEditContext() {
+		return (EditContext) getProperty(EditContext.EDIT_CONTEXT);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Value getValue() {
+		return new Value(getComponent().getText());
 	}
 
 	/**
@@ -102,4 +131,15 @@ public class TextPane extends Control {
 		getComponent().setText(text);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void setValue(Value value) {
+		Value previousValue = getValue();
+		getComponent().setText(value.toString());
+		if (getEditContext() != null) {
+			getEditContext().fireValueActions(this, previousValue, value);
+		}
+	}
 }

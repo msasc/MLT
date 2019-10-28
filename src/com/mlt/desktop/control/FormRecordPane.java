@@ -50,7 +50,7 @@ import com.mlt.util.Numbers;
  * @author Miquel Sas
  */
 public class FormRecordPane {
-	
+
 	/**
 	 * Grid of fields. It is a box that contains a list of fields laid out
 	 * vertically. Each row contains a label and an input control.
@@ -340,7 +340,7 @@ public class FormRecordPane {
 		}
 
 		/* The prefrerred row height. */
-		double height = getPreferredRowHeight();
+		double rowHeight = getPreferredRowHeight();
 
 		/* Add rows to the pane with insets to get the same height for all rows. */
 		GridBagPane pane = new GridBagPane();
@@ -351,7 +351,7 @@ public class FormRecordPane {
 
 			/* Insets and constraints for the label. */
 			double labelHeight = label.getPreferredSize().getHeight();
-			double labelTop = Numbers.round((height - labelHeight) / 2, 0);
+			double labelTop = Numbers.round((rowHeight - labelHeight) / 2, 0);
 			double labelLeft = 0;
 			double labelBottom = 0;
 			double labelRight = labelGap;
@@ -366,9 +366,13 @@ public class FormRecordPane {
 
 			/* Insets and constraints for the editor. */
 			double weightx = 1;
-			double weighty = (i == rows.size() - 1 ? 1 : 0);
+			Fill fill = context.getFill();
+			double weighty = (fill == Fill.VERTICAL || fill == Fill.BOTH ? 1 : 0);
 			double editorHeight = editor.getPreferredSize().getHeight();
-			double editorTop = Numbers.round((height - editorHeight) / 2, 0);
+			double editorTop = 0;
+			if (editorHeight < rowHeight) {
+				editorTop = Numbers.round((rowHeight - editorHeight) / 2, 0);
+			}
 			double editorLeft = 0;
 			double editorBottom = 0;
 			double editorRight = 0;
@@ -377,16 +381,13 @@ public class FormRecordPane {
 			}
 			Insets editorInsets = new Insets(editorTop, editorLeft, editorBottom, editorRight);
 			Constraints editorConstraints = new Constraints(
-				Anchor.TOP_LEFT,
-				!context.getField().isFixedWidth() ? Fill.HORIZONTAL : Fill.NONE,
-				1, i, 1, 1, weightx, weighty, editorInsets);
+				Anchor.TOP_LEFT, fill, 1, i, 1, 1, weightx, weighty, editorInsets);
 
 			/* Do add the row. */
 			pane.add(label, labelConstraints);
 			pane.add(editor, editorConstraints);
 		}
 
-//		pane.setBorder(new LineBorder(Color.RED));
 		return pane;
 	}
 
@@ -417,7 +418,7 @@ public class FormRecordPane {
 	private GridBagPane getGroupPane(Group group) {
 		GridBagPane groupPane = new GridBagPane();
 		Constraints constraints =
-			new Constraints(Anchor.TOP_LEFT, Fill.HORIZONTAL, 0, 0, groupInsets);
+			new Constraints(Anchor.TOP_LEFT, Fill.BOTH, 0, 0, groupInsets);
 		if (layouts.get(group) == Layout.COLUMNS) {
 			groupPane.add(getGroupPaneByColumns(group), constraints);
 		} else {
@@ -458,25 +459,21 @@ public class FormRecordPane {
 
 			/* The column pane. */
 			GridBagPane columnPane = new GridBagPane();
+			Fill fillColumn = Fill.VERTICAL;
 
 			/* Add the rows. */
 			int rows = gridRows.size();
-			boolean anyNonFixedInColumn = false;
 			for (int row = 0; row < rows; row++) {
 
 				Grid grid = gridRows.get(row);
-				boolean anyNonFixedInGrid = false;
-				for (EditContext ctx : grid.contexts) {
-					if (!ctx.getField().isFixedWidth()) {
-						anyNonFixedInGrid = true;
-						anyNonFixedInColumn = true;
-						break;
-					}
+				Fill fillGrid = Fill.NONE;
+				for (EditContext context : grid.contexts) {
+					fillGrid = Fill.merge(fillGrid, context.getFill());
 				}
 
 				Constraints constraintsGrid = new Constraints(
 					Anchor.TOP_LEFT,
-					anyNonFixedInGrid ? Fill.HORIZONTAL : Fill.NONE,
+					fillGrid,
 					0, row, 1, 1, 1, 1,
 					gridInsets);
 
@@ -499,15 +496,13 @@ public class FormRecordPane {
 
 				layoutPane.add(gridPane, constraintsGrid);
 				columnPane.add(layoutPane, constraintsLayout);
+				fillColumn = Fill.merge(fillColumn, fillGrid);
 			}
 
 			/* Add the column pane. */
 			Insets insetsColumn = new Insets(0, 0, 0, 0);
-
-			Constraints constraints = new Constraints(
-				Anchor.TOP_LEFT,
-				anyNonFixedInColumn ? Fill.BOTH : Fill.VERTICAL,
-				column, 0, insetsColumn);
+			Constraints constraints =
+				new Constraints(Anchor.TOP_LEFT, fillColumn, column, 0, insetsColumn);
 			groupPane.add(columnPane, constraints);
 		}
 
@@ -546,6 +541,7 @@ public class FormRecordPane {
 
 			/* The row pane. */
 			GridBagPane rowPane = new GridBagPane();
+			Fill fillRow = Fill.HORIZONTAL;
 
 			/* Add the columns, anchor left, and fill none (later review). */
 			int columns = gridColumns.size();
@@ -553,22 +549,25 @@ public class FormRecordPane {
 
 				/* Grid to layout. */
 				Grid grid = gridColumns.get(column);
-
-				/* Get a proper fill for the grid. */
-				Fill fillGrid = (columns > 1 ? Fill.NONE : Fill.HORIZONTAL);
-				for (EditContext ctx : grid.contexts) {
-					if (!ctx.getField().isFixedWidth()) {
-						fillGrid = Fill.HORIZONTAL;
-						break;
-					}
+				Fill fillGrid = Fill.NONE;
+				for (EditContext context : grid.contexts) {
+					fillGrid = Fill.merge(fillGrid, context.getFill());
 				}
 
 				/* Get the grid pane. */
 				GridBagPane gridPane = getGridPane(grid);
+				Constraints constraintsGrid = null;
+				{
+					double weighty = (fillGrid == Fill.VERTICAL || fillGrid == Fill.BOTH ? 1 : 0);
+					constraintsGrid = new Constraints(
+						Anchor.TOP_LEFT,
+						fillGrid,
+						column, 0, 1, 1, 1, weighty, gridInsets);
+				}
 
 				/*
 				 * Put the grid pane in a new pane to set the proper border depending on the row
-				 * and column, and apply globall grid insets.
+				 * and column, and apply global grid insets.
 				 */
 				GridBagPane layoutPane = new GridBagPane();
 				layoutPane.setBorder(new LineBorderSides(
@@ -578,24 +577,26 @@ public class FormRecordPane {
 					true,
 					(row == rows - 1 ? true : false),
 					column == columns - 1 ? true : false));
-				Constraints constraintsGrid = new Constraints(
-					Anchor.TOP_LEFT,
-					fillGrid,
-					column, 0, 1, 1, 1, 1,
-					gridInsets);
-				layoutPane.add(gridPane, constraintsGrid);
+				Constraints constraintsLayout = null;
+				{
+					double weightx = (column == columns - 1 ? 1 : 0);
+					double weighty = (fillGrid == Fill.VERTICAL || fillGrid == Fill.BOTH ? 1 : 0);
+					constraintsLayout = new Constraints(
+						Anchor.TOP_LEFT,
+						Fill.BOTH,
+						column, row, 1, 1,
+						weightx,
+						weighty, Insets.EMPTY);
+				}
 
-				/* Get the proper fill for the layout pane. */
-				Constraints constraintsLayout = new Constraints(
-					Anchor.TOP_LEFT, Fill.BOTH,
-					column, row, 1, 1, (column == columns - 1 ? 1 : 0), 1, Insets.EMPTY);
+				layoutPane.add(gridPane, constraintsGrid);
 				rowPane.add(layoutPane, constraintsLayout);
+				fillRow = Fill.merge(fillRow, fillGrid);
 			}
 
 			/* Add the row pane. */
 			Insets insets = new Insets(0, 0, 0, 0);
-			Constraints constraints =
-				new Constraints(Anchor.LEFT, Fill.HORIZONTAL, 0, row, insets);
+			Constraints constraints = new Constraints(Anchor.LEFT, fillRow, 0, row, insets);
 			groupPane.add(rowPane, constraints);
 		}
 
@@ -718,8 +719,9 @@ public class FormRecordPane {
 		/* Only one field group. */
 		if (groups.size() == 1) {
 			Insets insets = new Insets(0, 0, 0, 0);
-			Constraints constraints = new Constraints(Anchor.TOP, Fill.BOTH, 0, 0, insets);
-			pane.add(getGroupPane(groups.get(0)), constraints);
+			Constraints constraints = new Constraints(Anchor.TOP_LEFT, Fill.BOTH, 0, 0, insets);
+			GridBagPane groupPane = getGroupPane(groups.get(0));
+			pane.add(groupPane, constraints);
 			setEditMode();
 			return;
 		}
@@ -739,9 +741,9 @@ public class FormRecordPane {
 		pane.add(tabPane, constraints);
 
 		setEditMode();
-		
+
 	}
-	
+
 	/**
 	 * Apply the current edit mode.
 	 */
@@ -780,7 +782,7 @@ public class FormRecordPane {
 		this.editMode = editMode;
 		setEditMode();
 	}
-	
+
 	/**
 	 * Set the layout of the field group.
 	 * 

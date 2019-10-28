@@ -52,6 +52,11 @@ public class EditContext {
 	/** Key to get/set the previous value. */
 	public static final String PREVIOUS_VALUE = "PREVIOUS_VALUE";
 
+	/** Key for the field property edit field. */
+	public static final String EDIT_FIELD = "EDIT_FIELD";
+	/** Key for the forced fill property. */
+	public static final String FILL = "FILL";
+
 	/**
 	 * Helper to get the current value from an action performing the action value
 	 * functionality.
@@ -136,19 +141,25 @@ public class EditContext {
 	 */
 	public EditField getEditField() {
 		if (editField == null) {
-			if (field.isBoolean()) {
-				editField = getEditorBoolean();
-			} else if (field.isDate()) {
-				editField = getEditorDate();
-			} else if (field.isPossibleValues()) {
-				editField = getEditorPossibleValues();
-			} else if (field.isNumber()) {
-				editField = getEditorNumber();
-			} else if (field.isString()) {
-				editField = getEditorString();
+			/* First check non standard edit fields. */
+			Object editor = getField().getProperties().getObject(EDIT_FIELD);
+			if (editor != null && editor instanceof EditField) {
+				editField = (EditField) editor;
+			} else {
+				if (field.isBoolean()) {
+					editField = getEditorBoolean();
+				} else if (field.isDate()) {
+					editField = getEditorDate();
+				} else if (field.isPossibleValues()) {
+					editField = getEditorPossibleValues();
+				} else if (field.isNumber()) {
+					editField = getEditorNumber();
+				} else if (field.isString()) {
+					editField = getEditorString();
+				}
 			}
 		}
-		
+
 		if (editField == null) {
 			throw new NullPointerException();
 		}
@@ -273,6 +284,10 @@ public class EditContext {
 	 * @return The fill.
 	 */
 	public Fill getFill() {
+		Object fill = field.getProperties().getObject(FILL);
+		if (fill != null && fill instanceof Fill) {
+			return (Fill) fill;
+		}
 		if (field.isBoolean()) {
 			return Fill.NONE;
 		} else if (field.isPossibleValues()) {

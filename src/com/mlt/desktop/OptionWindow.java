@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2017 Miquel Sas
  * 
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  * 
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  * 
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 
@@ -32,7 +37,8 @@ import com.mlt.desktop.layout.Position;
  * A frame or dialog that has the following properties.
  * <ul>
  * <li>Can have an option pane.</li>
- * <li>The layout is a border layout. Components may be set top, left, bottom, right and center.</li>
+ * <li>The layout is a border layout. Components may be set top, left, bottom,
+ * right and center.</li>
  * </ul>
  *
  *
@@ -45,8 +51,7 @@ public class OptionWindow {
 	 */
 	private class ActionClose extends AbstractAction {
 
-		private ActionClose() {
-		}
+		private ActionClose() {}
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -79,14 +84,15 @@ public class OptionWindow {
 		public void added(Option option) {
 
 			/*
-			 * Configure an action list starting with the action of the option, adding the action to set the executed
-			 * option, and finally, if required, add an action to close the window.
+			 * Configure an action list starting with the action to set the executed option,
+			 * then the action of the option, and finally, if required, the action to close
+			 * the window.
 			 */
 			ActionList actions = new ActionList();
+			actions.add(new ActionOption(option));
 			if (option.getAction() != null) {
 				actions.add(option.getAction());
 			}
-			actions.add(new ActionOption(option));
 			if (option.isCloseWindow()) {
 				actions.add(new ActionClose());
 			}
@@ -106,8 +112,7 @@ public class OptionWindow {
 		}
 
 		@Override
-		public void removed(Option option) {
-		}
+		public void removed(Option option) {}
 	}
 
 	/**
@@ -160,7 +165,8 @@ public class OptionWindow {
 	}
 
 	/**
-	 * Check that the position (top, left, bottom or right) is not accessed when the options are installed there.
+	 * Check that the position (top, left, bottom or right) is not accessed when the
+	 * options are installed there.
 	 * 
 	 * @param pos The position.
 	 */
@@ -226,8 +232,10 @@ public class OptionWindow {
 	}
 
 	/**
-	 * Give access to the options pane to manage, add or remove options. Note that the option pane must have been set
-	 * with a call to <code>setOptions...</code>. Throws a NullPointerException if the option pane has not been set.
+	 * Give access to the options pane to manage, add or remove options. Note that
+	 * the option pane must have been set
+	 * with a call to <code>setOptions...</code>. Throws a NullPointerException if
+	 * the option pane has not been set.
 	 * 
 	 * @return The option pane.
 	 */

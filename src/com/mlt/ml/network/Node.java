@@ -348,17 +348,21 @@ public abstract class Node implements Persistent {
 	protected void saveProperties(OutputStream os) throws IOException {
 
 		/* List of keys. */
-		Set<String> keySet = properties.keySet();
+		Set<Object> keySet = properties.keySet();
 
 		/* Number of keys. */
 		IO.writeInt(os, keySet.size());
 
 		/* Iterate keys. */
-		Iterator<String> keys = keySet.iterator();
+		Iterator<Object> keys = keySet.iterator();
 		while (keys.hasNext()) {
 
 			/* Key and value. */
-			String key = keys.next();
+			Object okey = keys.next();
+			if (!(okey instanceof String)) {
+				throw new IllegalStateException("Property key must be of type string");
+			}
+			String key = (String) okey;
 			Object value = properties.getObject(key);
 			if (value == null) {
 				throw new NullPointerException();

@@ -677,6 +677,18 @@ public class FormRecordPane {
 	}
 
 	/**
+	 * Return a copy of the record with the edited values, useful for validation
+	 * purposes without assigning values to the origin record.
+	 * 
+	 * @return The copy of the record with edited values.
+	 */
+	public Record getRecordEdited() {
+		Record edited = Record.copy(record);
+		updateRecord(edited);
+		return edited;
+	}
+
+	/**
 	 * Check whether the group has a grid with the argument row and column.
 	 * 
 	 * @param group  The group.
@@ -843,6 +855,15 @@ public class FormRecordPane {
 	 * Update the record from data in editors.
 	 */
 	public void updateRecord() {
+		updateRecord(record);
+	}
+
+	/**
+	 * Update the argument record with control values.
+	 * 
+	 * @param record The record to update, must have the aliases of the controls.
+	 */
+	private void updateRecord(Record record) {
 		for (Group group : groups) {
 			for (Grid grid : group.grids) {
 				for (EditContext context : grid.contexts) {

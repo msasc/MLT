@@ -109,12 +109,12 @@ public class ActionTickers extends ActionRun {
 				persistor.setPageSize(100);
 
 				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
-				model.addColumn(Fields.TIME_FMT);
-				model.addColumn(Fields.OPEN);
-				model.addColumn(Fields.HIGH);
-				model.addColumn(Fields.LOW);
-				model.addColumn(Fields.CLOSE);
-				model.addColumn(Fields.VOLUME);
+				model.addColumn(Fields.BAR_TIME_FMT);
+				model.addColumn(Fields.BAR_OPEN);
+				model.addColumn(Fields.BAR_HIGH);
+				model.addColumn(Fields.BAR_LOW);
+				model.addColumn(Fields.BAR_CLOSE);
+				model.addColumn(Fields.BAR_VOLUME);
 				model.setRecordSet(new DataRecordSet(persistor));
 
 				TableRecord table = new TableRecord();

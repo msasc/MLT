@@ -48,15 +48,15 @@ public class TableData extends Table {
 		setName(DB.name_ticker(instrument, period));
 		setSchema(DB.schema_server());
 
-		addField(new FieldTime(Fields.TIME));
-		addField(new FieldDataInst(instrument, Fields.OPEN, "Open", "Open"));
-		addField(new FieldDataInst(instrument, Fields.HIGH, "High", "High"));
-		addField(new FieldDataInst(instrument, Fields.LOW, "Low", "Low"));
-		addField(new FieldDataInst(instrument, Fields.CLOSE, "Close", "Close"));
-		addField(new FieldVolume(instrument, Fields.VOLUME));
-		addField(new FieldTimeFmt(Fields.TIME_FMT, period));
+		addField(new FieldTime(Fields.BAR_TIME));
+		addField(new FieldDataInst(instrument, Fields.BAR_OPEN, "Open", "Open"));
+		addField(new FieldDataInst(instrument, Fields.BAR_HIGH, "High", "High"));
+		addField(new FieldDataInst(instrument, Fields.BAR_LOW, "Low", "Low"));
+		addField(new FieldDataInst(instrument, Fields.BAR_CLOSE, "Close", "Close"));
+		addField(new FieldVolume(instrument, Fields.BAR_VOLUME));
+		addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
 
-		getField(Fields.TIME).setPrimaryKey(true);
+		getField(Fields.BAR_TIME).setPrimaryKey(true);
 
 		setPersistor(new DBPersistor(MLT.getDBEngine(), getComplexView(getPrimaryKey())));
 	}

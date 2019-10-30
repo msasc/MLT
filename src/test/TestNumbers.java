@@ -1,10 +1,11 @@
 package test;
 
+import com.mlt.util.Numbers;
+
 public class TestNumbers {
 
 	public static void main(String[] args) {
-		System.out.println(Integer.MAX_VALUE);
-		System.out.println(Long.MAX_VALUE);
+		System.out.println(Numbers.remainder(20, 5));
 	}
 
 }

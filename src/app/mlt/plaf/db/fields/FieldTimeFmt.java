@@ -38,7 +38,7 @@ public class FieldTimeFmt extends Field {
 	public static class Time implements Calculator {
 		@Override
 		public Value getValue(Record record) {
-			return record.getValue(Fields.TIME);
+			return record.getValue(Fields.BAR_TIME);
 		}
 
 	}

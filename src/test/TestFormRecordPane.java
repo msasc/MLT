@@ -107,6 +107,7 @@ public class TestFormRecordPane {
 		rp.setLayoutByRows(FieldGroup.EMPTY_FIELD_GROUP);
 
 		rp.addField(RandomData.Test.CARTICLE, 0, 0);
+		rp.addField(RandomData.Test.DTITLE, 0, 0);
 		rp.addField(RandomData.Test.DARTICLE, 0, 0);
 		rp.addField(RandomData.Test.CBUSINESS, 0, 0);
 		rp.addField(RandomData.Test.TCREATED, 0, 0);

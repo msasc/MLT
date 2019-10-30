@@ -363,6 +363,9 @@ public class Alert {
 	 * @param text The text.
 	 */
 	public void setText(String text) {
+		if (text == null) {
+			text = "";
+		}
 		if (text.toLowerCase().startsWith("<html>")) {
 			textPane.setContentType("text/html");
 			text = text.substring(6);

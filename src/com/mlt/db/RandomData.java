@@ -48,6 +48,7 @@ public class RandomData {
 	public static class Test {
 
 		public static final String CARTICLE = "CARTICLE";
+		public static final String DTITLE = "DTITLE";
 		public static final String DARTICLE = "DARTICLE";
 		public static final String CBUSINESS = "CBUSINESS";
 		public static final String TCREATED = "TCREATED";

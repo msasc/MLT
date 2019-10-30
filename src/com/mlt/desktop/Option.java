@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2017 Miquel Sas
  * 
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  * 
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  * 
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 
@@ -40,7 +45,8 @@ import com.mlt.util.Properties;
 import com.mlt.util.Resources;
 
 /**
- * Packs the attributes of an button or menu item option, like the optional action, the text, the tooltip, etc.
+ * Packs the attributes of an button or menu item option, like the optional
+ * action, the text, the tooltip, etc.
  *
  * @author Miquel Sas
  */
@@ -163,10 +169,12 @@ public class Option {
 		}
 
 		/**
-		 * Returns a negative integer, zero, or a positive integer as this value is less than, equal to, or greater than
+		 * Returns a negative integer, zero, or a positive integer as this value is less
+		 * than, equal to, or greater than
 		 * the specified value.
 		 * <p>
-		 * A field is considered to be equal to another field if the alias, type, length and decimals are the same.
+		 * A field is considered to be equal to another field if the alias, type, length
+		 * and decimals are the same.
 		 *
 		 * @param group The object to compare.
 		 * @return The comparison integer.
@@ -186,8 +194,7 @@ public class Option {
 		/**
 		 * Constructor.
 		 */
-		private OptionCmp() {
-		}
+		private OptionCmp() {}
 
 		/**
 		 * {@inheritDoc}
@@ -323,7 +330,8 @@ public class Option {
 	 * Create the menu.
 	 * 
 	 * @param option         The option.
-	 * @param actionListener Optional action to assign to the option. If null, the action of the option will be
+	 * @param actionListener Optional action to assign to the option. If null, the
+	 *                       action of the option will be
 	 *                       assigned.
 	 * @return The menu.
 	 */
@@ -359,7 +367,8 @@ public class Option {
 	 * Create the menu item.
 	 * 
 	 * @param option         The option.
-	 * @param actionListener Optional action to assign to the option. If null, the action of the option will be
+	 * @param actionListener Optional action to assign to the option. If null, the
+	 *                       action of the option will be
 	 *                       assigned.
 	 * @return The menu item.
 	 */
@@ -383,7 +392,8 @@ public class Option {
 	 * Create a standard button from the option.
 	 *
 	 * @param option         The option.
-	 * @param actionListener Optional action to assign to the option. If null, the action of the option will be
+	 * @param actionListener Optional action to assign to the option. If null, the
+	 *                       action of the option will be
 	 *                       assigned.
 	 * @return The button.
 	 */
@@ -412,7 +422,8 @@ public class Option {
 	}
 
 	/**
-	 * Returns an unique list with all options in the tree that contains the argument control.
+	 * Returns an unique list with all options in the tree that contains the
+	 * argument control.
 	 * 
 	 * @param control THe source control.
 	 * @return The list of options.
@@ -430,7 +441,8 @@ public class Option {
 	}
 
 	/**
-	 * Returns the text for a button. If the option has a key stroke, an HTML text that informs of the key is builded.
+	 * Returns the text for a button. If the option has a key stroke, an HTML text
+	 * that informs of the key is builded.
 	 * 
 	 * @param option The option.
 	 * @return The button text.
@@ -780,8 +792,13 @@ public class Option {
 	 * @param closeWindow   Close window.
 	 * @return The option.
 	 */
-	public static Option option(String key, String text, String toolTip, KeyStroke accelerator, boolean defaultClose,
-	boolean closeWindow) {
+	public static Option option(
+		String key,
+		String text,
+		String toolTip,
+		KeyStroke accelerator,
+		boolean defaultClose,
+		boolean closeWindow) {
 
 		Option option = new Option();
 		option.setKey(key);
@@ -795,73 +812,174 @@ public class Option {
 	}
 
 	public static Option option_ACCEPT() {
-		return option(KEY_ACCEPT, Resources.getText("buttonAccept"), Resources.getText("buttonAccept"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), false, false);
+		return option_ACCEPT(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+	}
+
+	public static Option option_ACCEPT(KeyStroke accelerator) {
+		return option(
+			KEY_ACCEPT,
+			Resources.getText("buttonAccept"),
+			Resources.getText("buttonAccept"),
+			accelerator,
+			false, false);
 	}
 
 	public static Option option_APPLY() {
-		return option(KEY_APPLY, Resources.getText("buttonApply"), Resources.getText("buttonApply"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), false, false);
+		return option_APPLY(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+	}
+
+	public static Option option_APPLY(KeyStroke accelerator) {
+		return option(
+			KEY_APPLY,
+			Resources.getText("buttonApply"),
+			Resources.getText("buttonApply"),
+			accelerator, false, false);
 	}
 
 	public static Option option_CANCEL() {
-		return option(KEY_CANCEL, Resources.getText("buttonCancel"), Resources.getText("buttonCancel"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), true, true);
+		return option_CANCEL(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0));
+	}
+
+	public static Option option_CANCEL(KeyStroke accelerator) {
+		return option(
+			KEY_CANCEL,
+			Resources.getText("buttonCancel"),
+			Resources.getText("buttonCancel"),
+			accelerator, true, true);
 	}
 
 	public static Option option_CLOSE() {
-		return option(KEY_CLOSE, Resources.getText("buttonClose"), Resources.getText("buttonClose"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), true, true);
+		return option_CLOSE(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0));
+	}
+
+	public static Option option_CLOSE(KeyStroke accelerator) {
+		return option(
+			KEY_CLOSE,
+			Resources.getText("buttonClose"),
+			Resources.getText("buttonClose"),
+			accelerator, true, true);
 	}
 
 	public static Option option_FINISH() {
-		return option(KEY_FINISH, Resources.getText("buttonFinish"), Resources.getText("buttonFinish"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), false, true);
+		return option_FINISH(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+	}
+
+	public static Option option_FINISH(KeyStroke accelerator) {
+		return option(
+			KEY_FINISH,
+			Resources.getText("buttonFinish"),
+			Resources.getText("buttonFinish"),
+			accelerator, false, true);
 	}
 
 	public static Option option_IGNORE() {
-		return option(KEY_IGNORE, Resources.getText("buttonFinish"), Resources.getText("buttonFinish"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK), false, true);
+		return option_IGNORE(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK));
+	}
+
+	public static Option option_IGNORE(KeyStroke accelerator) {
+		return option(
+			KEY_IGNORE,
+			Resources.getText("buttonFinish"),
+			Resources.getText("buttonFinish"),
+			accelerator, false, true);
 	}
 
 	public static Option option_NEXT() {
-		return option(KEY_NEXT, Resources.getText("buttonNext"), Resources.getText("buttonNext"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK), false, true);
+		return option_NEXT(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK));
+	}
+
+	public static Option option_NEXT(KeyStroke accelerator) {
+		return option(
+			KEY_NEXT,
+			Resources.getText("buttonNext"),
+			Resources.getText("buttonNext"),
+			accelerator, false, true);
 	}
 
 	public static Option option_NO() {
-		return option(KEY_NO, Resources.getText("buttonNo"), Resources.getText("buttonNo"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), true, true);
+		return option_NO();
+	}
+
+	public static Option option_NO(KeyStroke accelerator) {
+		return option(
+			KEY_NO,
+			Resources.getText("buttonNo"),
+			Resources.getText("buttonNo"),
+			accelerator, true, true);
 	}
 
 	public static Option option_OK() {
-		return option(KEY_OK, Resources.getText("buttonOk"), Resources.getText("buttonOk"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), false, true);
+		return option_OK(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+	}
+
+	public static Option option_OK(KeyStroke accelerator) {
+		return option(
+			KEY_OK,
+			Resources.getText("buttonOk"),
+			Resources.getText("buttonOk"),
+			accelerator, false, true);
 	}
 
 	public static Option option_OPEN() {
-		return option(KEY_OPEN, Resources.getText("buttonOpen"), Resources.getText("buttonOpen"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), false, true);
+		return option_OPEN(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+	}
+
+	public static Option option_OPEN(KeyStroke accelerator) {
+		return option(
+			KEY_OPEN,
+			Resources.getText("buttonOpen"),
+			Resources.getText("buttonOpen"),
+			accelerator, false, true);
 	}
 
 	public static Option option_PREVIOUS() {
-		return option(KEY_PREVIOUS, Resources.getText("buttonPrevious"), Resources.getText("buttonPrevious"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.ALT_DOWN_MASK), false, true);
+		return option_PREVIOUS(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.ALT_DOWN_MASK));
+	}
+
+	public static Option option_PREVIOUS(KeyStroke accelerator) {
+		return option(
+			KEY_PREVIOUS,
+			Resources.getText("buttonPrevious"),
+			Resources.getText("buttonPrevious"),
+			accelerator, false, true);
 	}
 
 	public static Option option_RETRY() {
-		return option(KEY_RETRY, Resources.getText("buttonRetry"), Resources.getText("buttonRetry"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.ALT_DOWN_MASK + KeyEvent.CTRL_DOWN_MASK), false, true);
+		return option_RETRY(
+			KeyStroke.getKeyStroke(KeyEvent.VK_ENTER,
+			KeyEvent.ALT_DOWN_MASK + KeyEvent.CTRL_DOWN_MASK));
+	}
+
+	public static Option option_RETRY(KeyStroke accelerator) {
+		return option(
+			KEY_RETRY,
+			Resources.getText("buttonRetry"),
+			Resources.getText("buttonRetry"),
+			accelerator, false, true);
 	}
 
 	public static Option option_SELECT() {
-		return option(KEY_SELECT, Resources.getText("buttonSelect"), Resources.getText("buttonSelect"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), false, true);
+		return option_SELECT(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+	}
+
+	public static Option option_SELECT(KeyStroke accelerator) {
+		return option(
+			KEY_SELECT,
+			Resources.getText("buttonSelect"),
+			Resources.getText("buttonSelect"),
+			accelerator, false, true);
 	}
 
 	public static Option option_YES() {
-		return option(KEY_YES, Resources.getText("buttonYes"), Resources.getText("buttonYes"),
-		KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), false, true);
+		return option_YES(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+	}
+
+	public static Option option_YES(KeyStroke accelerator) {
+		return option(
+			KEY_YES,
+			Resources.getText("buttonYes"),
+			Resources.getText("buttonYes"),
+			accelerator, false, true);
 	}
 
 	/*
@@ -869,8 +987,10 @@ public class Option {
 	 */
 
 	/**
-	 * Sets the mnemonics for a list of option buttons and menu items if present. Starts with the first character of the
-	 * text, and if the mnemonic is used, scans the text for the first character not used.
+	 * Sets the mnemonics for a list of option buttons and menu items if present.
+	 * Starts with the first character of the
+	 * text, and if the mnemonic is used, scans the text for the first character not
+	 * used.
 	 * 
 	 * @param options The list of options to set the mnemonics.
 	 */
@@ -897,8 +1017,7 @@ public class Option {
 
 				/* Skip possible tag. */
 				if (c == '<') {
-					while (++index < text.length() && text.charAt(index) != '>') {
-					}
+					while (++index < text.length() && text.charAt(index) != '>') {}
 					continue;
 				}
 
@@ -926,8 +1045,10 @@ public class Option {
 	}
 
 	/**
-	 * Sets the mnemonics for a list of option buttons and menu items if present. Starts with the first character of the
-	 * text, and if the mnemonic is used, scans the text for the first character not used.
+	 * Sets the mnemonics for a list of option buttons and menu items if present.
+	 * Starts with the first character of the
+	 * text, and if the mnemonic is used, scans the text for the first character not
+	 * used.
 	 * 
 	 * @param options The list of options to set the mnemonics.
 	 */
@@ -936,8 +1057,10 @@ public class Option {
 	}
 
 	/**
-	 * Sets the mnemonics for a list of option buttons and menu items if present. Starts with the first character of the
-	 * text, and if the mnemonic is used, scans the text for the first character not used.
+	 * Sets the mnemonics for a list of option buttons and menu items if present.
+	 * Starts with the first character of the
+	 * text, and if the mnemonic is used, scans the text for the first character not
+	 * used.
 	 * 
 	 * @param options The list of options to set the mnemonics.
 	 */
@@ -950,8 +1073,10 @@ public class Option {
 	}
 
 	/**
-	 * Sets the mnemonics for a list of option buttons and menu items if present. Starts with the first character of the
-	 * text, and if the mnemonic is used, scans the text for the first character not used.
+	 * Sets the mnemonics for a list of option buttons and menu items if present.
+	 * Starts with the first character of the
+	 * text, and if the mnemonic is used, scans the text for the first character not
+	 * used.
 	 * 
 	 * @param options The list of options to set the mnemonics.
 	 */
@@ -985,8 +1110,7 @@ public class Option {
 
 			/* Skip possible tag. */
 			if (c == '<') {
-				while (++index < text.length() && text.charAt(index) != '>') {
-				}
+				while (++index < text.length() && text.charAt(index) != '>') {}
 				continue;
 			}
 
@@ -1014,7 +1138,10 @@ public class Option {
 	 * @param option         The option.
 	 * @param actionListener The optional action.
 	 */
-	private static void setupMenuItem(MenuItem menuItem, Option option, ActionListener actionListener) {
+	private static void setupMenuItem(
+		MenuItem menuItem,
+		Option option,
+		ActionListener actionListener) {
 		if (actionListener == null) {
 			actionListener = option.getAction();
 		}
@@ -1057,9 +1184,8 @@ public class Option {
 	/**
 	 * Constructor.
 	 */
-	public Option() {
-	}
-	
+	public Option() {}
+
 	/**
 	 * Execute (click) the option.
 	 */
@@ -1073,7 +1199,7 @@ public class Option {
 			return;
 		}
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -1232,7 +1358,8 @@ public class Option {
 	}
 
 	/**
-	 * Check if the option should display the accelerator in buttons when present. Default is true.
+	 * Check if the option should display the accelerator in buttons when present.
+	 * Default is true.
 	 * 
 	 * @return A boolean.
 	 */

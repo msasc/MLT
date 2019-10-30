@@ -50,6 +50,12 @@ public class Average implements Comparable<Average> {
 	 */
 	public Average(Type type, int period, int... smooths) {
 		super();
+		if (type == null) {
+			throw new NullPointerException("Type can not be null");
+		}
+		if (period <= 0) {
+			throw new IllegalArgumentException("Period must be greater than zero");
+		}
 		this.type = type;
 		this.period = period;
 		this.smooths = (smooths == null ? new int[0] : smooths);
@@ -113,11 +119,25 @@ public class Average implements Comparable<Average> {
 	}
 
 	/**
-	 * Set the type.
-	 * 
-	 * @param type The average type.
+	 * {@inheritDoc}
 	 */
-	public void setType(Type type) {
-		this.type = type;
+	@Override
+	public String toString() {
+		StringBuilder b = new StringBuilder();
+		b.append(type.toString());
+		b.append("(");
+		b.append(period);
+		b.append(")");
+		if (smooths.length > 0) {
+			b.append(" (");
+			for (int i = 0; i < smooths.length; i++) {
+				if (i > 0) {
+					b.append(", ");
+				}
+				b.append(smooths[i]);
+			}
+			b.append(")");
+		}
+		return b.toString();
 	}
 }

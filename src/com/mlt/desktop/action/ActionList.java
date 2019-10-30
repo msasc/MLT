@@ -63,6 +63,7 @@ public class ActionList extends Action {
 			if (action instanceof Action) {
 				Action a = (Action) action;
 				if (!a.getProperties().getBoolean(CAN_CONTINUE, true)) {
+					a.getProperties().remove(CAN_CONTINUE);
 					break;
 				}
 			}

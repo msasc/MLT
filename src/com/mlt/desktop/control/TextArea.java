@@ -16,10 +16,7 @@
  */
 package com.mlt.desktop.control;
 
-import java.awt.event.KeyEvent;
-
 import javax.swing.JTextArea;
-import javax.swing.KeyStroke;
 
 import com.mlt.db.Value;
 import com.mlt.desktop.EditContext;
@@ -41,7 +38,7 @@ public class TextArea extends Control implements EditField {
 	 */
 	public TextArea() {
 		super();
-		setComponent(configure(new JTextArea()));
+		setComponent(new JTextArea());
 	}
 
 	/**
@@ -51,7 +48,7 @@ public class TextArea extends Control implements EditField {
 	 */
 	public TextArea(String text) {
 		super();
-		setComponent(configure(new JTextArea(text)));
+		setComponent(new JTextArea(text));
 	}
 
 	/**
@@ -62,7 +59,7 @@ public class TextArea extends Control implements EditField {
 	 */
 	public TextArea(int rows, int columns) {
 		super();
-		setComponent(configure(new JTextArea(rows, columns)));
+		setComponent(new JTextArea(rows, columns));
 	}
 
 	/**
@@ -74,17 +71,7 @@ public class TextArea extends Control implements EditField {
 	 */
 	public TextArea(String text, int rows, int columns) {
 		super();
-		setComponent(configure(new JTextArea(text, rows, columns)));
-	}
-
-	private JTextArea configure(JTextArea textArea) {
-		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "");
-		textArea.getInputMap().put(
-			KeyStroke.getKeyStroke(
-				KeyEvent.VK_ENTER,
-				KeyEvent.ALT_DOWN_MASK),
-			"insert-break");
-		return textArea;
+		setComponent(new JTextArea(text, rows, columns));
 	}
 
 	/**

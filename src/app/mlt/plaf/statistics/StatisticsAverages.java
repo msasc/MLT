@@ -92,58 +92,72 @@ public class StatisticsAverages extends StatisticsTicker {
 			String path,
 			Attributes attributes) throws SAXException {
 
-			/* Validate the path. */
-			if (!path.equals("averages") && !path.equals("averages/average")) {
-				throw new SAXException("Invalid path: " + path);
-			}
-
-			/* Validate that the average path has no attributes. */
-			if (path.equals("averages")) {
-				if (attributes.getLength() > 0) {
-					throw new SAXException("Path \"" + averages + "\" can not have attributes");
-				}
-			}
-
-			/* Validate and retrieve attributes of averages/average path. */
-			if (path.equals("averages/average")) {
-
-				/*
-				 * Attributes must be type, period, optionally smooths. Any attribute that is
-				 * not one of these is not valid.
-				 */
-				for (int i = 0; i < attributes.getLength(); i++) {
-					String name = attributes.getQName(i);
-					if (!Strings.in(name, "type", "period", "smooths")) {
-						throw new SAXException("Invalid attribute " + name + " in path "+ path);
-					}
-				}
-				 
-				/* Type. */
-				String attrType = attributes.getValue("type");
-				Average.Type type = Average.Type.valueOf(attrType);
-
-				/* Period. */
-				String attrPeriod = attributes.getValue("period");
-				int period = 0;
-				try {
-					period = Integer.parseInt(attrPeriod);
-				} catch (NumberFormatException exc) {
-					throw new SAXException("Invalid period " + attrPeriod, exc);
+			try {
+				/* Validate the path. */
+				if (!path.equals("averages") && !path.equals("averages/average")) {
+					throw new Exception("Invalid path: " + path);
 				}
 
-				/* Smooths. */
-				String attrSmooths = attributes.getValue("smooths");
-				int[] smooths = null;
-				if (!attrSmooths.isEmpty()) {
-					String[] s_smooths = Strings.parse(attrSmooths, ",");
-					smooths = new int[s_smooths.length];
-					for (int i = 0; i < s_smooths.length; i++) {
-						smooths[i] = Integer.parseInt(s_smooths[i]);
+				/* Validate that the average path has no attributes. */
+				if (path.equals("averages")) {
+					if (attributes.getLength() > 0) {
+						throw new Exception("Path \"" + averages + "\" can not have attributes");
 					}
 				}
 
-				/* Add the average. */
-				averages.add(new Average(type, period, smooths));
+				/* Validate and retrieve attributes of averages/average path. */
+				if (path.equals("averages/average")) {
+
+					/*
+					 * Attributes must be type, period, optionally smooths. Any attribute that is
+					 * not one of these is not valid. At least type and period must be set.
+					 */
+					boolean attrTypeSet = false;
+					boolean attrPeriodSet = false;
+					for (int i = 0; i < attributes.getLength(); i++) {
+						String name = attributes.getQName(i);
+						if (!Strings.in(name, "type", "period", "smooths")) {
+							throw new Exception("Invalid attribute " + name + " in path " + path);
+						}
+						if (name.equals("type")) attrTypeSet = true;
+						if (name.equals("period")) attrPeriodSet = true;
+					}
+					if (!attrTypeSet) {
+						throw new Exception("The attribute \"type\" must be set.");
+					}
+					if (!attrPeriodSet) {
+						throw new Exception("The attribute \"period\" must be set.");
+					}
+
+					/* Type. */
+					String attrType = attributes.getValue("type");
+					Average.Type type = Average.Type.valueOf(attrType);
+
+					/* Period. */
+					String attrPeriod = attributes.getValue("period");
+					int period = 0;
+					try {
+						period = Integer.parseInt(attrPeriod);
+					} catch (NumberFormatException exc) {
+						throw new Exception("Invalid period " + attrPeriod, exc);
+					}
+
+					/* Smooths. */
+					String attrSmooths = attributes.getValue("smooths");
+					int[] smooths = null;
+					if (attrSmooths != null && !attrSmooths.isEmpty()) {
+						String[] s_smooths = Strings.parse(attrSmooths, ",");
+						smooths = new int[s_smooths.length];
+						for (int i = 0; i < s_smooths.length; i++) {
+							smooths[i] = Integer.parseInt(s_smooths[i]);
+						}
+					}
+
+					/* Add the average. */
+					averages.add(new Average(type, period, smooths));
+				}
+			} catch (Exception exc) {
+				throw new SAXException(exc.getMessage(), exc);
 			}
 		}
 
@@ -154,6 +168,52 @@ public class StatisticsAverages extends StatisticsTicker {
 		 */
 		public List<Average> getAverages() {
 			return averages;
+		}
+	}
+
+	/**
+	 * Return the list of averages given the parameters string.
+	 * 
+	 * @param parameters The parameters string.
+	 * @return The list of averages.
+	 * @throws ParserConfigurationException
+	 * @throws SAXException
+	 * @throws IOException
+	 */
+	public static List<Average> getAverages(
+		String parameters) throws ParserConfigurationException, SAXException, IOException {
+		ParametersHandler handler = new ParametersHandler();
+		Parser parser = new Parser();
+		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
+		return handler.getAverages();
+	}
+
+	/**
+	 * Validates that the list of averages is correct for the purpose of the
+	 * StatisticsAverages.
+	 * 
+	 * @param averages The list of averages.
+	 * @throws IllegalArgumentException
+	 */
+	public static void validate(List<Average> averages) throws IllegalArgumentException {
+		for (int i = 0; i < averages.size(); i++) {
+			Average avgCurr = averages.get(i);
+			/* Must have smooths. */
+			if (avgCurr.getSmooths().length == 0) {
+				throw new IllegalArgumentException("Average " + avgCurr + " must have smooths");
+			}
+			/* Period greater than previous, and previous must be multiple. */
+			if (i > 0) {
+				Average avgPrev = averages.get(i - 1);
+				if (avgPrev.getPeriod() >= avgCurr.getPeriod()) {
+					throw new IllegalArgumentException(
+						"Average period of " + avgCurr + " must greater than period of " + avgPrev);
+				}
+				if (Numbers.remainder(avgCurr.getPeriod(), avgPrev.getPeriod()) != 0) {
+					throw new IllegalArgumentException(
+						"Average " + avgCurr + " must be a multiple of " + avgPrev);
+				}
+			}
 		}
 	}
 
@@ -169,16 +229,13 @@ public class StatisticsAverages extends StatisticsTicker {
 	 * 
 	 * @param instrument Instrument.
 	 * @param period     Period.
-	 * @param idSuffix   Id suffix.
 	 */
-	public StatisticsAverages(Instrument instrument, Period period, String idSuffix) {
+	public StatisticsAverages(Instrument instrument, Period period) {
 		super(instrument, period);
-		setId("st" + idSuffix);
 	}
 
 	/**
-	 * Add an average to the list of averages. Averages must be added in inverse
-	 * order, from greater to smallest.
+	 * Add an average to the list of averages in a period ascending order.
 	 * 
 	 * @param avg The average to add.
 	 */
@@ -198,16 +255,12 @@ public class StatisticsAverages extends StatisticsTicker {
 				throw new IllegalArgumentException("Repeated verage period.");
 			}
 		}
-		/* Period must be less than first. */
-		if (avg.getPeriod() > averages.get(0).getPeriod()) {
-			throw new IllegalArgumentException("Period must be less than first one.");
+		/* Period must be greater than previous. */
+		if (avg.getPeriod() <= averages.get(averages.size() - 1).getPeriod()) {
+			throw new IllegalArgumentException("Period must be greater than the previous one.");
 		}
-		/* Period must be a divisor of last one. */
-		if (averages.get(averages.size() - 1).getPeriod() % avg.getPeriod() != 0) {
-			throw new IllegalArgumentException("Period must be a divisor of last one.");
-		}
-		/* Set as the first. */
-		averages.add(0, avg);
+		/* Do add. */
+		averages.add(avg);
 	}
 
 	/**
@@ -219,70 +272,181 @@ public class StatisticsAverages extends StatisticsTicker {
 		List<Field> fields = new ArrayList<>();
 		for (int i = 0; i < averages.size(); i++) {
 			Average average = averages.get(i);
-			String name = Fields.averageName(average);
-			String header = Fields.averageHeader(average);
-			String label = Fields.averageLabel(average);
-			Field field = Domains.getDouble(name, header, label);
-			fields.add(field);
+			String name = "average_" + average.getPeriod();
+			String header = "Avg " + average.getPeriod();
+			String label = "Average " + average.toString();
+			fields.add(Domains.getDouble(name, header, label));
 		}
 		return fields;
 	}
 
 	/**
-	 * Return the list of fields of candles per average.
+	 * Return the list of fields for slopes. For each slope, a raw and a normalized
+	 * value.
 	 * 
-	 * @param suffix The suffix.
-	 * @return The list of fields.
+	 * @return The list of fields for slopes.
 	 */
-	public List<Field> getFieldListCandles(String suffix) {
+	public List<Field> getFieldListAverageSlopes() {
 		List<Field> fields = new ArrayList<>();
-		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
-
-		/* Calculate maximum integer digits to pad the number. */
-		int pad = -1;
-		for (int i = 0; i < averages.size() - 1; i++) {
-			Average average = averages.get(i);
-			int period = average.getPeriod();
-			int candles = maxPeriod / period;
-			pad = Math.max(pad, Numbers.getDigits(candles));
+		String name, header, label;
+		for (int i = 0; i < averages.size(); i++) {
+			int p = averages.get(i).getPeriod();
+			/* Raw value. */
+			name = "average_slope_" + p + "_raw";
+			header = "Avg-Slope " + p + " raw";
+			label = "Average slope " + p + " raw value";
+			fields.add(Domains.getDouble(name, header, label));
+			/* Normalized value. */
+			name = "average_slope_" + p + "_nrm";
+			header = "Avg-Slope " + p + " nrm";
+			label = "Average slope " + p + " normalized value";
+			fields.add(Domains.getDouble(name, header, label));
 		}
+		return fields;
+	}
 
-		/* Build fields. */
-		for (int i = 0; i < averages.size() - 1; i++) {
-			Average average = averages.get(i);
-			int period = average.getPeriod();
-			int candles = maxPeriod / period;
-			for (int j = 0; j < candles; j++) {
+	/**
+	 * Return the list of fields for spreads. For each spread, a raw and a normalize
+	 * value.
+	 * 
+	 * @return The list of fields for slopes.
+	 */
+	public List<Field> getFieldListAverageSpreads() {
+		List<Field> fields = new ArrayList<>();
+		String name, header, label;
+		for (int i = 0; i < averages.size(); i++) {
+			int fp = averages.get(i).getPeriod();
+			for (int j = i + 1; j < averages.size(); j++) {
+				int sp = averages.get(j).getPeriod();
+				/* Raw value. */
+				name = "average_spread_" + fp + "_" + sp + "_raw";
+				header = "Avg-Spread " + fp + "/" + sp + " raw";
+				label = "Average spread between " + fp + " and " + sp + " raw value";
+				fields.add(Domains.getDouble(name, header, label));
+				/* Normalized value. */
+				name = "average_spread_" + fp + "_" + sp + "_nrm";
+				header = "Avg-Spread " + fp + "/" + sp + " nrm";
+				label = "Average spread between " + fp + " and " + sp + " normalized value";
+				fields.add(Domains.getDouble(name, header, label));
+			}
+		}
+		return fields;
+	}
 
-				/* Range. */
-				String rangeName = Fields.fieldName("range", period, j, pad, suffix);
-				String rangeHeader = Fields.fieldHeader("Range", period, j, pad, suffix);
-				String rangeLabel = Fields.fieldLabel("Range", period, j, pad, suffix);
-				Field rangeField = Domains.getDouble(rangeName, rangeHeader, rangeLabel);
-				fields.add(rangeField);
+	/**
+	 * Returns the list of candle related fields.
+	 * 
+	 * @return The list of candle related fields.
+	 */
+	public List<Field> getFieldListCandles() {
 
-				/* Body size. */
-				String bodySizeName = Fields.fieldName("body_size", period, j, pad, suffix);
-				String bodySizeHeader = Fields.fieldHeader("Body-Size", period, j, pad, suffix);
-				String bodySizeLabel = Fields.fieldLabel("Body-Size", period, j, pad, suffix);
-				Field bodySizeField =
-					Domains.getDouble(bodySizeName, bodySizeHeader, bodySizeLabel);
-				fields.add(bodySizeField);
+		List<Field> fields = new ArrayList<>();
+		String name, header, label;
+		for (int i = 0; i < averages.size(); i++) {
 
-				/* Body position (center of body relative to range). */
-				String bodyPosName = Fields.fieldName("body_pos", period, j, pad, suffix);
-				String bodyPosHeader = Fields.fieldHeader("body_pos", period, j, pad, suffix);
-				String bodyPosLabel = Fields.fieldLabel("body_pos", period, j, pad, suffix);
-				Field bodyPosField = Domains.getDouble(bodyPosName, bodyPosHeader, bodyPosLabel);
-				fields.add(bodyPosField);
+			/* Number of candles and pad for index. */
+			int count, period;
+			if (i == 0) {
+				count = averages.get(i).getPeriod();
+				period = 0;
+			} else {
+				count = averages.get(i).getPeriod() / averages.get(i - 1).getPeriod();
+				period = averages.get(i).getPeriod();
+			}
+			int pad = Numbers.getDigits(count);
 
-				/* Relative position between this and next candle. */
-				if (j < candles - 1) {
-					String relPosName = Fields.fieldNameRel("rel_pos", period, j, pad, suffix);
-					String relPosHeader = Fields.fieldHeaderRel("rel_pos", period, j, pad, suffix);
-					String relPosLabel = Fields.fieldLabelRel("rel_pos", period, j, pad, suffix);
-					Field relPosField = Domains.getDouble(relPosName, relPosHeader, relPosLabel);
-					fields.add(relPosField);
+			/* Create the candles fields for level candles. */
+			for (int j = 0; j < count; j++) {
+				String curr = Strings.leftPad(Integer.toString(j), pad);
+				String id = period + "_" + curr;
+
+				/* Open, high, low, close. */
+				name = "open_" + id;
+				header = "Open " + id;
+				label = "Open " + id;
+				fields.add(Domains.getDouble(name, header, label));
+				name = "high_" + id;
+				header = "High " + id;
+				label = "High " + id;
+				fields.add(Domains.getDouble(name, header, label));
+				name = "low_" + id;
+				header = "Low " + id;
+				label = "Low " + id;
+				fields.add(Domains.getDouble(name, header, label));
+				name = "close_" + id;
+				header = "Close " + id;
+				label = "Close " + id;
+				fields.add(Domains.getDouble(name, header, label));
+
+				/* Sign: 1, 0, -1 */
+				name = "sign_" + id;
+				header = "Sign " + id;
+				label = "Sign " + id;
+				fields.add(Domains.getDouble(name, header, label));
+
+				/* Range, raw and normalized. */
+				name = "range_" + id + "_raw";
+				header = "Range " + id + " raw";
+				label = "Range " + id + " raw value";
+				fields.add(Domains.getDouble(name, header, label));
+				name = "range_" + id + "_nrm";
+				header = "Range " + id + " nrm";
+				label = "Range " + id + " normalized value";
+				fields.add(Domains.getDouble(name, header, label));
+
+				/* Body size as a factor of the range, no need to normalize. */
+				name = "body_size" + id;
+				header = "Body-size " + id;
+				label = "Body size " + id;
+				fields.add(Domains.getDouble(name, header, label));
+
+				/* Body relative position within the range. */
+				name = "body_pos" + id;
+				header = "Body-pos " + id;
+				label = "Body position " + id;
+				fields.add(Domains.getDouble(name, header, label));
+
+				/*
+				 * Factor of change of open, high, low and close, of this candle versus the next
+				 * candle. Raw and normalized values.
+				 */
+				if (j < count - 1) {
+					String next = Strings.leftPad(Integer.toString(j + 1), pad);
+					id = period + "_" + curr + "_" + next;
+					/* Raw values. */
+					name = "open_" + id + "_factor_raw";
+					header = "Open " + id + " factor raw";
+					label = "Open " + id + " factor raw value";
+					fields.add(Domains.getDouble(name, header, label));
+					name = "high_" + id + "_factor_raw";
+					header = "High " + id + " factor raw";
+					label = "High " + id + " factor raw value";
+					fields.add(Domains.getDouble(name, header, label));
+					name = "low_" + id + "_factor_raw";
+					header = "Low " + id + " factor raw";
+					label = "Low " + id + " factor raw value";
+					fields.add(Domains.getDouble(name, header, label));
+					name = "close_" + id + "_factor_raw";
+					header = "Close " + id + " factor raw";
+					label = "Close " + id + " factor raw value";
+					fields.add(Domains.getDouble(name, header, label));
+					/* Normalized values. */
+					name = "open_" + id + "_factor_nrm";
+					header = "Open " + id + " factor nrm";
+					label = "Open " + id + " factor normalized value";
+					fields.add(Domains.getDouble(name, header, label));
+					name = "high_" + id + "_factor_nrm";
+					header = "High " + id + " factor nrm";
+					label = "High " + id + " factor normalized value";
+					fields.add(Domains.getDouble(name, header, label));
+					name = "low_" + id + "_factor_nrm";
+					header = "Low " + id + " factor nrm";
+					label = "Low " + id + " factor normalized value";
+					fields.add(Domains.getDouble(name, header, label));
+					name = "close_" + id + "_factor_nrm";
+					header = "Close " + id + " factor nrm";
+					label = "Close " + id + " factor normalized value";
+					fields.add(Domains.getDouble(name, header, label));
 				}
 			}
 		}
@@ -290,53 +454,28 @@ public class StatisticsAverages extends StatisticsTicker {
 	}
 
 	/**
-	 * Return the field list with increases in percentage of the last N close values
+	 * Return the list of fields to normalize.
 	 * 
-	 * @param suffix
-	 * @return
+	 * @return The list of fields to normalize.
 	 */
-	public List<Field> getFieldListIncreases(String suffix) {
+	public List<Field> getFieldListToNormalize() {
 		List<Field> fields = new ArrayList<>();
-		return fields;
-	}
-
-	/**
-	 * Return the list of slope fields.
-	 * 
-	 * @return The list of slope fields.
-	 */
-	public List<Field> getFieldListSlopes(String suffix) {
-		List<Field> fields = new ArrayList<>();
-		for (int i = 0; i < averages.size(); i++) {
-			Average average = averages.get(i);
-			String name = Fields.slopeName(average, suffix);
-			String header = Fields.slopeHeader(average, suffix);
-			String label = Fields.slopeLabel(average, suffix);
-			Field field = Domains.getDouble(name, header, label);
-			fields.add(field);
-		}
-		return fields;
-	}
-
-	/**
-	 * Return the list of spread fields.
-	 * 
-	 * @return The list of spread fields.
-	 */
-	public List<Field> getFieldListSpreads(String suffix) {
-		List<Field> fields = new ArrayList<>();
-		for (int i = 0; i < averages.size() - 1; i++) {
-			Average fast = averages.get(i);
-			for (int j = i + 1; j < averages.size(); j++) {
-				Average slow = averages.get(j);
-				String name = Fields.spreadName(fast, slow, suffix);
-				String header = Fields.spreadHeader(fast, slow, suffix);
-				String label = Fields.spreadLabel(fast, slow, suffix);
-				Field field = Domains.getDouble(name, header, label);
+		for (int i = 0; i < getTableStates().getFieldCount(); i++) {
+			Field field = getTableStates().getField(i);
+			if (field.getName().endsWith("_raw")) {
 				fields.add(field);
 			}
 		}
 		return fields;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getLegend() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	/**
@@ -388,15 +527,13 @@ public class StatisticsAverages extends StatisticsTicker {
 		return sw.toString();
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public List<Table> getTables() {
-		List<Table> tables = new ArrayList<>();
-		tables.add(getTableRanges());
-		tables.add(getTableStates());
-		return tables;
+	private String getTableNameSuffix() {
+		StringBuilder suffix = new StringBuilder();
+		suffix.append("_");
+		suffix.append(getId());
+		suffix.append("_");
+		suffix.append(getKey());
+		return suffix.toString().toLowerCase();
 	}
 
 	/**
@@ -413,7 +550,7 @@ public class StatisticsAverages extends StatisticsTicker {
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
-		String name = DB.name_ticker(instrument, period, "_" + getId() + "_rng");
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix() + "_rng");
 
 		tableRanges.setSchema(DB.schema_server());
 		tableRanges.setName(name);
@@ -435,7 +572,7 @@ public class StatisticsAverages extends StatisticsTicker {
 		tableRanges.addField(fieldValue);
 
 		/* Reference of the time of the registered values. */
-		Field fieldTime = new FieldTime(Fields.TIME);
+		Field fieldTime = new FieldTime(Fields.BAR_TIME);
 		tableRanges.addField(fieldTime);
 
 		/* Non unique index on name, min-max and period. */
@@ -453,6 +590,17 @@ public class StatisticsAverages extends StatisticsTicker {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public List<Table> getTables() {
+		List<Table> tables = new ArrayList<>();
+		tables.add(getTableRanges());
+		tables.add(getTableStates());
+		return tables;
+	}
+
+	/**
 	 * Return the states (all parameters) table.
 	 * 
 	 * @return The table.
@@ -466,20 +614,21 @@ public class StatisticsAverages extends StatisticsTicker {
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
-		String name = DB.name_ticker(instrument, period, "_" + getId() + "_src");
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix() + "_src");
 
 		tableStates.setSchema(DB.schema_server());
 		tableStates.setName(name);
 
 		/* Time, open, high, low, close. */
-		tableStates.addField(new FieldTime(Fields.TIME));
-		tableStates.getField(Fields.TIME).setPrimaryKey(true);
+		tableStates.addField(new FieldTime(Fields.BAR_TIME));
+		tableStates.getField(Fields.BAR_TIME).setPrimaryKey(true);
 
-		tableStates.addField(new FieldTimeFmt(Fields.TIME_FMT, period));
-		tableStates.addField(new FieldDataInst(instrument, Fields.OPEN, "Open", "Open value"));
-		tableStates.addField(new FieldDataInst(instrument, Fields.HIGH, "High", "High value"));
-		tableStates.addField(new FieldDataInst(instrument, Fields.LOW, "Low", "Low value"));
-		tableStates.addField(new FieldDataInst(instrument, Fields.CLOSE, "Close", "Close value"));
+		tableStates.addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
+		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_OPEN, "Open", "Open value"));
+		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_HIGH, "High", "High value"));
+		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_LOW, "Low", "Low value"));
+		tableStates
+			.addField(new FieldDataInst(instrument, Fields.BAR_CLOSE, "Close", "Close value"));
 
 		/* Calculated pivot (High=1, None=0, Low=-1) */
 		tableStates.addField(Domains.getInteger("pivot", "Pivot", "Pivot"));
@@ -493,39 +642,21 @@ public class StatisticsAverages extends StatisticsTicker {
 			tableStates.addField(field);
 		}
 
-		/* Slopes of averages: raw. */
-		List<Field> slopeFieldsRaw = getFieldListSlopes("raw");
-		for (Field field : slopeFieldsRaw) {
+		/* Slopes of averages: raw and normalized. */
+		List<Field> slopeFields = getFieldListAverageSlopes();
+		for (Field field : slopeFields) {
 			tableStates.addField(field);
 		}
 
-		/* Spread fields: raw. */
-		List<Field> spreadFieldsRaw = getFieldListSpreads("raw");
-		for (Field field : spreadFieldsRaw) {
+		/* Spreads within averages: raw and normalized. */
+		List<Field> spreadFields = getFieldListAverageSpreads();
+		for (Field field : spreadFields) {
 			tableStates.addField(field);
 		}
 
-		/* Candle fields: raw. */
-		List<Field> candleFieldsRaw = getFieldListCandles("raw");
-		for (Field field : candleFieldsRaw) {
-			tableStates.addField(field);
-		}
-
-		/* Slopes of averages: normalized. */
-		List<Field> slopeFieldsNrm = getFieldListSlopes("nrm");
-		for (Field field : slopeFieldsNrm) {
-			tableStates.addField(field);
-		}
-
-		/* Spread fields: normalized. */
-		List<Field> spreadFieldsNrm = getFieldListSpreads("nrm");
-		for (Field field : spreadFieldsNrm) {
-			tableStates.addField(field);
-		}
-
-		/* Candle fields: normalized. */
-		List<Field> candleFieldsNrm = getFieldListCandles("nrm");
-		for (Field field : candleFieldsNrm) {
+		/* Candle fields. */
+		List<Field> candleFields = getFieldListCandles();
+		for (Field field : candleFields) {
 			tableStates.addField(field);
 		}
 
@@ -540,14 +671,11 @@ public class StatisticsAverages extends StatisticsTicker {
 	 */
 	@Override
 	public void setParameters(String parameters) {
-		ParametersHandler handler = new ParametersHandler();
-		Parser parser = new Parser();
 		try {
-			parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
+			averages.clear();
+			averages.addAll(getAverages(parameters));
 		} catch (ParserConfigurationException | SAXException | IOException e) {
 			e.printStackTrace();
 		}
-		averages.clear();
-		averages.addAll(handler.getAverages());
 	}
 }

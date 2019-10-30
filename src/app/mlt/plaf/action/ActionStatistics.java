@@ -20,6 +20,10 @@ package app.mlt.plaf.action;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.util.List;
+
+import javax.swing.KeyStroke;
 
 import com.mlt.db.FieldGroup;
 import com.mlt.db.Persistor;
@@ -54,6 +58,8 @@ import com.mlt.util.Logs;
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.Fields;
+import app.mlt.plaf.statistics.Average;
+import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**
  * Define and manage statistics on tickers.
@@ -122,9 +128,13 @@ public class ActionStatistics extends ActionRun {
 
 				wnd.setCenter(form.getPane());
 
-				Option accept = Option.option_ACCEPT();
+				ValidatorStats validator = new ValidatorStats();
+				validator.form = form;
+				
+				Option accept = Option.option_ACCEPT(
+					KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK));
 				accept.setCloseWindow(true);
-				accept.setAction(new ValidatorStats(form));
+				accept.setAction(validator);
 				wnd.getOptionPane().add(accept);
 
 				Option cancel = Option.option_CANCEL();
@@ -139,6 +149,13 @@ public class ActionStatistics extends ActionRun {
 				if (Option.isCancel(option)) {
 					return;
 				}
+				
+				/* Everyting ok, setup the statistics. */
+				rcStats = form.getRecord();
+				List<Average> averages = validator.averages;
+				StatisticsAverages stats = new StatisticsAverages(instrument, period);
+				stats.setId(rcStats.getValue(Fields.STATISTICS_ID).getString());
+				stats.setKey(rcStats.getValue(Fields.STATISTICS_KEY).getString());
 
 			} catch (PersistorException exc) {
 				Logs.catching(exc);
@@ -151,28 +168,40 @@ public class ActionStatistics extends ActionRun {
 	 */
 	class ValidatorStats extends Action {
 		FormRecordPane form;
-		ValidatorStats(FormRecordPane form) {
-			super();
-			this.form = form;
-		}
-
+		List<Average> averages;
+		
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			/* Statistics id. */
-			Value vStatId = form.getEditContext(Fields.STATISTICS_ID).getValue();
-			if (vStatId.isEmpty()) {
-				Alert.error("Statistics id can not be empty");
+			try {
+				/* Statistics id. */
+				Value vStatId = form.getEditContext(Fields.STATISTICS_ID).getValue();
+				if (vStatId.isEmpty()) {
+					throw new Exception("Statistics id can not be empty");
+				}
+				/* Statistics key. */
+				Value vStatKey = form.getEditContext(Fields.STATISTICS_KEY).getValue();
+				if (vStatKey.isEmpty()) {
+					throw new Exception("Statistics key can not be empty");
+				}
+				/* Validate and retrieve averages parameters. */
+				Value vStatParams = form.getEditContext(Fields.STATISTICS_PARAMS).getValue();
+				averages = StatisticsAverages.getAverages(vStatParams.getString());
+				if (averages.isEmpty()) {
+					throw new Exception("No average set");
+				}
+				StatisticsAverages.validate(averages);
+				/* Get a copy of the edited record and validate not exists. */
+				Record rcStats = form.getRecordEdited();
+				Persistor pStats = DB.persistor_statistics();
+				if (pStats.exists(rcStats)) {
+					throw new Exception("Statistics already exist");
+				}
+				/* Everything ok, apply controls to record. */
+				form.updateRecord();
+			} catch (Exception exc) {
+				Alert.error(exc.getMessage());
 				getProperties().setBoolean(CAN_CONTINUE, false);
-				return;
 			}
-			/* Statistics key. */
-			Value vStatKey = form.getEditContext(Fields.STATISTICS_KEY).getValue();
-			if (vStatKey.isEmpty()) {
-				Alert.error("Statistics key can not be empty");
-				getProperties().setBoolean(CAN_CONTINUE, false);
-				return;
-			}
-			
 		}
 
 	}
@@ -249,7 +278,6 @@ public class ActionStatistics extends ActionRun {
 			iconChar.setOpaque(false);
 
 			MLT.getTabbedPane().addTab("STATS", iconChar, "Statistics", "Defined statistics", pane);
-
 			MLT.getStatusBar().removeLabel("STATS");
 
 		} catch (PersistorException exc) {

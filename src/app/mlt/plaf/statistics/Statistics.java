@@ -20,7 +20,6 @@ package app.mlt.plaf.statistics;
 import java.util.List;
 
 import com.mlt.db.Table;
-import com.mlt.db.Types;
 import com.mlt.desktop.Option;
 
 /**
@@ -31,63 +30,15 @@ import com.mlt.desktop.Option;
 public abstract class Statistics {
 
 	/**
-	 * Output descriptor.
+	 * Identifier that indicates the class of statistics. For instance, staticstics
+	 * over averages could have a "AVG" identifier.
 	 */
-	public static class Output {
-		/** Id. */
-		private String id;
-		/** Description. */
-		private String description;
-		/** Type. */
-		private Types type;
-
-		/**
-		 * Constructor.
-		 * 
-		 * @param id          Id.
-		 * @param description Description.
-		 * @param type        Data type.
-		 */
-		public Output(String id, String description, Types type) {
-			super();
-			this.id = id;
-			this.description = description;
-			this.type = type;
-		}
-
-		/**
-		 * Return the output id.
-		 * 
-		 * @return The output id.
-		 */
-		public String getName() {
-			return id;
-		}
-
-		/**
-		 * Return the description.
-		 * 
-		 * @return The description.
-		 */
-		public String getDescription() {
-			return description;
-		}
-
-		/**
-		 * Return the data type.
-		 * 
-		 * @return The data type.
-		 */
-		public Types getType() {
-			return type;
-		}
-
-	}
-
-	/** Identifier. */
 	private String id;
-	/** Description. */
-	private String description;
+	/**
+	 * A key to classify statistics within the same identifier. A kind of
+	 * subclasses.
+	 */
+	private String key;
 
 	/**
 	 * Constructor.
@@ -106,6 +57,15 @@ public abstract class Statistics {
 	}
 
 	/**
+	 * Return the key or subclass.
+	 * 
+	 * @return The key.
+	 */
+	public String getKey() {
+		return key;
+	}
+
+	/**
 	 * Set the id.
 	 * 
 	 * @param id The statistics id.
@@ -115,22 +75,24 @@ public abstract class Statistics {
 	}
 
 	/**
-	 * Return the description.
+	 * Set the key or subclass.
 	 * 
-	 * @return The description.
+	 * @param key The key.
 	 */
-	public String getDescription() {
-		return description;
+	public void setKey(String key) {
+		this.key = key;
 	}
 
 	/**
-	 * Set the description.
+	 * Returns a legend description of the statistics, with description of
+	 * paramemters, used tables, menu options offered, and any internal details of
+	 * interest.
+	 * <p>
+	 * Recomended to use HTML format.
 	 * 
-	 * @param description The description.
+	 * @return The statistics legend or summary.
 	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
+	public abstract String getLegend();
 
 	/**
 	 * Return the list of options associated with the statistics. These options are
@@ -146,7 +108,7 @@ public abstract class Statistics {
 	 * @return The internal parameters as a string.
 	 */
 	public abstract String getParameters();
-	
+
 	/**
 	 * Returns the list of tables where statistic results are stored.
 	 * 

@@ -16,16 +16,32 @@
  */
 package app.mlt.plaf.db;
 
-import com.mlt.util.Strings;
-
-import app.mlt.plaf.statistics.Average;
-
 /**
  * Field names.
  *
  * @author Miquel Sas
  */
 public class Fields {
+
+	/*
+	 * Averages type, period and smooths.
+	 */
+
+	public static final String AVERAGE_TYPE = "avg_type";
+	public static final String AVERAGE_PERIOD = "avg_period";
+	public static final String AVERAGE_SMOOTHS = "avg_smooths";
+
+	/*
+	 * Bar data, time, open, high, low, close, volume.
+	 */
+
+	public static final String BAR_TIME = "time";
+	public static final String BAR_TIME_FMT = "time_fmt";
+	public static final String BAR_OPEN = "open";
+	public static final String BAR_HIGH = "high";
+	public static final String BAR_LOW = "low";
+	public static final String BAR_CLOSE = "close";
+	public static final String BAR_VOLUME = "volume";
 
 	/*
 	 * Data filters.
@@ -64,6 +80,15 @@ public class Fields {
 	public static final String PERIOD_UNIT_INDEX = "period_unit_index";
 
 	/*
+	 * Range (statistics) fields.
+	 */
+
+	public static final String RANGE_NAME = "name";
+	public static final String RANGE_MIN_MAX = "min_max";
+	public static final String RANGE_PERIOD = "period";
+	public static final String RANGE_VALUE = "value";
+
+	/*
 	 * Server descriptors.
 	 */
 
@@ -72,300 +97,16 @@ public class Fields {
 	public static final String SERVER_TITLE = "server_title";
 
 	/*
-	 * Bar data, time, open, high, low, close, volume.
-	 */
-
-	public static final String TIME = "time";
-	public static final String TIME_FMT = "time_fmt";
-	public static final String OPEN = "open";
-	public static final String HIGH = "high";
-	public static final String LOW = "low";
-	public static final String CLOSE = "close";
-	public static final String VOLUME = "volume";
-
-	/*
-	 * Ticker table name.
-	 */
-
-	public static final String TABLE_NAME = "table_name";
-	
-	/*
-	 * Range (statistics) fields.
-	 */
-	
-	public static final String RANGE_NAME = "name";
-	public static final String RANGE_MIN_MAX = "min_max";
-	public static final String RANGE_PERIOD = "period";
-	public static final String RANGE_VALUE = "value";
-
-	/*
 	 * Statistics
 	 */
 
 	public static final String STATISTICS_ID = "stats_id";
 	public static final String STATISTICS_KEY = "stats_key";
 	public static final String STATISTICS_PARAMS = "stats_params";
-	
+
 	/*
-	 * Averages type, period and smooths.
+	 * Ticker table name.
 	 */
-	
-	public static final String AVERAGE_TYPE = "avg_type";
-	public static final String AVERAGE_PERIOD = "avg_period";
-	public static final String AVERAGE_SMOOTHS = "avg_smooths";
 
-	/**
-	 * Returns the field header for an average.
-	 * 
-	 * @param average The average.
-	 * @return The header.
-	 */
-	public static String averageHeader(Average average) {
-		return "Avg-" + average.getPeriod();
-	}
-
-	/**
-	 * Returns the field label for an average.
-	 * 
-	 * @param average The average.
-	 * @return The label.
-	 */
-	public static String averageLabel(Average average) {
-		StringBuilder b = new StringBuilder();
-		b.append("Average (");
-		b.append(average.getPeriod());
-		for (int smooth : average.getSmooths()) {
-			b.append(", ");
-			b.append(smooth);
-		}
-		b.append(")");
-		return b.toString();
-	}
-
-	/**
-	 * Returns the field name for an average.
-	 * 
-	 * @param average The average.
-	 * @return The name.
-	 */
-	public static String averageName(Average average) {
-		return "average_" + average.getPeriod();
-	}
-
-	/**
-	 * Return the complex field header.
-	 * 
-	 * @param prefix Prefix.
-	 * @param period Period.
-	 * @param index  Index.
-	 * @param pad    Padding.
-	 * @param suffix Suffix.
-	 * @return The field name.
-	 */
-	public static String fieldHeader(String prefix, int period, int index, int pad, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append(prefix);
-		b.append("-");
-		b.append(period);
-		b.append("-");
-		b.append(Strings.leftPad(Integer.toString(index), pad));
-		b.append("-");
-		b.append(suffix);
-		return b.toString();
-	}
-
-	/**
-	 * Return the complex field header (consecutive indexes).
-	 * 
-	 * @param prefix Prefix.
-	 * @param period Period.
-	 * @param index  Index.
-	 * @param pad    Padding.
-	 * @param suffix Suffix.
-	 * @return The field name.
-	 */
-	public static String fieldHeaderRel(String prefix, int period, int index, int pad, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append(prefix);
-		b.append("-");
-		b.append(period);
-		b.append("-");
-		b.append(Strings.leftPad(Integer.toString(index), pad));
-		b.append("-");
-		b.append(Strings.leftPad(Integer.toString(index + 1), pad));
-		b.append("-");
-		b.append(suffix);
-		return b.toString();
-	}
-
-	/**
-	 * Return the complex field label (consecutive indexes).
-	 * 
-	 * @param prefix Prefix.
-	 * @param period Period.
-	 * @param index  Index.
-	 * @param pad    Padding.
-	 * @param suffix Suffix.
-	 * @return The field name.
-	 */
-	public static String fieldLabel(String prefix, int period, int index, int pad, String suffix) {
-		return fieldHeader(prefix, period, index, pad, suffix);
-	}
-
-	/**
-	 * Return the complex field label.
-	 * 
-	 * @param prefix Prefix.
-	 * @param period Period.
-	 * @param index  Index.
-	 * @param pad    Padding.
-	 * @param suffix Suffix.
-	 * @return The field name.
-	 */
-	public static String fieldLabelRel(String prefix, int period, int index, int pad, String suffix) {
-		return fieldHeaderRel(prefix, period, index, pad, suffix);
-	}
-
-	/**
-	 * Return the complex field name.
-	 * 
-	 * @param prefix Prefix.
-	 * @param period Period.
-	 * @param index  Index.
-	 * @param pad    Padding.
-	 * @param suffix Suffix.
-	 * @return The field name.
-	 */
-	public static String fieldName(String prefix, int period, int index, int pad, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append(prefix);
-		b.append("_");
-		b.append(period);
-		b.append("_");
-		b.append(Strings.leftPad(Integer.toString(index), pad));
-		b.append("_");
-		b.append(suffix);
-		return b.toString();
-	}
-
-	/**
-	 * Return the complex field name (consecutive indexes).
-	 * 
-	 * @param prefix Prefix.
-	 * @param period Period.
-	 * @param index  Index.
-	 * @param pad    Padding.
-	 * @param suffix Suffix.
-	 * @return The field name.
-	 */
-	public static String fieldNameRel(String prefix, int period, int index, int pad, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append(prefix);
-		b.append("_");
-		b.append(period);
-		b.append("_");
-		b.append(Strings.leftPad(Integer.toString(index), pad));
-		b.append("_");
-		b.append(Strings.leftPad(Integer.toString(index + 1), pad));
-		b.append("_");
-		b.append(suffix);
-		return b.toString();
-	}
-
-	/**
-	 * Returns the field header for a slope.
-	 * 
-	 * @param average The average.
-	 * @param suffix  The suffix.
-	 * @return The field header.
-	 */
-	public static String slopeHeader(Average average, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append("Slope");
-		b.append("-");
-		b.append(average.getPeriod());
-		b.append("-");
-		b.append(suffix);
-		return b.toString();
-	}
-
-	/**
-	 * Returns the field label for a slope.
-	 * 
-	 * @param average The average.
-	 * @param suffix  The suffix.
-	 * @return The field label.
-	 */
-	public static String slopeLabel(Average average, String suffix) {
-		return slopeHeader(average, suffix);
-	}
-
-	/**
-	 * Returns the field name for a slope.
-	 * 
-	 * @param average The average.
-	 * @param suffix  The suffix.
-	 * @return The field name.
-	 */
-	public static String slopeName(Average average, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append("slope");
-		b.append("_");
-		b.append(average.getPeriod());
-		b.append("_");
-		b.append(suffix);
-		return b.toString();
-	}
-
-	/**
-	 * Returns the field header for a spread of averages.
-	 * 
-	 * @param fast   The fast average.
-	 * @param slow   The slow average.
-	 * @param suffix The suffix.
-	 * @return The field header.
-	 */
-	public static String spreadHeader(Average fast, Average slow, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append("Spread-");
-		b.append("-");
-		b.append(fast.getPeriod());
-		b.append("-");
-		b.append(slow.getPeriod());
-		b.append("-");
-		b.append(suffix);
-		return b.toString();
-	}
-
-	/**
-	 * Returns the field label for a spread of averages.
-	 * 
-	 * @param fast   The fast average.
-	 * @param slow   The slow average.
-	 * @param suffix The suffix.
-	 * @return The field label.
-	 */
-	public static String spreadLabel(Average fast, Average slow, String suffix) {
-		return spreadHeader(fast, slow, suffix);
-	}
-
-	/**
-	 * Returns the field name for a spread of averages.
-	 * 
-	 * @param fast   The fast average.
-	 * @param slow   The slow average.
-	 * @param suffix The suffix.
-	 * @return The field name.
-	 */
-	public static String spreadName(Average fast, Average slow, String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append("spread");
-		b.append("_");
-		b.append(fast.getPeriod());
-		b.append("_");
-		b.append(slow.getPeriod());
-		b.append("_");
-		b.append(suffix);
-		return b.toString();
-	}
+	public static final String TABLE_NAME = "table_name";
 }

@@ -29,6 +29,7 @@ import app.mlt.plaf.db.fields.FieldServerId;
 import app.mlt.plaf.db.fields.FieldStatisticsId;
 import app.mlt.plaf.db.fields.FieldStatisticsKey;
 import app.mlt.plaf.db.fields.FieldStatisticsParams;
+import app.mlt.plaf.db.fields.FieldStatisticsParamsDesc;
 
 /**
  * Statistics table definition.
@@ -52,6 +53,7 @@ public class TableStatistics extends Table {
 		addField(new FieldStatisticsId(Fields.STATISTICS_ID));
 		addField(new FieldStatisticsKey(Fields.STATISTICS_KEY));
 		addField(new FieldStatisticsParams(Fields.STATISTICS_PARAMS));
+		addField(new FieldStatisticsParamsDesc(Fields.STATISTICS_PARAMS_DESC));
 
 		getField(Fields.SERVER_ID).setPrimaryKey(true);
 		getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);

@@ -23,8 +23,8 @@ import com.mlt.db.RecordSet;
 import com.mlt.desktop.action.ActionRun;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
+import com.mlt.desktop.control.TableRecordModel;
 import com.mlt.desktop.control.table.SelectionMode;
-import com.mlt.desktop.control.table.TableRecordModel;
 import com.mlt.desktop.icon.IconChar;
 import com.mlt.util.Logs;
 

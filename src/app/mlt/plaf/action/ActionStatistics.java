@@ -27,9 +27,11 @@ import javax.swing.KeyStroke;
 
 import com.mlt.db.FieldGroup;
 import com.mlt.db.Persistor;
+import com.mlt.db.PersistorDDL;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
+import com.mlt.db.Table;
 import com.mlt.db.Value;
 import com.mlt.desktop.Alert;
 import com.mlt.desktop.Option;
@@ -43,8 +45,8 @@ import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.OptionPane;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
+import com.mlt.desktop.control.TableRecordModel;
 import com.mlt.desktop.control.table.SelectionMode;
-import com.mlt.desktop.control.table.TableRecordModel;
 import com.mlt.desktop.icon.IconChar;
 import com.mlt.desktop.layout.Anchor;
 import com.mlt.desktop.layout.Constraints;
@@ -69,7 +71,7 @@ import app.mlt.plaf.statistics.StatisticsAverages;
 public class ActionStatistics extends ActionRun {
 
 	/**
-	 * Create a new ticker.
+	 * Create a new statistics.
 	 */
 	class ActionCreate extends ActionRun {
 
@@ -79,33 +81,29 @@ public class ActionStatistics extends ActionRun {
 		@Override
 		public void run() {
 			try {
-
-				/* Instrument. */
-				Record rcInstrument = DB.lookup_instrument();
-				if (rcInstrument == null) {
+				
+				/* Ticker. */
+				Record rcTicker = DB.lookup_ticker();
+				if (rcTicker == null) {
 					return;
 				}
-				Instrument instrument = DB.to_instrument(rcInstrument);
-
-				/* Period. */
-				Record rcPeriod = DB.lookup_period();
-				if (rcPeriod == null) {
-					return;
-				}
-				Period period = DB.to_period(rcPeriod);
+				String instrumentId = rcTicker.getValue(Fields.INSTRUMENT_ID).getString();
+				String periodId = rcTicker.getValue(Fields.PERIOD_ID).getString();
+				Instrument instrument = DB.to_instrument(instrumentId);
+				Period period = DB.to_period(periodId);
 
 				/* Statistics persistor. */
-				Persistor pStats = DB.persistor_statistics();
+				Persistor persistor = DB.persistor_statistics();
 
 				/* Statistics record to edit. */
-				Record rcStats = pStats.getDefaultRecord();
-				rcStats.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
-				rcStats.setValue(Fields.INSTRUMENT_ID, new Value(instrument.getId()));
-				rcStats.setValue(Fields.PERIOD_ID, new Value(period.getId()));
-				rcStats.setValue(Fields.PERIOD_NAME, new Value(period.toString()));
+				Record rc = persistor.getDefaultRecord();
+				rc.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
+				rc.setValue(Fields.INSTRUMENT_ID, new Value(instrument.getId()));
+				rc.setValue(Fields.PERIOD_ID, new Value(period.getId()));
+				rc.setValue(Fields.PERIOD_NAME, new Value(period.toString()));
 
 				/* Form. */
-				FormRecordPane form = new FormRecordPane(rcStats);
+				FormRecordPane form = new FormRecordPane(rc);
 				form.setLayoutByRows(FieldGroup.EMPTY_FIELD_GROUP);
 
 				form.addField(Fields.SERVER_ID);
@@ -130,9 +128,10 @@ public class ActionStatistics extends ActionRun {
 
 				ValidatorStats validator = new ValidatorStats();
 				validator.form = form;
-				
-				Option accept = Option.option_ACCEPT(
-					KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK));
+
+				Option accept =
+					Option.option_ACCEPT(
+						KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK));
 				accept.setCloseWindow(true);
 				accept.setAction(validator);
 				wnd.getOptionPane().add(accept);
@@ -149,13 +148,84 @@ public class ActionStatistics extends ActionRun {
 				if (Option.isCancel(option)) {
 					return;
 				}
-				
+
 				/* Everyting ok, setup the statistics. */
-				rcStats = form.getRecord();
-				List<Average> averages = validator.averages;
+				rc = form.getRecord();
 				StatisticsAverages stats = new StatisticsAverages(instrument, period);
-				stats.setId(rcStats.getValue(Fields.STATISTICS_ID).getString());
-				stats.setKey(rcStats.getValue(Fields.STATISTICS_KEY).getString());
+				stats.setId(rc.getValue(Fields.STATISTICS_ID).getString());
+				stats.setKey(rc.getValue(Fields.STATISTICS_KEY).getString());
+				List<Average> averages = validator.averages;
+				for (Average avg : averages) {
+					stats.addAverage(avg);
+				}
+
+				/* Save the record. */
+				persistor.save(rc);
+
+				/* Do create the tables again. */
+				PersistorDDL ddl = persistor.getDDL();
+				List<Table> tables = stats.getTables();
+				for (Table table : tables) {
+					if (ddl.existsTable(table)) {
+						ddl.dropTable(table);
+					}
+					ddl.createTable(table);
+				}
+				
+				/* Add to model. */
+				int index = tableStats.getModel().getRecordSet().getInsertIndex(rc);
+				tableStats.getModel().getRecordSet().add(index, rc);
+
+			} catch (PersistorException exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
+	 * Delete the selected statistics.
+	 */
+	class ActionDelete extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				/* Selected record. */
+				Record rc = tableStats.getSelectedRecord();
+				if (rc == null) {
+					return;
+				}
+				
+				/* Ask. */
+				Option option = Alert.confirm("Delete current statistics");
+				if (Option.isCancel(option)) {
+					return;
+				}
+
+				/* Statistics averages. */
+				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
+
+				/* Statistics persistor. */
+				Persistor persistor = DB.persistor_statistics();
+
+				/* Drop the tables. */
+				PersistorDDL ddl = persistor.getDDL();
+				List<Table> tables = stats.getTables();
+				for (Table table : tables) {
+					if (ddl.existsTable(table)) {
+						ddl.dropTable(table);
+					}
+				}
+
+				/* Delete the record. */
+				persistor.delete(rc);
+
+				/* Remove from table. */
+				int row = tableStats.getSelectedRow();
+				tableStats.getModel().getRecordSet().remove(row);
 
 			} catch (PersistorException exc) {
 				Logs.catching(exc);
@@ -169,7 +239,7 @@ public class ActionStatistics extends ActionRun {
 	class ValidatorStats extends Action {
 		FormRecordPane form;
 		List<Average> averages;
-		
+
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			try {
@@ -190,12 +260,6 @@ public class ActionStatistics extends ActionRun {
 					throw new Exception("No average set");
 				}
 				StatisticsAverages.validate(averages);
-				/* Get a copy of the edited record and validate not exists. */
-				Record rcStats = form.getRecordEdited();
-				Persistor pStats = DB.persistor_statistics();
-				if (pStats.exists(rcStats)) {
-					throw new Exception("Statistics already exist");
-				}
 				/* Everything ok, apply controls to record. */
 				form.updateRecord();
 			} catch (Exception exc) {
@@ -237,7 +301,8 @@ public class ActionStatistics extends ActionRun {
 			model.addColumn(Fields.INSTRUMENT_ID);
 			model.addColumn(Fields.PERIOD_NAME);
 			model.addColumn(Fields.STATISTICS_ID);
-			model.addColumn(Fields.STATISTICS_PARAMS);
+			model.addColumn(Fields.STATISTICS_KEY);
+			model.addColumn(Fields.STATISTICS_PARAMS_DESC);
 			model.setRecordSet(recordSet);
 
 			tableStats = new TableRecord();
@@ -257,6 +322,7 @@ public class ActionStatistics extends ActionRun {
 			delete.setText("Delete");
 			delete.setToolTip("Delete the selected statistics");
 			delete.setOptionGroup(Group.EDIT);
+			delete.setAction(new ActionDelete());
 
 			OptionPane optionPane = new OptionPane(Orientation.HORIZONTAL);
 			optionPane.add(create, delete);

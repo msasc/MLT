@@ -30,12 +30,14 @@ import org.xml.sax.SAXException;
 
 import com.mlt.db.Field;
 import com.mlt.db.Index;
+import com.mlt.db.Record;
 import com.mlt.db.Table;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.desktop.Option;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
+import com.mlt.util.HTML;
 import com.mlt.util.Numbers;
 import com.mlt.util.Strings;
 import com.mlt.util.xml.Parser;
@@ -186,6 +188,50 @@ public class StatisticsAverages extends StatisticsTicker {
 		Parser parser = new Parser();
 		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
 		return handler.getAverages();
+	}
+
+	/**
+	 * Return the parameters description part of averages.
+	 * 
+	 * @param averages The list of averages.
+	 * @return The description.
+	 */
+	public static String getParametersDescription(List<Average> averages) {
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < averages.size(); i++) {
+			if (i > 0) {
+				b.append("; ");
+			}
+			b.append(averages.get(i).toString());
+		}
+		return b.toString();
+	}
+
+	/**
+	 * Return statistics averages from a statistics record.
+	 * 
+	 * @param rc The statistics definition record.
+	 * @return The statistics object.
+	 */
+	public static StatisticsAverages getStatistics(Record rc) {
+		try {
+
+			/* Instrument and period. */
+			Instrument instrument = DB.to_instrument(rc.getValue(Fields.INSTRUMENT_ID).getString());
+			Period period = DB.to_period(rc.getValue(Fields.PERIOD_ID).getString());
+
+			/* Statistics averages. */
+			StatisticsAverages stats = new StatisticsAverages(instrument, period);
+			stats.setId(rc.getValue(Fields.STATISTICS_ID).getString());
+			stats.setKey(rc.getValue(Fields.STATISTICS_KEY).getString());
+			stats.setParameters(rc.getValue(Fields.STATISTICS_PARAMS).getString());
+
+			return stats;
+
+		} catch (Exception exc) {
+
+		}
+		return null;
 	}
 
 	/**
@@ -351,7 +397,7 @@ public class StatisticsAverages extends StatisticsTicker {
 				period = 0;
 			} else {
 				count = averages.get(i).getPeriod() / averages.get(i - 1).getPeriod();
-				period = averages.get(i).getPeriod();
+				period = averages.get(i - 1).getPeriod();
 			}
 			int pad = Numbers.getDigits(count);
 
@@ -395,13 +441,13 @@ public class StatisticsAverages extends StatisticsTicker {
 				fields.add(Domains.getDouble(name, header, label));
 
 				/* Body size as a factor of the range, no need to normalize. */
-				name = "body_size" + id;
+				name = "body_size_" + id;
 				header = "Body-size " + id;
 				label = "Body size " + id;
 				fields.add(Domains.getDouble(name, header, label));
 
 				/* Body relative position within the range. */
-				name = "body_pos" + id;
+				name = "body_pos_" + id;
 				header = "Body-pos " + id;
 				label = "Body position " + id;
 				fields.add(Domains.getDouble(name, header, label));
@@ -474,8 +520,8 @@ public class StatisticsAverages extends StatisticsTicker {
 	 */
 	@Override
 	public String getLegend() {
-		// TODO Auto-generated method stub
-		return null;
+		HTML html = new HTML();
+		return html.toString(true);
 	}
 
 	/**
@@ -527,6 +573,19 @@ public class StatisticsAverages extends StatisticsTicker {
 		return sw.toString();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getParametersDescription() {
+		return getParametersDescription(averages);
+	}
+
+	/**
+	 * Return the table name suffix.
+	 * 
+	 * @return The table name suffix.
+	 */
 	private String getTableNameSuffix() {
 		StringBuilder suffix = new StringBuilder();
 		suffix.append("_");

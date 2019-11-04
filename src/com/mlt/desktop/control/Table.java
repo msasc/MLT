@@ -184,7 +184,10 @@ public class Table extends Control {
 	 * @return The model.
 	 */
 	public TableModel getModel() {
-		return (TableModel) getTableComponent().getModel();
+		if (getTableComponent().getModel() instanceof TableModel) {
+			return (TableModel) getTableComponent().getModel();
+		}
+		return null;
 	}
 
 	/**
@@ -441,6 +444,17 @@ public class Table extends Control {
 	public boolean isSortingEnabled() {
 		return getTableComponent().isSortingEnabled();
 	}
+	
+	/**
+	 * Change the focus to the argument cell.
+	 *
+	 * @param rowIndex    The row index.
+	 * @param columnIndex The column index.
+	 */
+	public void moveFocus(int rowIndex, int columnIndex) {
+		getTableComponent().moveFocus(rowIndex, columnIndex);
+	}
+
 
 	/**
 	 * Select all cells, row or columns.

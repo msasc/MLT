@@ -36,8 +36,8 @@ import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.Stage;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
+import com.mlt.desktop.control.TableRecordModel;
 import com.mlt.desktop.control.table.SelectionMode;
-import com.mlt.desktop.control.table.TableRecordModel;
 import com.mlt.desktop.event.MouseHandler;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.util.Lists;
@@ -140,7 +140,7 @@ public class LookupRecords {
 	 * Add a column.
 	 * 
 	 * @param index The field index.
-	 * @see com.mlt.lib.desktop.control.table.TableRecordModel#addColumn(int)
+	 * @see com.mlt.desktop.control.lib.desktop.control.table.TableRecordModel#addColumn(int)
 	 */
 	public void addColumn(int index) {
 		model.addColumn(index);
@@ -150,7 +150,7 @@ public class LookupRecords {
 	 * Add a column.
 	 * 
 	 * @param alias The field alias.
-	 * @see com.mlt.lib.desktop.control.table.TableRecordModel#addColumn(java.lang.String)
+	 * @see com.mlt.desktop.control.lib.desktop.control.table.TableRecordModel#addColumn(java.lang.String)
 	 */
 	public void addColumn(String alias) {
 		model.addColumn(alias);

@@ -41,10 +41,16 @@ public class Record implements Comparable<Object> {
 		for (int i = 0; i < source.size(); i++) {
 			String alias = source.getField(i).getAlias();
 			Value value = source.getValue(i);
-			Types type = source.getField(i).getType();
-			int index = destination.getFieldList().getFieldIndex(alias);
-			if (index >= 0 && destination.getField(index).getType().equals(type)) {
-				destination.setValue(index, value.getCopy());
+			Field srcfield = source.getField(alias);
+			Types srctype = srcfield.getType();
+			Field dstfield = destination.getField(alias);
+			if (dstfield != null) {
+				if (!srcfield.isCalculated() && !dstfield.isCalculated()) {
+					Types dsttype = dstfield.getType();
+					if (srctype.equals(dsttype)) {
+						destination.setValue(alias, value.getCopy());
+					}
+				}
 			}
 		}
 	}
@@ -85,26 +91,15 @@ public class Record implements Comparable<Object> {
 		move(source, destination);
 	}
 
-	/**
-	 * The list of fields.
-	 */
+	/** The list of fields. */
 	private FieldList fields;
-	/**
-	 * The list of values.
-	 */
+	/** The list of values. */
 	private Value[] values;
-	/**
-	 * List of modified flags.
-	 */
+	/** List of modified flags. */
 	private boolean[] modified;
-
-	/**
-	 * An arbitrary map of properties.
-	 */
+	/** An arbitrary map of properties. */
 	private Properties properties;
-	/**
-	 * The persistor.
-	 */
+	/** The persistor. */
 	private Persistor persistor;
 
 	/**

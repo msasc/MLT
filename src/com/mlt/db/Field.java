@@ -226,7 +226,7 @@ public class Field implements Comparable<Object> {
 		this.function = field.function;
 		this.table = field.table;
 		this.view = field.view;
-		
+
 		// Properies.
 		if (field.properties != null) {
 			this.properties = new Properties();
@@ -1082,6 +1082,15 @@ public class Field implements Comparable<Object> {
 	 */
 	public boolean isByteArray() {
 		return getType().isByteArray();
+	}
+
+	/**
+	 * Check whether this is a calculated field.
+	 * 
+	 * @return A boolean.
+	 */
+	public boolean isCalculated() {
+		return calculator != null;
 	}
 
 	/**

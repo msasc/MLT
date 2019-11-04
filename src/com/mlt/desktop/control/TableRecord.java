@@ -23,7 +23,6 @@ import com.mlt.db.Record;
 import com.mlt.desktop.control.table.SelectionMode;
 import com.mlt.desktop.control.table.TableModel;
 import com.mlt.desktop.control.table.TableRecordCellRenderer;
-import com.mlt.desktop.control.table.TableRecordModel;
 
 /**
  *
@@ -89,7 +88,10 @@ public class TableRecord extends Table {
 	 */
 	@Override
 	public TableRecordModel getModel() {
-		return (TableRecordModel) super.getModel();
+		if (super.getModel() instanceof TableRecordModel) {
+			return (TableRecordModel) super.getModel();
+		}
+		return null;
 	}
 
 	/**
@@ -108,6 +110,10 @@ public class TableRecord extends Table {
 		if (!(tableModel instanceof TableRecordModel)) {
 			throw new ClassCastException("The table model must be an instance of TableRecordModel");
 		}
+		if (getModel() != null) {
+			((TableRecordModel)getModel()).removeTable(this);
+		}
+		((TableRecordModel) tableModel).addTable(this);
 		super.setModel(tableModel);
 
 		/*

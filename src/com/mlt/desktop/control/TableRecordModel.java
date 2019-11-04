@@ -1,21 +1,27 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
-package com.mlt.desktop.control.table;
+package com.mlt.desktop.control;
 
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import com.mlt.db.Field;
 import com.mlt.db.Order;
@@ -25,8 +31,9 @@ import com.mlt.db.RecordSet;
 import com.mlt.db.RecordSetListener;
 import com.mlt.db.Types;
 import com.mlt.db.Value;
+import com.mlt.desktop.control.table.TableModel;
+import com.mlt.desktop.control.table.TableSorter;
 import com.mlt.util.Logs;
-import java.util.Locale;
 
 /**
  * A table model aimed to work with sets of records.
@@ -46,7 +53,7 @@ public class TableRecordModel extends TableModel {
 		@Override
 		public void added(Record record) {
 			int index = recordSet.size() - 1;
-			fireTableRowsInserted(index, index);
+			added(index, record);
 		}
 
 		/**
@@ -55,6 +62,8 @@ public class TableRecordModel extends TableModel {
 		@Override
 		public void added(int index, Record record) {
 			fireTableRowsInserted(index, index);
+			index = recordSet.indexOf(record);
+			fireUpdateTables(index);
 		}
 
 		/**
@@ -63,6 +72,10 @@ public class TableRecordModel extends TableModel {
 		@Override
 		public void removed(int index, Record record) {
 			fireTableRowsDeleted(index, index);
+			if (recordSet.size() <= index) {
+				index = recordSet.size() - 1;
+			}
+			fireUpdateTables(index);
 		}
 
 		/**
@@ -92,6 +105,9 @@ public class TableRecordModel extends TableModel {
 	/** The recordset listener. */
 	private RecordSetListener listener;
 
+	/** List of table records that display this model. */
+	private List<TableRecord> tables = new ArrayList<>();
+
 	/**
 	 * Constructor.
 	 * 
@@ -105,23 +121,6 @@ public class TableRecordModel extends TableModel {
 		this.recordSet.setFieldList(masterRecord.getFieldList());
 		this.recordSet.addListener(listener);
 	}
-
-	/*
-	 * Access to the master record.
-	 */
-
-	/**
-	 * Returns the master record of this model.
-	 * 
-	 * @return The master record.
-	 */
-	public Record getMasterRecord() {
-		return masterRecord;
-	}
-
-	/*
-	 * Adding and removing columns.
-	 */
 
 	/**
 	 * Add a column indicating the field index.
@@ -147,55 +146,33 @@ public class TableRecordModel extends TableModel {
 	}
 
 	/**
-	 * Remove a given fieldIndex.
+	 * Add the table to the list of tables that display this model.
 	 * 
-	 * @param column The column index.
+	 * @param table The table record.
 	 */
-	public void removeColumn(int column) {
-		if (column < 0 || column >= fieldIndexes.size()) {
-			throw new IllegalArgumentException("Invalid fieldIndex index " + column);
+	void addTable(TableRecord table) {
+		if (!tables.contains(table)) {
+			tables.add(table);
 		}
-		fieldIndexes.remove(column);
-		removeCellEditable(-1, column);
-		fireTableStructureChanged();
+	}
+	
+	private void fireUpdateTables(int row) {
+		for (TableRecord table : tables) {
+			table.adjustColumnWidths();
+			if (row >= 0) {
+				table.setSelectedRow(row);
+			}
+			table.repaint();
+		}
 	}
 
 	/**
-	 * Remove all columns.
+	 * {@inheritDoc}
 	 */
-	public void removeAllColumns() {
-		fieldIndexes.clear();
-		removeCellEditable(-1, -1);
-		fireTableStructureChanged();
+	@Override
+	public int getColumnCount() {
+		return fieldIndexes.size();
 	}
-
-	/*
-	 * Recordset management.
-	 */
-
-	/**
-	 * Return the recordset.
-	 * 
-	 * @return The recordset.
-	 */
-	public RecordSet getRecordSet() {
-		return recordSet;
-	}
-
-	/**
-	 * Set the record set without any persistence execution involved.
-	 * 
-	 * @param recordSet The record set.
-	 */
-	public void setRecordSet(RecordSet recordSet) {
-		this.recordSet = recordSet;
-		this.recordSet.addListener(listener);
-		fireTableRowsInserted(0, getRowCount());
-	}
-
-	/*
-	 * Access to the mapping of field indexes to columns.
-	 */
 
 	/**
 	 * Returns the field index given the column index.
@@ -210,9 +187,23 @@ public class TableRecordModel extends TableModel {
 		return fieldIndexes.get(columnIndex);
 	}
 
-	/*
-	 * Implementation of table model abstract methods.
+	/**
+	 * Returns the master record of this model.
+	 * 
+	 * @return The master record.
 	 */
+	public Record getMasterRecord() {
+		return masterRecord;
+	}
+
+	/**
+	 * Return the recordset.
+	 * 
+	 * @return The recordset.
+	 */
+	public RecordSet getRecordSet() {
+		return recordSet;
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -220,14 +211,6 @@ public class TableRecordModel extends TableModel {
 	@Override
 	public int getRowCount() {
 		return recordSet.size();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public int getColumnCount() {
-		return fieldIndexes.size();
 	}
 
 	/**
@@ -246,6 +229,49 @@ public class TableRecordModel extends TableModel {
 
 		/* Return the value. */
 		return recordSet.get(rowIndex).getValue(getFieldIndex(columnIndex));
+	}
+
+	/**
+	 * Remove all columns.
+	 */
+	public void removeAllColumns() {
+		fieldIndexes.clear();
+		removeCellEditable(-1, -1);
+		fireTableStructureChanged();
+	}
+
+	/**
+	 * Remove a given fieldIndex.
+	 * 
+	 * @param column The column index.
+	 */
+	public void removeColumn(int column) {
+		if (column < 0 || column >= fieldIndexes.size()) {
+			throw new IllegalArgumentException("Invalid fieldIndex index " + column);
+		}
+		fieldIndexes.remove(column);
+		removeCellEditable(-1, column);
+		fireTableStructureChanged();
+	}
+
+	/**
+	 * Remove the table from the list of tables that display this model.
+	 * 
+	 * @param table The tale record to remove.
+	 */
+	void removeTable(TableRecord table) {
+		tables.remove(table);
+	}
+
+	/**
+	 * Set the record set without any persistence execution involved.
+	 * 
+	 * @param recordSet The record set.
+	 */
+	public void setRecordSet(RecordSet recordSet) {
+		this.recordSet = recordSet;
+		this.recordSet.addListener(listener);
+		fireTableRowsInserted(0, getRowCount());
 	}
 
 	/**

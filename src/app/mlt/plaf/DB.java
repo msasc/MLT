@@ -117,6 +117,25 @@ public class DB {
 	}
 
 	/**
+	 * Lookup a ticker.
+	 * 
+	 * @return The selected ticker record.
+	 * @throws PersistorException
+	 */
+	public static Record lookup_ticker() throws PersistorException {
+		LookupRecords lookup = new LookupRecords(persistor_tickers().getDefaultRecord());
+		lookup.addColumn(Fields.INSTRUMENT_ID);
+		lookup.addColumn(Fields.PERIOD_ID);
+		lookup.addColumn(Fields.PERIOD_NAME);
+		lookup.addColumn(Fields.PERIOD_SIZE);
+		lookup.setRecordSet(recordset_tickers());
+		lookup.setSize(0.3, 0.4);
+		lookup.setTitle("Select the ticker");
+		Record record = lookup.lookupRecord();
+		return record;
+	}
+
+	/**
 	 * Return the generic ticker name.
 	 * 
 	 * @param instrument The instrument.
@@ -356,11 +375,11 @@ public class DB {
 		RecordSet recordSet = persistor.select(criteria);
 		return recordSet;
 	}
-	
+
 	public static String schema_server() {
 		return "qtfx" + "_" + MLT.getServer().getId();
 	}
-	
+
 	public static String schema_system() {
 		return "qtfx";
 	}
@@ -451,7 +470,13 @@ public class DB {
 		}
 		return table;
 	}
-	
+
+	/**
+	 * Access to the instrument.
+	 * 
+	 * @param record The record.
+	 * @return The instrument.
+	 */
 	public static Instrument to_instrument(Record record) {
 		Instrument instrument = new Instrument();
 		instrument.setId(record.getValue(Fields.INSTRUMENT_ID).getString());
@@ -469,8 +494,36 @@ public class DB {
 		return instrument;
 	}
 
+	/**
+	 * Access to the instrument.
+	 * 
+	 * @param id Instrument id.
+	 * @return The instrument.
+	 * @throws PersistorException
+	 */
+	public static Instrument to_instrument(String id) throws PersistorException {
+		return to_instrument(record_instrument(id));
+	}
+
+	/**
+	 * Access to the period.
+	 * 
+	 * @param record The period record.
+	 * @return The period.
+	 */
 	public static Period to_period(Record record) {
 		String id = record.getValue(Fields.PERIOD_ID).getString();
 		return Period.parseId(id);
+	}
+
+	/**
+	 * Access to the period.
+	 * 
+	 * @param id The period id.
+	 * @return The period.
+	 * @throws PersistorException
+	 */
+	public static Period to_period(String id) throws PersistorException {
+		return to_period(record_period(id));
 	}
 }

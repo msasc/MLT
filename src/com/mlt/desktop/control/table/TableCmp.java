@@ -987,7 +987,7 @@ public class TableCmp extends JTable {
 	 * @param rowIndex    The row index.
 	 * @param columnIndex The column index.
 	 */
-	void moveFocus(int rowIndex, int columnIndex) {
+	public void moveFocus(int rowIndex, int columnIndex) {
 		moveSelection(rowIndex, columnIndex, null, null);
 	}
 

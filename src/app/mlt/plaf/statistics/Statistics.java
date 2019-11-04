@@ -103,11 +103,19 @@ public abstract class Statistics {
 	public abstract List<Option> getOptions();
 
 	/**
-	 * Return a string that stores internal parameter values to be restored later.
+	 * Return a string that stores internal parameter values to be restored later,
+	 * generally in an XML format.
 	 * 
 	 * @return The internal parameters as a string.
 	 */
 	public abstract String getParameters();
+
+	/**
+	 * Return the parameters description in a more readable form.
+	 * 
+	 * @return The parameters description.
+	 */
+	public abstract String getParametersDescription();
 
 	/**
 	 * Returns the list of tables where statistic results are stored.

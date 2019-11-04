@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.db;
@@ -101,7 +106,7 @@ public class RecordList extends RecordSet {
 			setFieldList(record.getFieldList());
 		}
 		records.add(index, record);
-		fireRecordAdded(record);
+		fireRecordAdded(index, record);
 	}
 
 	/**
@@ -228,7 +233,8 @@ public class RecordList extends RecordSet {
 	}
 
 	/**
-	 * Sort this list of records based on the order by key pointers, or in its default the primary key pointers.
+	 * Sort this list of records based on the order by key pointers, or in its
+	 * default the primary key pointers.
 	 */
 	public void sort() {
 		if (size() == 0) {
@@ -279,7 +285,8 @@ public class RecordList extends RecordSet {
 	}
 
 	/**
-	 * Returns a record set based on this record set that meets the argument criteria.
+	 * Returns a record set based on this record set that meets the argument
+	 * criteria.
 	 *
 	 * @param criteria The criteria to meet.
 	 * @return The result record set.
@@ -298,8 +305,8 @@ public class RecordList extends RecordSet {
 	}
 
 	/**
-	 * Check if the record set can be sorted. Default is true, overwrite this method if the record set implementation
-	 * can not be sorted.
+	 * Check if the record set can be sorted. Default is true, overwrite this method
+	 * if the record set implementation can not be sorted.
 	 *
 	 * @return A boolean.
 	 */

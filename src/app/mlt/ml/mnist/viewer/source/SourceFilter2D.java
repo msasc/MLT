@@ -103,16 +103,16 @@ public class SourceFilter2D extends ImageSource {
 	@Override
 	public String getInformation() {
 		HTML info = new HTML();
-		info.append(node.getName());
-		info.append(", cells: ");
-		info.append(filterValues.length);
-		info.append(", ");
-		info.append("rows: ");
-		info.append(rows);
-		info.append(", ");
-		info.append("columns: ");
-		info.append(columns);
-		return info.toString(true);
+		info.print(node.getName());
+		info.print(", cells: ");
+		info.print(filterValues.length);
+		info.print(", ");
+		info.print("rows: ");
+		info.print(rows);
+		info.print(", ");
+		info.print("columns: ");
+		info.print(columns);
+		return info.toString();
 	}
 
 }

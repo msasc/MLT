@@ -521,7 +521,7 @@ public class StatisticsAverages extends StatisticsTicker {
 	@Override
 	public String getLegend() {
 		HTML html = new HTML();
-		return html.toString(true);
+		return html.toString();
 	}
 
 	/**

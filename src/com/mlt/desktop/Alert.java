@@ -366,12 +366,8 @@ public class Alert {
 		if (text == null) {
 			text = "";
 		}
-		if (text.toLowerCase().startsWith("<html>")) {
+		if (text.toLowerCase().contains("<html>")) {
 			textPane.setContentType("text/html");
-			text = text.substring(6);
-			if (text.toLowerCase().endsWith("</html>")) {
-				text = text.substring(0, text.length() - 7);
-			}
 		} else {
 			textPane.setContentType("text/plain");
 		}

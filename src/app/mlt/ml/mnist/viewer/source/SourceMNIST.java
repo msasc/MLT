@@ -76,23 +76,23 @@ public class SourceMNIST extends ImageSource {
 		}
 		NumberImage image = pattern.getImage();
 		HTML info = new HTML();
-		info.append("MNIST image");
-		info.append(", ");
-		info.append("rows: ");
-		info.append(getRows());
-		info.append(", ");
-		info.append("columns: ");
-		info.append(getColumns());
-		info.append(", ");
-		info.append("image number: ");
-		info.append(image.getNumber());
+		info.print("MNIST image");
+		info.print(", ");
+		info.print("rows: ");
+		info.print(getRows());
+		info.print(", ");
+		info.print("columns: ");
+		info.print(getColumns());
+		info.print(", ");
+		info.print("image number: ");
+		info.print(image.getNumber());
 		int networkOutput = pattern.getProperties().getInteger("NET-OUT", -1);
 		if (networkOutput >= 0) {
-			info.append(", ");
-			info.append("network number: ");
-			info.append(networkOutput);
+			info.print(", ");
+			info.print("network number: ");
+			info.print(networkOutput);
 		}
-		return info.toString(true);
+		return info.toString();
 	}
 
 	/**

@@ -301,14 +301,14 @@ public class ActionTickers extends ActionRun {
 				/* Ask. */
 				HTML msg = new HTML();
 				msg.startTag("h2");
-				msg.append("Delete the current ticker?", "color: red;");
+				msg.print("Delete the current ticker?", "color: red;");
 				msg.endTag("h2");
 				msg.startTag("h3");
-				msg.append(rcTicker.getValue(Fields.INSTRUMENT_ID).toString());
-				msg.append(", ");
-				msg.append(rcTicker.getValue(Fields.PERIOD_NAME).toString());
+				msg.print(rcTicker.getValue(Fields.INSTRUMENT_ID).toString());
+				msg.print(", ");
+				msg.print(rcTicker.getValue(Fields.PERIOD_NAME).toString());
 				msg.endTag("h3");
-				Option option = Alert.confirm(msg.toString(true));
+				Option option = Alert.confirm(msg.toString());
 				if (!Option.isOk(option)) {
 					return;
 				}

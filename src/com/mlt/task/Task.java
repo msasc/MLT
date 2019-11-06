@@ -139,7 +139,7 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 *
 	 * @param key The status key.
 	 */
-	public void addStatus(String key) {
+	protected void addStatus(String key) {
 		statusKeys.add(key);
 	}
 
@@ -177,6 +177,13 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 */
 	protected void clearMessage() {
 		updateMessage("");
+	}
+	
+	/**
+	 * Clear all status keys.
+	 */
+	protected void clearStatusKeys() {
+		statusKeys.clear();
 	}
 
 	/**

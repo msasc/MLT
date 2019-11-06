@@ -285,7 +285,7 @@ public class Trainer extends Task {
 	 * Calculate the test performance.
 	 */
 	private void calculateTestPerformance() {
-		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+		removeStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
 		int matches = 0;
 		int size = patternSourceTest.size();
 		for (int i = 0; i < size; i++) {
@@ -298,6 +298,10 @@ public class Trainer extends Task {
 				PROGRESS_PROCESSING,
 				"Calculating test performance: " + (i + 1) + " of " + size,
 				(i + 1), size);
+//			updateStatusProgress(
+//				STATUS_PROCESSING,
+//				PROGRESS_PROCESSING,
+//				(i + 1), size);
 			Pattern pattern = patternSourceTest.get(i);
 			double[] patternInput = pattern.getInputValues();
 			double[] networkOutput = network.calculate(patternInput);
@@ -593,7 +597,7 @@ public class Trainer extends Task {
 			scanFlat = !scanFlat;
 		}
 	}
-
+	
 	/**
 	 * Return the list of files with the path, root and extension.
 	 * 

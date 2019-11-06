@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control;
@@ -31,11 +36,17 @@ import com.mlt.desktop.layout.HorizontalFlowLayout;
 import com.mlt.desktop.layout.Insets;
 
 /**
- * A status bar displays labels and progress bars, with an optional label, accessed by key
+ * A status bar displays labels and progress bars, with an optional label,
+ * accessed by key
  *
  * @author Miquel Sas
  */
-public class StatusBar extends Pane {
+public class StatusBar extends Control {
+
+	/**
+	 * Default status bar insets.
+	 */
+	public static final Insets INSETS = new Insets(5, 5, 5, 5);
 
 	/**
 	 * A label control.
@@ -58,7 +69,8 @@ public class StatusBar extends Pane {
 
 			label = new Label();
 			label.setFont(StatusBar.this.getFont());
-			add(label, new Constraints(Anchor.RIGHT, Fill.NONE, 0, 0, new Insets(0, 0, 0, 0)));
+			add(label, new Constraints(
+				Anchor.LEFT, Fill.NONE, 0, 0, 1, 1, 1, 0, new Insets(0, 0, 0, 0)));
 		}
 	}
 
@@ -75,9 +87,10 @@ public class StatusBar extends Pane {
 		/**
 		 * Constructor.
 		 * 
-		 * @param name The component name.
+		 * @param name     The component name.
+		 * @param useLabel A boolean.
 		 */
-		ProgressControl(String name) {
+		ProgressControl(String name, Boolean useLabel) {
 			super();
 			setName(name);
 			setOpaque(StatusBar.this.isOpaque());
@@ -85,7 +98,10 @@ public class StatusBar extends Pane {
 
 			label = new Label();
 			label.setFont(StatusBar.this.getFont());
-			add(label, new Constraints(Anchor.RIGHT, Fill.NONE, 0, 0, new Insets(0, 0, 0, 5)));
+			add(label, new Constraints(
+				Anchor.RIGHT,
+				Fill.NONE, 0, 0,
+				new Insets(0, 0, 0, useLabel ? 5 : 0)));
 
 			progress = new ProgressBar();
 			progress.setFont(new Font(Font.DIALOG, Font.BOLD, 10));
@@ -96,32 +112,63 @@ public class StatusBar extends Pane {
 			if (progressBorder != null) {
 				progress.setBorder(progressBorder);
 			}
-			add(progress, new Constraints(Anchor.RIGHT, Fill.HORIZONTAL, 1, 0, new Insets(0, 0, 0, 0)));
+			add(progress, new Constraints(
+				Anchor.RIGHT,
+				Fill.HORIZONTAL,
+				useLabel ? 1 : 0, 0, new Insets(0, 0, 0, 0)));
 		}
 	}
 
-	/** List of components, instances of <em>LabelPane</em> or <em>ProgressPane</em>. */
+	/**
+	 * List of components, instances of <em>LabelPane</em> or <em>ProgressPane</em>.
+	 */
 	private List<Pane> components = new ArrayList<>();
 	/** Progress string painted. */
 	private boolean progressStringPainted = true;
 	/** Progress bar border. */
 	private Border progressBorder;
+	/** Control pane. */
+	private Pane pane;
+	/** Global insets. */
+	private Insets insets;
+	/** Flow flag. */
+	private boolean flow;
+	/** Horizontal alignment. */
+	private Alignment horizontalAlignment = Alignment.LEFT;
 
 	/**
 	 * Constructor.
 	 */
 	public StatusBar() {
-		this(new Insets(5, 5, 5, 5));
+		this(INSETS);
 	}
 
 	/**
 	 * Constructor.
 	 * 
-	 * @param statusBarInsets Status bar flow insets.
+	 * @param insets Status bar insets.
 	 */
-	public StatusBar(Insets statusBarInsets) {
+	public StatusBar(Insets insets) {
+		this(insets, false);
+	}
+
+	/**
+	 * Constructor.
+	 * 
+	 * @param insets Status bar insets.
+	 * @param flow   A boolean indicating whether the underlying pane is an
+	 *               horizontal flow pane, or a grid bag layout pane.
+	 */
+	public StatusBar(Insets insets, boolean flow) {
 		super();
-		setLayout(new HorizontalFlowLayout(statusBarInsets));
+		this.insets = insets;
+		this.flow = flow;
+		if (flow) {
+			pane = new HorizontalFlowPane(insets);
+		} else {
+			pane = new GridBagPane();
+		}
+		setComponent(pane.getComponent());
 		setFont(new Font(Font.DIALOG, Font.PLAIN, 12));
 	}
 
@@ -160,7 +207,7 @@ public class StatusBar extends Pane {
 	 */
 	@Override
 	public Dimension getPreferredSize() {
-		if (!isEmpty()) {
+		if (!pane.isEmpty()) {
 			return super.getPreferredSize();
 		}
 		Label label = new Label();
@@ -171,18 +218,18 @@ public class StatusBar extends Pane {
 			borderInsets = AWT.fromAWT(getBorder().getBorderInsets(getComponent()));
 			height += borderInsets.getTop() + borderInsets.getBottom();
 		}
-		Insets statusInsets = ((HorizontalFlowLayout) getLayout()).getBorderInsets();
-		height += statusInsets.getTop() + statusInsets.getBottom();
+		height += insets.getTop() + insets.getBottom();
 		return new Dimension(50, height);
 	}
 
 	/**
 	 * Return the progress with the given key or null if not exist.
 	 * 
-	 * @param key The key of the progress.
+	 * @param key      The key of the progress.
+	 * @param useLabel A boolean.
 	 * @return The progress or null.
 	 */
-	private ProgressControl getProgress(String key) {
+	private ProgressControl getProgress(String key, Boolean useLabel) {
 		for (int i = 0; i < components.size(); i++) {
 			Pane component = components.get(i);
 			if (component.getName().equals(key)) {
@@ -192,7 +239,7 @@ public class StatusBar extends Pane {
 				throw new IllegalArgumentException(key + " is not a progress");
 			}
 		}
-		ProgressControl progress = new ProgressControl(key);
+		ProgressControl progress = new ProgressControl(key, useLabel);
 		components.add(0, progress);
 		layoutComponents();
 		return progress;
@@ -202,14 +249,28 @@ public class StatusBar extends Pane {
 	 * Layout the components and repaint.
 	 */
 	private void layoutComponents() {
-		EventQueue.invokeLater(() -> {
-			removeAll();
-			for (int i = 0; i < components.size(); i++) {
-				Pane component = components.get(i);
-				add(component);
+//		EventQueue.invokeLater(() -> {
+			pane.removeAll();
+			if (flow) {
+				HorizontalFlowPane fpane = (HorizontalFlowPane) pane;
+				HorizontalFlowLayout layout = (HorizontalFlowLayout) pane.getLayout();
+				layout.setHorizontalAlignment(horizontalAlignment);
+				for (int i = 0; i < components.size(); i++) {
+					Pane component = components.get(i);
+					fpane.add(component);
+				}
+			} else {
+				GridBagPane bpane = (GridBagPane) pane;
+				for (int i = 0; i < components.size(); i++) {
+					Pane component = components.get(i);
+					Constraints constraints = new Constraints(
+						Anchor.LEFT, 
+						Fill.HORIZONTAL, i, 0, 1, 1, 1, 0, insets);
+					bpane.add(component, constraints);
+				}
 			}
 			repaint();
-		});
+//		});
 	}
 
 	/**
@@ -232,7 +293,7 @@ public class StatusBar extends Pane {
 	 * @param key The key of the progress.
 	 */
 	public void removeProgress(String key) {
-		ProgressControl progress = getProgress(key);
+		ProgressControl progress = getProgress(key, null);
 		if (progress != null) {
 			components.remove(progress);
 			layoutComponents();
@@ -242,15 +303,15 @@ public class StatusBar extends Pane {
 	/**
 	 * Set the horizontal alignment of components.
 	 * 
-	 * @param alignment The alignment.
+	 * @param horizontalAlignment The alignment.
 	 */
-	public void setHorizontalAlignment(Alignment alignment) {
-		HorizontalFlowLayout layout = (HorizontalFlowLayout) getLayout();
-		layout.setHorizontalAlignment(alignment);
+	public void setHorizontalAlignment(Alignment horizontalAlignment) {
+		this.horizontalAlignment = horizontalAlignment;
 	}
 
 	/**
-	 * Set the text to the label identified by the key. If not exists, one is created.
+	 * Set the text to the label identified by the key. If not exists, one is
+	 * created.
 	 * 
 	 * @param key  The key of the component.
 	 * @param icon The icon.
@@ -265,7 +326,8 @@ public class StatusBar extends Pane {
 	}
 
 	/**
-	 * Set the text to the label identified by the key. If not exists, one is created.
+	 * Set the text to the label identified by the key. If not exists, one is
+	 * created.
 	 * 
 	 * @param key  The key of the component.
 	 * @param text The text.
@@ -278,30 +340,11 @@ public class StatusBar extends Pane {
 	 * Set the progress with the given key. If not exist, one is created.
 	 * 
 	 * @param key       The key of the progress.
-	 * @param icon      Optional icon.
-	 * @param text      Optional text.
-	 * @param workDone  Work done.
-	 * @param totalWork Total work.
-	 */
-	public void setProgress(String key, Icon icon, String text, int workDone, int totalWork) {
-		final ProgressControl progress = getProgress(key);
-		EventQueue.invokeLater(() -> {
-			progress.label.setIcon(icon);
-			progress.label.setText(text);
-			progress.progress.setTotalWork(totalWork);
-			progress.progress.setWorkDone(workDone);
-		});
-	}
-
-	/**
-	 * Set the progress with the given key. If not exist, one is created.
-	 * 
-	 * @param key       The key of the progress.
 	 * @param workDone  Work done.
 	 * @param totalWork Total work.
 	 */
 	public void setProgress(String key, int workDone, int totalWork) {
-		setProgress(key, null, null, workDone, totalWork);
+		setProgress(key, null, workDone, totalWork);
 	}
 
 	/**
@@ -313,7 +356,12 @@ public class StatusBar extends Pane {
 	 * @param totalWork Total work.
 	 */
 	public void setProgress(String key, String text, int workDone, int totalWork) {
-		setProgress(key, null, text, workDone, totalWork);
+		final ProgressControl progress = getProgress(key, text != null);
+		EventQueue.invokeLater(() -> {
+			progress.label.setText(text);
+			progress.progress.setTotalWork(totalWork);
+			progress.progress.setWorkDone(workDone);
+		});
 	}
 
 	/**
@@ -334,7 +382,7 @@ public class StatusBar extends Pane {
 	 * @param indeterminate A boolean.
 	 */
 	public void setProgressIndeterminate(String key, String text, boolean indeterminate) {
-		final ProgressControl progress = getProgress(key);
+		final ProgressControl progress = getProgress(key, text != null);
 		EventQueue.invokeLater(() -> {
 			if (!progress.progress.isIndeterminate()) {
 				progress.progress.setTotalWork(0);

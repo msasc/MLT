@@ -255,17 +255,23 @@ public class HTML {
 	@Override
 	public String toString() {
 		StringBuilder html = new StringBuilder();
-		print(html, "<!DOCTYPE html>");
-		println(html, "<html>");
-		println(html, "<head>");
-		println(html, "<style>");
-		println(html, headStyles.toString());
-		println(html, "</style>");
-		println(html, "</head>");
-		println(html, "<body>");
-		println(html, body.toString());
-		println(html, "</body>");
-		println(html, "</html>");
+		if (!Strings.isEmpty(headStyles)) {
+			print(html, "<!DOCTYPE html>");
+			print(html, "<html>");
+			print(html, "<head>");
+			print(html, "<style>");
+			print(html, headStyles.toString());
+			print(html, "</style>");
+			print(html, "</head>");
+			print(html, "<body>");
+			print(html, body.toString());
+			print(html, "</body>");
+			print(html, "</html>");
+		} else {
+			print(html, "<html>");
+			print(html, body.toString());
+			print(html, "</html>");
+		}
 		return html.toString();
 	}
 }

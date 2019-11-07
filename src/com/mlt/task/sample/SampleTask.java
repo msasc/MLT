@@ -90,6 +90,7 @@ public class SampleTask extends Task {
 	 */
 	public void setThrowAfterIterations(long throwAfterIterations) {
 		this.throwAfterIterations = throwAfterIterations;
+		this.throwException = true;
 	}
 
 	/**
@@ -126,7 +127,8 @@ public class SampleTask extends Task {
 				long millis = random.nextInt(countSeconds * 1000);
 				Thread.sleep(millis);
 			} catch (InterruptedException interrupted) {
-				if (isCancelled()) {
+				if (isCancelRequested()) {
+					setCancelled();
 					return;
 				}
 			} finally {
@@ -134,7 +136,8 @@ public class SampleTask extends Task {
 			}
 		}
 		for (long i = 0; i < iterations; i++) {
-			if (isCancelled()) {
+			if (isCancelRequested()) {
+				setCancelled();
 				break;
 			}
 			if (i == 0 || module <= 0 || Long.remainderUnsigned(i + 1, module) == 0 || i == (iterations - 1)) {

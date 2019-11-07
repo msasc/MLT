@@ -18,12 +18,10 @@
 package app.mlt.plaf.statistics;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -68,7 +66,7 @@ import app.mlt.plaf.db.fields.FieldTimeFmt;
  *
  * @author Miquel Sas
  */
-public class StatisticsAverages extends StatisticsTicker {
+public class StatisticsAverages extends Statistics {
 
 	/**
 	 * Parameters handler.
@@ -174,93 +172,25 @@ public class StatisticsAverages extends StatisticsTicker {
 	}
 
 	/**
-	 * Return the list of averages given the parameters string.
-	 * 
-	 * @param parameters The parameters string.
-	 * @return The list of averages.
-	 * @throws ParserConfigurationException
-	 * @throws SAXException
-	 * @throws IOException
-	 */
-	public static List<Average> getAverages(
-		String parameters) throws ParserConfigurationException, SAXException, IOException {
-		ParametersHandler handler = new ParametersHandler();
-		Parser parser = new Parser();
-		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
-		return handler.getAverages();
-	}
-
-	/**
-	 * Return the parameters description part of averages.
-	 * 
-	 * @param averages The list of averages.
-	 * @return The description.
-	 */
-	public static String getParametersDescription(List<Average> averages) {
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < averages.size(); i++) {
-			if (i > 0) {
-				b.append("; ");
-			}
-			b.append(averages.get(i).toString());
-		}
-		return b.toString();
-	}
-
-	/**
 	 * Return statistics averages from a statistics record.
 	 * 
 	 * @param rc The statistics definition record.
 	 * @return The statistics object.
 	 */
-	public static StatisticsAverages getStatistics(Record rc) {
-		try {
+	public static StatisticsAverages getStatistics(Record rc) throws Exception {
 
-			/* Instrument and period. */
-			Instrument instrument = DB.to_instrument(rc.getValue(Fields.INSTRUMENT_ID).getString());
-			Period period = DB.to_period(rc.getValue(Fields.PERIOD_ID).getString());
+		/* Instrument and period. */
+		Instrument instrument = DB.to_instrument(rc.getValue(Fields.INSTRUMENT_ID).getString());
+		Period period = DB.to_period(rc.getValue(Fields.PERIOD_ID).getString());
 
-			/* Statistics averages. */
-			StatisticsAverages stats = new StatisticsAverages(instrument, period);
-			stats.setId(rc.getValue(Fields.STATISTICS_ID).getString());
-			stats.setKey(rc.getValue(Fields.STATISTICS_KEY).getString());
-			stats.setParameters(rc.getValue(Fields.STATISTICS_PARAMS).getString());
+		/* Statistics averages. */
+		StatisticsAverages stats = new StatisticsAverages(instrument, period);
+		stats.setId(rc.getValue(Fields.STATISTICS_ID).getString());
+		stats.setKey(rc.getValue(Fields.STATISTICS_KEY).getString());
+		stats.setParameters(rc.getValue(Fields.STATISTICS_PARAMS).getString());
 
-			return stats;
+		return stats;
 
-		} catch (Exception exc) {
-
-		}
-		return null;
-	}
-
-	/**
-	 * Validates that the list of averages is correct for the purpose of the
-	 * StatisticsAverages.
-	 * 
-	 * @param averages The list of averages.
-	 * @throws IllegalArgumentException
-	 */
-	public static void validate(List<Average> averages) throws IllegalArgumentException {
-		for (int i = 0; i < averages.size(); i++) {
-			Average avgCurr = averages.get(i);
-			/* Must have smooths. */
-			if (avgCurr.getSmooths().length == 0) {
-				throw new IllegalArgumentException("Average " + avgCurr + " must have smooths");
-			}
-			/* Period greater than previous, and previous must be multiple. */
-			if (i > 0) {
-				Average avgPrev = averages.get(i - 1);
-				if (avgPrev.getPeriod() >= avgCurr.getPeriod()) {
-					throw new IllegalArgumentException(
-						"Average period of " + avgCurr + " must greater than period of " + avgPrev);
-				}
-				if (Numbers.remainder(avgCurr.getPeriod(), avgPrev.getPeriod()) != 0) {
-					throw new IllegalArgumentException(
-						"Average " + avgCurr + " must be a multiple of " + avgPrev);
-				}
-			}
-		}
 	}
 
 	/** List of averages. */
@@ -307,6 +237,15 @@ public class StatisticsAverages extends StatisticsTicker {
 		}
 		/* Do add. */
 		averages.add(avg);
+	}
+
+	/**
+	 * Return an unmodifiable copy of the list of averages.
+	 * 
+	 * @return The list of averages.
+	 */
+	public List<Average> getAverages() {
+		return Collections.unmodifiableList(averages);
 	}
 
 	/**
@@ -578,7 +517,14 @@ public class StatisticsAverages extends StatisticsTicker {
 	 */
 	@Override
 	public String getParametersDescription() {
-		return getParametersDescription(averages);
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < averages.size(); i++) {
+			if (i > 0) {
+				b.append("; ");
+			}
+			b.append(averages.get(i).toString());
+		}
+		return b.toString();
 	}
 
 	/**
@@ -729,12 +675,37 @@ public class StatisticsAverages extends StatisticsTicker {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void setParameters(String parameters) {
-		try {
-			averages.clear();
-			averages.addAll(getAverages(parameters));
-		} catch (ParserConfigurationException | SAXException | IOException e) {
-			e.printStackTrace();
+	public void setParameters(String parameters) throws Exception {
+		ParametersHandler handler = new ParametersHandler();
+		Parser parser = new Parser();
+		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
+		averages.clear();
+		averages.addAll(handler.getAverages());
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void validate() throws Exception {
+		for (int i = 0; i < averages.size(); i++) {
+			Average avgCurr = averages.get(i);
+			/* Must have smooths. */
+			if (avgCurr.getSmooths().length == 0) {
+				throw new IllegalArgumentException("Average " + avgCurr + " must have smooths");
+			}
+			/* Period greater than previous, and previous must be multiple. */
+			if (i > 0) {
+				Average avgPrev = averages.get(i - 1);
+				if (avgPrev.getPeriod() >= avgCurr.getPeriod()) {
+					throw new IllegalArgumentException(
+						"Average period of " + avgCurr + " must greater than period of " + avgPrev);
+				}
+				if (Numbers.remainder(avgCurr.getPeriod(), avgPrev.getPeriod()) != 0) {
+					throw new IllegalArgumentException(
+						"Average " + avgCurr + " must be a multiple of " + avgPrev);
+				}
+			}
 		}
 	}
 }

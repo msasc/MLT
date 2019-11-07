@@ -53,9 +53,9 @@ public class FieldStatisticsParamsDesc extends Field {
 			String params = record.getValue(Fields.STATISTICS_PARAMS).toString();
 			if (id.equals("AVG") && !params.isEmpty()) {
 				try {
-					List<Average> avgs = StatisticsAverages.getAverages(params);
-					return new Value(StatisticsAverages.getParametersDescription(avgs));
-				} catch (ParserConfigurationException | SAXException | IOException e) {
+					StatisticsAverages stats = StatisticsAverages.getStatistics(record);
+					return new Value(stats.getParametersDescription());
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}

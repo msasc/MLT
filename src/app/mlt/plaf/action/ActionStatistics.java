@@ -60,7 +60,6 @@ import com.mlt.util.Logs;
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.Fields;
-import app.mlt.plaf.statistics.Average;
 import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**
@@ -151,13 +150,7 @@ public class ActionStatistics extends ActionRun {
 
 				/* Everyting ok, setup the statistics. */
 				rc = form.getRecord();
-				StatisticsAverages stats = new StatisticsAverages(instrument, period);
-				stats.setId(rc.getValue(Fields.STATISTICS_ID).getString());
-				stats.setKey(rc.getValue(Fields.STATISTICS_KEY).getString());
-				List<Average> averages = validator.averages;
-				for (Average avg : averages) {
-					stats.addAverage(avg);
-				}
+				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
 
 				/* Save the record. */
 				persistor.save(rc);
@@ -176,7 +169,7 @@ public class ActionStatistics extends ActionRun {
 				int index = tableStats.getModel().getRecordSet().getInsertIndex(rc);
 				tableStats.getModel().getRecordSet().add(index, rc);
 
-			} catch (PersistorException exc) {
+			} catch (Exception exc) {
 				Logs.catching(exc);
 			}
 		}
@@ -227,7 +220,7 @@ public class ActionStatistics extends ActionRun {
 				int row = tableStats.getSelectedRow();
 				tableStats.getModel().getRecordSet().remove(row);
 
-			} catch (PersistorException exc) {
+			} catch (Exception exc) {
 				Logs.catching(exc);
 			}
 		}
@@ -238,28 +231,25 @@ public class ActionStatistics extends ActionRun {
 	 */
 	class ValidatorStats extends Action {
 		FormRecordPane form;
-		List<Average> averages;
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			try {
+				/* Edited record. */
+				Record rc = form.getRecordEdited();
 				/* Statistics id. */
-				Value vStatId = form.getEditContext(Fields.STATISTICS_ID).getValue();
+				Value vStatId = rc.getValue(Fields.STATISTICS_ID);
 				if (vStatId.isEmpty()) {
 					throw new Exception("Statistics id can not be empty");
 				}
 				/* Statistics key. */
-				Value vStatKey = form.getEditContext(Fields.STATISTICS_KEY).getValue();
+				Value vStatKey = rc.getValue(Fields.STATISTICS_KEY);
 				if (vStatKey.isEmpty()) {
 					throw new Exception("Statistics key can not be empty");
 				}
 				/* Validate and retrieve averages parameters. */
-				Value vStatParams = form.getEditContext(Fields.STATISTICS_PARAMS).getValue();
-				averages = StatisticsAverages.getAverages(vStatParams.getString());
-				if (averages.isEmpty()) {
-					throw new Exception("No average set");
-				}
-				StatisticsAverages.validate(averages);
+				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
+				stats.validate();
 				/* Everything ok, apply controls to record. */
 				form.updateRecord();
 			} catch (Exception exc) {

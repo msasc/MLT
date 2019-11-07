@@ -21,9 +21,11 @@ import java.util.List;
 
 import com.mlt.db.Table;
 import com.mlt.desktop.Option;
+import com.mlt.mkt.data.Instrument;
+import com.mlt.mkt.data.Period;
 
 /**
- * Statistics descriptor.
+ * Statistics on tickers.
  *
  * @author Miquel Sas
  */
@@ -39,12 +41,25 @@ public abstract class Statistics {
 	 * subclasses.
 	 */
 	private String key;
+	/**
+	 * Instrument.
+	 */
+	private Instrument instrument;
+	/**
+	 * Period.
+	 */
+	private Period period;
 
 	/**
 	 * Constructor.
+	 * 
+	 * @param instrument Instrument.
+	 * @param period     Period.
 	 */
-	public Statistics() {
+	public Statistics(Instrument instrument, Period period) {
 		super();
+		this.instrument = instrument;
+		this.period = period;
 	}
 
 	/**
@@ -57,30 +72,21 @@ public abstract class Statistics {
 	}
 
 	/**
+	 * Return the instrument.
+	 * 
+	 * @return The instrument.
+	 */
+	public Instrument getInstrument() {
+		return instrument;
+	}
+
+	/**
 	 * Return the key or subclass.
 	 * 
 	 * @return The key.
 	 */
 	public String getKey() {
 		return key;
-	}
-
-	/**
-	 * Set the id.
-	 * 
-	 * @param id The statistics id.
-	 */
-	public void setId(String id) {
-		this.id = id;
-	}
-
-	/**
-	 * Set the key or subclass.
-	 * 
-	 * @param key The key.
-	 */
-	public void setKey(String key) {
-		this.key = key;
 	}
 
 	/**
@@ -118,6 +124,33 @@ public abstract class Statistics {
 	public abstract String getParametersDescription();
 
 	/**
+	 * Return the period.
+	 * 
+	 * @return The period.
+	 */
+	public Period getPeriod() {
+		return period;
+	}
+
+	/**
+	 * Set the id.
+	 * 
+	 * @param id The statistics id.
+	 */
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	/**
+	 * Set the key or subclass.
+	 * 
+	 * @param key The key.
+	 */
+	public void setKey(String key) {
+		this.key = key;
+	}
+
+	/**
 	 * Returns the list of tables where statistic results are stored.
 	 * 
 	 * @return The list of result tables.
@@ -129,5 +162,12 @@ public abstract class Statistics {
 	 * 
 	 * @param parameters The parameters (XML).
 	 */
-	public abstract void setParameters(String parameters);
+	public abstract void setParameters(String parameters) throws Exception;
+
+	/**
+	 * Validate the statistics internal parameters.
+	 * 
+	 * @throws Exception
+	 */
+	public abstract void validate() throws Exception;
 }

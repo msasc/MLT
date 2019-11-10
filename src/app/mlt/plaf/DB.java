@@ -36,7 +36,7 @@ import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
 import app.mlt.plaf.db.Fields;
-import app.mlt.plaf.db.tables.TableData;
+import app.mlt.plaf.db.tables.TableTicker;
 import app.mlt.plaf.db.tables.TableInstruments;
 import app.mlt.plaf.db.tables.TablePeriods;
 import app.mlt.plaf.db.tables.TableServers;
@@ -61,7 +61,7 @@ public class DB {
 	private static HashMap<String, Table> tables = new HashMap<>();
 	/** DDL. */
 	private static PersistorDDL ddl;
-
+	
 	/**
 	 * Return the proper persistor DDL.
 	 * 
@@ -167,17 +167,6 @@ public class DB {
 	}
 
 	/**
-	 * Returns the data price persistor.
-	 * 
-	 * @param instrument The instrument.
-	 * @param period     The period.
-	 * @return The persistor.
-	 */
-	public static Persistor persistor_data(Instrument instrument, Period period) {
-		return table_data(instrument, period).getPersistor();
-	}
-
-	/**
 	 * Returns the instruments persistor.
 	 * 
 	 * @return The persistor.
@@ -211,6 +200,17 @@ public class DB {
 	 */
 	public static Persistor persistor_statistics() {
 		return table_statistics().getPersistor();
+	}
+
+	/**
+	 * Returns the data price persistor.
+	 * 
+	 * @param instrument The instrument.
+	 * @param period     The period.
+	 * @return The persistor.
+	 */
+	public static Persistor persistor_ticker(Instrument instrument, Period period) {
+		return table_ticker(instrument, period).getPersistor();
 	}
 
 	/**
@@ -385,23 +385,6 @@ public class DB {
 	}
 
 	/**
-	 * Access to the price table.
-	 * 
-	 * @param instrument Instrument.
-	 * @param period     Period.
-	 * @return The table.
-	 */
-	public static TableData table_data(Instrument instrument, Period period) {
-		String name = name_ticker(instrument, period);
-		TableData table = (TableData) tables.get(name);
-		if (table == null) {
-			table = new TableData(instrument, period);
-			tables.put(name, table);
-		}
-		return table;
-	}
-
-	/**
 	 * Access the instruments table.
 	 * 
 	 * @return The table.
@@ -453,6 +436,23 @@ public class DB {
 		if (table == null) {
 			table = new TableStatistics();
 			tables.put(STATISTICS, table);
+		}
+		return table;
+	}
+
+	/**
+	 * Access to the price table.
+	 * 
+	 * @param instrument Instrument.
+	 * @param period     Period.
+	 * @return The table.
+	 */
+	public static TableTicker table_ticker(Instrument instrument, Period period) {
+		String name = name_ticker(instrument, period);
+		TableTicker table = (TableTicker) tables.get(name);
+		if (table == null) {
+			table = new TableTicker(instrument, period);
+			tables.put(name, table);
 		}
 		return table;
 	}

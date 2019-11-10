@@ -39,10 +39,13 @@ import com.mlt.desktop.Option.Group;
 import com.mlt.desktop.OptionWindow;
 import com.mlt.desktop.action.Action;
 import com.mlt.desktop.action.ActionRun;
+import com.mlt.desktop.control.Control;
 import com.mlt.desktop.control.Dialog;
 import com.mlt.desktop.control.FormRecordPane;
 import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.OptionPane;
+import com.mlt.desktop.control.PopupMenu;
+import com.mlt.desktop.control.PopupMenuProvider;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.control.TableRecordModel;
@@ -80,7 +83,7 @@ public class ActionStatistics extends ActionRun {
 		@Override
 		public void run() {
 			try {
-				
+
 				/* Ticker. */
 				Record rcTicker = DB.lookup_ticker();
 				if (rcTicker == null) {
@@ -162,9 +165,9 @@ public class ActionStatistics extends ActionRun {
 					if (ddl.existsTable(table)) {
 						ddl.dropTable(table);
 					}
-					ddl.createTable(table);
+					ddl.buildTable(table);
 				}
-				
+
 				/* Add to model. */
 				int index = tableStats.getModel().getRecordSet().getInsertIndex(rc);
 				tableStats.getModel().getRecordSet().add(index, rc);
@@ -191,7 +194,7 @@ public class ActionStatistics extends ActionRun {
 				if (rc == null) {
 					return;
 				}
-				
+
 				/* Ask. */
 				Option option = Alert.confirm("Delete current statistics");
 				if (Option.isCancel(option)) {
@@ -224,6 +227,38 @@ public class ActionStatistics extends ActionRun {
 				Logs.catching(exc);
 			}
 		}
+	}
+
+	/**
+	 * Popup menu provider.
+	 */
+	class MenuProvider implements PopupMenuProvider {
+		@Override
+		public PopupMenu getPopupMenu(Control control) {
+
+			/* Option pane options. */
+			PopupMenu popup = optionPane.getPopupMenu(control);
+
+			/* Options from selected statistics. */
+			Record rc = tableStats.getSelectedRecord();
+			if (rc != null) {
+				try {
+					StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
+					List<Option> options = stats.getOptions();
+					for (int i = 0; i < options.size(); i++) {
+						if (i == 0) {
+							popup.addSeparator();
+						}
+						popup.add(options.get(i).getMenuItem());
+					}
+				} catch (Exception exc) {
+					Logs.catching(exc);
+				}
+			}
+
+			return popup;
+		}
+
 	}
 
 	/**
@@ -260,17 +295,17 @@ public class ActionStatistics extends ActionRun {
 
 	}
 
+	/** The table. */
+	private TableRecord tableStats;
+	/** Option pane. */
+	private OptionPane optionPane;
+
 	/**
 	 * Constructor.
 	 */
 	public ActionStatistics() {
 		super();
 	}
-
-	/**
-	 * The table.
-	 */
-	private TableRecord tableStats;
 
 	/**
 	 * {@inheritDoc}
@@ -314,9 +349,10 @@ public class ActionStatistics extends ActionRun {
 			delete.setOptionGroup(Group.EDIT);
 			delete.setAction(new ActionDelete());
 
-			OptionPane optionPane = new OptionPane(Orientation.HORIZONTAL);
+			optionPane = new OptionPane(Orientation.HORIZONTAL);
 			optionPane.add(create, delete);
-			tableStats.setPopupMenuProvider(optionPane);
+
+			tableStats.setPopupMenuProvider(new MenuProvider());
 
 			GridBagPane pane = new GridBagPane();
 			pane.add(tablePane,

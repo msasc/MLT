@@ -16,8 +16,10 @@
  */
 package app.mlt.plaf.db.tables;
 
+import com.mlt.db.Record;
 import com.mlt.db.Table;
 import com.mlt.db.rdbms.DBPersistor;
+import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
@@ -30,11 +32,27 @@ import app.mlt.plaf.db.fields.FieldTimeFmt;
 import app.mlt.plaf.db.fields.FieldVolume;
 
 /**
- * Table of market data, either prices or any time series data values.
+ * Table of market data, either prices.
  *
  * @author Miquel Sas
  */
-public class TableData extends Table {
+public class TableTicker extends Table {
+
+	/**
+	 * Return the data element given the ticker record.
+	 * 
+	 * @param rc The ticker record.
+	 * @return The data element.
+	 */
+	public static Data getData(Record rc) {
+		long time = rc.getValue(Fields.BAR_TIME).getLong();
+		double open = rc.getValue(Fields.BAR_OPEN).getDouble();
+		double high = rc.getValue(Fields.BAR_HIGH).getDouble();
+		double low = rc.getValue(Fields.BAR_LOW).getDouble();
+		double close = rc.getValue(Fields.BAR_CLOSE).getDouble();
+		double volume = rc.getValue(Fields.BAR_CLOSE).getDouble();
+		return new Data(time, open, high, low, close, volume);
+	}
 
 	/**
 	 * Constructor.
@@ -42,7 +60,7 @@ public class TableData extends Table {
 	 * @param instrument Instrument.
 	 * @param period     Period.
 	 */
-	public TableData(Instrument instrument, Period period) {
+	public TableTicker(Instrument instrument, Period period) {
 		super();
 
 		setName(DB.name_ticker(instrument, period));
@@ -57,7 +75,6 @@ public class TableData extends Table {
 		addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
 
 		getField(Fields.BAR_TIME).setPrimaryKey(true);
-
 		setPersistor(new DBPersistor(MLT.getDBEngine(), getComplexView(getPrimaryKey())));
 	}
 }

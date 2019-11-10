@@ -28,14 +28,24 @@ import org.xml.sax.SAXException;
 
 import com.mlt.db.Field;
 import com.mlt.db.Index;
+import com.mlt.db.ListPersistor;
 import com.mlt.db.Record;
 import com.mlt.db.Table;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.desktop.Option;
+import com.mlt.desktop.TaskFrame;
+import com.mlt.desktop.action.ActionRun;
+import com.mlt.desktop.control.TablePane;
+import com.mlt.desktop.control.TableRecord;
+import com.mlt.desktop.control.TableRecordModel;
+import com.mlt.desktop.control.table.SelectionMode;
+import com.mlt.desktop.icon.IconGrid;
+import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 import com.mlt.util.HTML;
+import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
 import com.mlt.util.Strings;
 import com.mlt.util.xml.Parser;
@@ -47,6 +57,7 @@ import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
 import app.mlt.plaf.db.Domains;
 import app.mlt.plaf.db.Fields;
+import app.mlt.plaf.db.converters.NumberScaleConverter;
 import app.mlt.plaf.db.fields.FieldDataInst;
 import app.mlt.plaf.db.fields.FieldPeriod;
 import app.mlt.plaf.db.fields.FieldTime;
@@ -67,6 +78,111 @@ import app.mlt.plaf.db.fields.FieldTimeFmt;
  * @author Miquel Sas
  */
 public class StatisticsAverages extends Statistics {
+
+	/**
+	 * Browse the statistics.
+	 */
+	class ActionBrowseStats extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				Instrument instrument = getInstrument();
+				Period period = getPeriod();
+
+				StringBuilder keyBuilder = new StringBuilder();
+				keyBuilder.append("BROWSE-STATS-");
+				keyBuilder.append(instrument.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(period.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getKey());
+				String key = keyBuilder.toString();
+
+				StringBuilder textBuilder = new StringBuilder();
+				textBuilder.append(instrument.getDescription());
+				textBuilder.append(" ");
+				textBuilder.append(period);
+				textBuilder.append(" ");
+				textBuilder.append(getId());
+				textBuilder.append(" ");
+				textBuilder.append(getKey());
+				String text = textBuilder.toString();
+
+				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
+
+				ListPersistor persistor = new ListPersistor(getTableStates().getPersistor());
+				persistor.setCacheSize(40000);
+				persistor.setPageSize(100);
+
+				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
+				model.addColumn(Fields.BAR_TIME_FMT);
+				model.addColumn(Fields.BAR_OPEN);
+				model.addColumn(Fields.BAR_HIGH);
+				model.addColumn(Fields.BAR_LOW);
+				model.addColumn(Fields.BAR_CLOSE);
+				for (int i = 0; i < getFieldListAverages().size(); i++) {
+					model.addColumn(getFieldListAverages().get(i).getAlias());
+				}
+				for (int i = 0; i < getFieldListAverageSlopes().size(); i++) {
+					model.addColumn(getFieldListAverageSlopes().get(i).getAlias());
+				}
+				for (int i = 0; i < getFieldListAverageSpreads().size(); i++) {
+					model.addColumn(getFieldListAverageSpreads().get(i).getAlias());
+				}
+				for (int i = 0; i < getFieldListCandles().size(); i++) {
+					model.addColumn(getFieldListCandles().get(i).getAlias());
+				}
+
+				model.setRecordSet(new DataRecordSet(persistor));
+
+				TableRecord table = new TableRecord();
+				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
+				table.setModel(model);
+				table.setSelectedRow(0);
+
+				TablePane tablePane = new TablePane(table);
+
+				IconGrid iconGrid = new IconGrid();
+				iconGrid.setSize(16, 16);
+				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
+
+				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
+				MLT.getStatusBar().removeProgress(key);
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
+	 * Action to calculate the statistics by a list of tasks.
+	 */
+	class ActionCalculate extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+
+			/* Calculate raw values. */
+			TaskAveragesRaw taskRaw = new TaskAveragesRaw(StatisticsAverages.this);
+
+			/* Task frame. */
+			TaskFrame frame = new TaskFrame();
+			frame.setTitle(getLabel());
+			frame.addTasks(taskRaw);
+			frame.show();
+		}
+
+	}
 
 	/**
 	 * Parameters handler.
@@ -199,6 +315,15 @@ public class StatisticsAverages extends Statistics {
 	private Table tableStates;
 	/** Ranges table. */
 	private Table tableRanges;
+	
+	/** Averages field list. */
+	private List<Field> fieldListAverages;
+	/** Average slopes field list. */
+	private List<Field> fieldListAverageSlopes;
+	/** Average spreads field list. */
+	private List<Field> fieldListAverageSpreads;
+	/** Candles field list. */
+	private List<Field> fieldListCandles;
 
 	/**
 	 * Constructor.
@@ -254,15 +379,19 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of average fields.
 	 */
 	public List<Field> getFieldListAverages() {
-		List<Field> fields = new ArrayList<>();
-		for (int i = 0; i < averages.size(); i++) {
-			Average average = averages.get(i);
-			String name = "average_" + average.getPeriod();
-			String header = "Avg " + average.getPeriod();
-			String label = "Average " + average.toString();
-			fields.add(Domains.getDouble(name, header, label));
+		if (fieldListAverages == null) {
+			fieldListAverages = new ArrayList<>();
+			for (int i = 0; i < averages.size(); i++) {
+				Average average = averages.get(i);
+				String name = Average.getNameAverage(average);
+				String header = Average.getHeaderAverage(average);
+				String label = Average.getLabelAverage(average);
+				Field field = Domains.getDouble(name, header, label);
+				field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+				fieldListAverages.add(field);
+			}
 		}
-		return fields;
+		return fieldListAverages;
 	}
 
 	/**
@@ -272,22 +401,29 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of fields for slopes.
 	 */
 	public List<Field> getFieldListAverageSlopes() {
-		List<Field> fields = new ArrayList<>();
-		String name, header, label;
-		for (int i = 0; i < averages.size(); i++) {
-			int p = averages.get(i).getPeriod();
-			/* Raw value. */
-			name = "average_slope_" + p + "_raw";
-			header = "Avg-Slope " + p + " raw";
-			label = "Average slope " + p + " raw value";
-			fields.add(Domains.getDouble(name, header, label));
-			/* Normalized value. */
-			name = "average_slope_" + p + "_nrm";
-			header = "Avg-Slope " + p + " nrm";
-			label = "Average slope " + p + " normalized value";
-			fields.add(Domains.getDouble(name, header, label));
+		if (fieldListAverageSlopes == null) {
+			fieldListAverageSlopes = new ArrayList<>();
+			String name, header, label;
+			Field field;
+			for (int i = 0; i < averages.size(); i++) {
+				Average average = averages.get(i);
+				/* Raw value. */
+				name = Average.getNameSlope(average, "raw");
+				header = Average.getHeaderSlope(average, "raw");
+				label = Average.getLabelSlope(average, "raw");
+				field = Domains.getDouble(name, header, label);
+				field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+				fieldListAverageSlopes.add(field);
+				/* Normalized value. */
+				name = Average.getNameSlope(average, "nrm");
+				header = Average.getHeaderSlope(average, "nrm");
+				label = Average.getLabelSlope(average, "nrm");
+				field = Domains.getDouble(name, header, label);
+				field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+				fieldListAverageSlopes.add(field);
+			}
 		}
-		return fields;
+		return fieldListAverageSlopes;
 	}
 
 	/**
@@ -297,25 +433,32 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of fields for slopes.
 	 */
 	public List<Field> getFieldListAverageSpreads() {
-		List<Field> fields = new ArrayList<>();
-		String name, header, label;
-		for (int i = 0; i < averages.size(); i++) {
-			int fp = averages.get(i).getPeriod();
-			for (int j = i + 1; j < averages.size(); j++) {
-				int sp = averages.get(j).getPeriod();
-				/* Raw value. */
-				name = "average_spread_" + fp + "_" + sp + "_raw";
-				header = "Avg-Spread " + fp + "/" + sp + " raw";
-				label = "Average spread between " + fp + " and " + sp + " raw value";
-				fields.add(Domains.getDouble(name, header, label));
-				/* Normalized value. */
-				name = "average_spread_" + fp + "_" + sp + "_nrm";
-				header = "Avg-Spread " + fp + "/" + sp + " nrm";
-				label = "Average spread between " + fp + " and " + sp + " normalized value";
-				fields.add(Domains.getDouble(name, header, label));
+		if (fieldListAverageSpreads == null) {
+			fieldListAverageSpreads = new ArrayList<>();
+			String name, header, label;
+			Field field;
+			for (int i = 0; i < averages.size(); i++) {
+				Average fast = averages.get(i);
+				for (int j = i + 1; j < averages.size(); j++) {
+					Average slow = averages.get(j);
+					/* Raw value. */
+					name = Average.getNameSpread(fast, slow, "raw");
+					header = Average.getHeaderSpread(fast, slow, "raw");
+					label = Average.getLabelSpread(fast, slow, "raw");
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					fieldListAverageSpreads.add(field);
+					/* Normalized value. */
+					name = Average.getNameSpread(fast, slow, "nrm");
+					header = Average.getHeaderSpread(fast, slow, "nrm");
+					label = Average.getLabelSpread(fast, slow, "nrm");
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					fieldListAverageSpreads.add(field);
+				}
 			}
 		}
-		return fields;
+		return fieldListAverageSpreads;
 	}
 
 	/**
@@ -324,118 +467,129 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of candle related fields.
 	 */
 	public List<Field> getFieldListCandles() {
+		if (fieldListCandles == null) {
 
-		List<Field> fields = new ArrayList<>();
-		String name, header, label;
-		for (int i = 0; i < averages.size(); i++) {
+			fieldListCandles = new ArrayList<>();
+			String name, header, label;
+			Field field;
+			for (int i = 0; i < averages.size(); i++) {
 
-			/* Number of candles and pad for index. */
-			int count, period;
-			if (i == 0) {
-				count = averages.get(i).getPeriod();
-				period = 0;
-			} else {
-				count = averages.get(i).getPeriod() / averages.get(i - 1).getPeriod();
-				period = averages.get(i - 1).getPeriod();
-			}
-			int pad = Numbers.getDigits(count);
+				/* Number of candles and pad for index. */
+				int count, period;
+				if (i == 0) {
+					count = averages.get(i).getPeriod();
+					period = 0;
+				} else {
+					count = averages.get(i).getPeriod() / averages.get(i - 1).getPeriod();
+					period = averages.get(i - 1).getPeriod();
+				}
+				int pad = Numbers.getDigits(count);
 
-			/* Create the candles fields for level candles. */
-			for (int j = 0; j < count; j++) {
-				String curr = Strings.leftPad(Integer.toString(j), pad);
-				String id = period + "_" + curr;
+				/* Create the candles fields for level candles. */
+				for (int j = 0; j < count; j++) {
+					String curr = Strings.leftPad(Integer.toString(j), pad);
+					String id = period + "_" + curr;
 
-				/* Open, high, low, close. */
-				name = "open_" + id;
-				header = "Open " + id;
-				label = "Open " + id;
-				fields.add(Domains.getDouble(name, header, label));
-				name = "high_" + id;
-				header = "High " + id;
-				label = "High " + id;
-				fields.add(Domains.getDouble(name, header, label));
-				name = "low_" + id;
-				header = "Low " + id;
-				label = "Low " + id;
-				fields.add(Domains.getDouble(name, header, label));
-				name = "close_" + id;
-				header = "Close " + id;
-				label = "Close " + id;
-				fields.add(Domains.getDouble(name, header, label));
+					/* Open, high, low, close. */
+					name = "open_" + id;
+					header = "Open " + id;
+					label = "Open " + id;
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					fieldListCandles.add(field);
+					name = "high_" + id;
+					header = "High " + id;
+					label = "High " + id;
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					fieldListCandles.add(field);
+					name = "low_" + id;
+					header = "Low " + id;
+					label = "Low " + id;
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					fieldListCandles.add(field);
+					name = "close_" + id;
+					header = "Close " + id;
+					label = "Close " + id;
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					fieldListCandles.add(field);
 
-				/* Sign: 1, 0, -1 */
-				name = "sign_" + id;
-				header = "Sign " + id;
-				label = "Sign " + id;
-				fields.add(Domains.getDouble(name, header, label));
+					/* Sign: 1, 0, -1 */
+					name = "sign_" + id;
+					header = "Sign " + id;
+					label = "Sign " + id;
+					fieldListCandles.add(Domains.getDouble(name, header, label));
 
-				/* Range, raw and normalized. */
-				name = "range_" + id + "_raw";
-				header = "Range " + id + " raw";
-				label = "Range " + id + " raw value";
-				fields.add(Domains.getDouble(name, header, label));
-				name = "range_" + id + "_nrm";
-				header = "Range " + id + " nrm";
-				label = "Range " + id + " normalized value";
-				fields.add(Domains.getDouble(name, header, label));
+					/* Range, raw and normalized. */
+					name = "range_" + id + "_raw";
+					header = "Range " + id + " raw";
+					label = "Range " + id + " raw value";
+					fieldListCandles.add(Domains.getDouble(name, header, label));
+					name = "range_" + id + "_nrm";
+					header = "Range " + id + " nrm";
+					label = "Range " + id + " normalized value";
+					fieldListCandles.add(Domains.getDouble(name, header, label));
 
-				/* Body size as a factor of the range, no need to normalize. */
-				name = "body_size_" + id;
-				header = "Body-size " + id;
-				label = "Body size " + id;
-				fields.add(Domains.getDouble(name, header, label));
+					/* Body size as a factor of the range, no need to normalize. */
+					name = "body_size_" + id;
+					header = "Body-size " + id;
+					label = "Body size " + id;
+					fieldListCandles.add(Domains.getDouble(name, header, label));
 
-				/* Body relative position within the range. */
-				name = "body_pos_" + id;
-				header = "Body-pos " + id;
-				label = "Body position " + id;
-				fields.add(Domains.getDouble(name, header, label));
+					/* Body relative position within the range. */
+					name = "body_pos_" + id;
+					header = "Body-pos " + id;
+					label = "Body position " + id;
+					fieldListCandles.add(Domains.getDouble(name, header, label));
 
-				/*
-				 * Factor of change of open, high, low and close, of this candle versus the next
-				 * candle. Raw and normalized values.
-				 */
-				if (j < count - 1) {
-					String next = Strings.leftPad(Integer.toString(j + 1), pad);
-					id = period + "_" + curr + "_" + next;
-					/* Raw values. */
-					name = "open_" + id + "_factor_raw";
-					header = "Open " + id + " factor raw";
-					label = "Open " + id + " factor raw value";
-					fields.add(Domains.getDouble(name, header, label));
-					name = "high_" + id + "_factor_raw";
-					header = "High " + id + " factor raw";
-					label = "High " + id + " factor raw value";
-					fields.add(Domains.getDouble(name, header, label));
-					name = "low_" + id + "_factor_raw";
-					header = "Low " + id + " factor raw";
-					label = "Low " + id + " factor raw value";
-					fields.add(Domains.getDouble(name, header, label));
-					name = "close_" + id + "_factor_raw";
-					header = "Close " + id + " factor raw";
-					label = "Close " + id + " factor raw value";
-					fields.add(Domains.getDouble(name, header, label));
-					/* Normalized values. */
-					name = "open_" + id + "_factor_nrm";
-					header = "Open " + id + " factor nrm";
-					label = "Open " + id + " factor normalized value";
-					fields.add(Domains.getDouble(name, header, label));
-					name = "high_" + id + "_factor_nrm";
-					header = "High " + id + " factor nrm";
-					label = "High " + id + " factor normalized value";
-					fields.add(Domains.getDouble(name, header, label));
-					name = "low_" + id + "_factor_nrm";
-					header = "Low " + id + " factor nrm";
-					label = "Low " + id + " factor normalized value";
-					fields.add(Domains.getDouble(name, header, label));
-					name = "close_" + id + "_factor_nrm";
-					header = "Close " + id + " factor nrm";
-					label = "Close " + id + " factor normalized value";
-					fields.add(Domains.getDouble(name, header, label));
+					/*
+					 * Factor of change of open, high, low and close, of this candle versus the next
+					 * candle. Raw and normalized values.
+					 */
+					if (j < count - 1) {
+						String next = Strings.leftPad(Integer.toString(j + 1), pad);
+						id = period + "_" + curr + "_" + next;
+						/* Raw values. */
+						name = "open_" + id + "_factor_raw";
+						header = "Open " + id + " factor raw";
+						label = "Open " + id + " factor raw value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+						name = "high_" + id + "_factor_raw";
+						header = "High " + id + " factor raw";
+						label = "High " + id + " factor raw value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+						name = "low_" + id + "_factor_raw";
+						header = "Low " + id + " factor raw";
+						label = "Low " + id + " factor raw value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+						name = "close_" + id + "_factor_raw";
+						header = "Close " + id + " factor raw";
+						label = "Close " + id + " factor raw value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+						/* Normalized values. */
+						name = "open_" + id + "_factor_nrm";
+						header = "Open " + id + " factor nrm";
+						label = "Open " + id + " factor normalized value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+						name = "high_" + id + "_factor_nrm";
+						header = "High " + id + " factor nrm";
+						label = "High " + id + " factor normalized value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+						name = "low_" + id + "_factor_nrm";
+						header = "Low " + id + " factor nrm";
+						label = "Low " + id + " factor normalized value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+						name = "close_" + id + "_factor_nrm";
+						header = "Close " + id + " factor nrm";
+						label = "Close " + id + " factor normalized value";
+						fieldListCandles.add(Domains.getDouble(name, header, label));
+					}
 				}
 			}
 		}
-		return fields;
+		return fieldListCandles;
 	}
 
 	/**
@@ -458,6 +612,22 @@ public class StatisticsAverages extends Statistics {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public String getLabel() {
+		StringBuilder b = new StringBuilder();
+		b.append(getInstrument().getId());
+		b.append(" ");
+		b.append(getPeriod().toString());
+		b.append(" ");
+		b.append(getId());
+		b.append(" ");
+		b.append(getKey());
+		return b.toString();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public String getLegend() {
 		HTML html = new HTML();
 		return html.toString();
@@ -468,8 +638,25 @@ public class StatisticsAverages extends Statistics {
 	 */
 	@Override
 	public List<Option> getOptions() {
-		// TODO Auto-generated method stub
-		return null;
+		List<Option> options = new ArrayList<>();
+
+		/* Calculate the statistics. */
+		Option optionCalculate = new Option();
+		optionCalculate.setKey("CALCULATE");
+		optionCalculate.setText("Calculate");
+		optionCalculate.setToolTip("Calculate all statistics values");
+		optionCalculate.setAction(new ActionCalculate());
+		options.add(optionCalculate);
+
+		/* Browse statictics. */
+		Option optionBrowseStats = new Option();
+		optionBrowseStats.setKey("BROWSE-STATS");
+		optionBrowseStats.setText("Browse statistics");
+		optionBrowseStats.setToolTip("Browse statistics values");
+		optionBrowseStats.setAction(new ActionBrowseStats());
+		options.add(optionBrowseStats);
+
+		return options;
 	}
 
 	/**
@@ -546,7 +733,7 @@ public class StatisticsAverages extends Statistics {
 	 * 
 	 * @return The ranges table.
 	 */
-	private Table getTableRanges() {
+	public Table getTableRanges() {
 		if (tableRanges != null) {
 			return tableRanges;
 		}
@@ -610,7 +797,7 @@ public class StatisticsAverages extends Statistics {
 	 * 
 	 * @return The table.
 	 */
-	private Table getTableStates() {
+	public Table getTableStates() {
 		if (tableStates != null) {
 			return tableStates;
 		}
@@ -626,14 +813,14 @@ public class StatisticsAverages extends Statistics {
 
 		/* Time, open, high, low, close. */
 		tableStates.addField(new FieldTime(Fields.BAR_TIME));
-		tableStates.getField(Fields.BAR_TIME).setPrimaryKey(true);
 
-		tableStates.addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
 		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_OPEN, "Open", "Open value"));
 		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_HIGH, "High", "High value"));
 		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_LOW, "Low", "Low value"));
 		tableStates
 			.addField(new FieldDataInst(instrument, Fields.BAR_CLOSE, "Close", "Close value"));
+
+		tableStates.addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
 
 		/* Calculated pivot (High=1, None=0, Low=-1) */
 		tableStates.addField(Domains.getInteger("pivot", "Pivot", "Pivot"));
@@ -665,6 +852,7 @@ public class StatisticsAverages extends Statistics {
 			tableStates.addField(field);
 		}
 
+		tableStates.getField(Fields.BAR_TIME).setPrimaryKey(true);
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
 		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
@@ -682,7 +870,7 @@ public class StatisticsAverages extends Statistics {
 		averages.clear();
 		averages.addAll(handler.getAverages());
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */

@@ -90,6 +90,13 @@ public abstract class Statistics {
 	}
 
 	/**
+	 * Return a short description.
+	 * 
+	 * @return The short description.
+	 */
+	public abstract String getLabel();
+
+	/**
 	 * Returns a legend description of the statistics, with description of
 	 * paramemters, used tables, menu options offered, and any internal details of
 	 * interest.

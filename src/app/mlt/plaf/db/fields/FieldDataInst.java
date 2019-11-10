@@ -17,6 +17,8 @@
 package app.mlt.plaf.db.fields;
 
 import app.mlt.plaf.db.Domains;
+import app.mlt.plaf.db.converters.NumberScaleConverter;
+
 import com.mlt.db.Field;
 import com.mlt.mkt.data.Instrument;
 
@@ -38,5 +40,6 @@ public class FieldDataInst extends Field {
 	public FieldDataInst(Instrument instrument, String name, String header, String label) {
 		super(Domains.getDouble(name, header, label));
 		setDisplayDecimals(instrument.getPipScale());
+		setStringConverter(new NumberScaleConverter(instrument.getPipScale()));
 	}
 }

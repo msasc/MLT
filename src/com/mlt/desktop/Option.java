@@ -1283,7 +1283,12 @@ public class Option {
 	 * @return The menu item.
 	 */
 	public MenuItem getMenuItem() {
-		return (MenuItem) properties.getObject("MENU_ITEM");
+		MenuItem menuItem = (MenuItem) properties.getObject("MENU_ITEM");
+		if (menuItem == null) {
+			menuItem = createMenuItem(this);
+			properties.setObject("MENU_ITEM", menuItem);
+		}
+		return menuItem;
 	}
 
 	/**

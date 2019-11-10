@@ -1,18 +1,24 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.db;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +38,8 @@ public class Record implements Comparable<Object> {
 	public static final String TOTAL = "Total";
 
 	/**
-	 * Move values from a source record to a destination record, by coincident alias and type.
+	 * Move values from a source record to a destination record, by coincident alias
+	 * and type.
 	 *
 	 * @param source      The source record.
 	 * @param destination The destination record.
@@ -201,7 +208,8 @@ public class Record implements Comparable<Object> {
 	}
 
 	/**
-	 * Returns the order key for the given order. The order must contain fields of the record.
+	 * Returns the order key for the given order. The order must contain fields of
+	 * the record.
 	 *
 	 * @param order The order.
 	 * @return The key.
@@ -399,7 +407,8 @@ public class Record implements Comparable<Object> {
 		try {
 			record = (Record) o;
 		} catch (ClassCastException exc) {
-			throw new UnsupportedOperationException("Not comparable type: " + o.getClass().getName());
+			throw new UnsupportedOperationException(
+				"Not comparable type: " + o.getClass().getName());
 		}
 		// Compare using the primary key pointers.
 		RecordComparator comparator = new RecordComparator(getPrimaryOrder());
@@ -441,7 +450,8 @@ public class Record implements Comparable<Object> {
 	}
 
 	/**
-	 * Check if the record has a main description field or at least a non fixed width field.
+	 * Check if the record has a main description field or at least a non fixed
+	 * width field.
 	 *
 	 * @return A boolean.
 	 */
@@ -462,9 +472,11 @@ public class Record implements Comparable<Object> {
 	}
 
 	/**
-	 * Return the main description field or if non exists, the first non fixed width field.
+	 * Return the main description field or if non exists, the first non fixed width
+	 * field.
 	 *
-	 * @return The main description field or if non exists, the first non fixed width field.
+	 * @return The main description field or if non exists, the first non fixed
+	 *         width field.
 	 */
 	public Field getMainDescription() {
 		Field mainDescription = null;
@@ -537,5 +549,32 @@ public class Record implements Comparable<Object> {
 		}
 		return b.toString();
 	}
+	
+	/**
+	 * Return the string representation of the value at index.
+	 * 
+	 * @param index The index.
+	 * @return The string representation.
+	 */
+	public String toString(int index) {
+		Field field = getField(index);
+		Value value = getValue(index);
+		if (field.getStringConverter() != null) {
+			try {
+				return field.getStringConverter().valueToString(value);
+			} catch (ParseException ignore) {}
+		}
+		return value.toString();
+	}
 
+	/**
+	 * Return the string representation of the value at alias.
+	 * 
+	 * @param alias The alias.
+	 * @return The string representation.
+	 */
+	public String toString(String alias) {
+		int index = fields.getFieldIndex(alias);
+		return (index == -1 ? null : toString(index));
+	}
 }

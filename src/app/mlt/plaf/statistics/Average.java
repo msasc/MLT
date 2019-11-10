@@ -17,7 +17,11 @@
 
 package app.mlt.plaf.statistics;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
+import com.mlt.util.FixedSizeList;
 
 /**
  * Defines a smoothed average used as a movement descriptor.
@@ -25,7 +29,85 @@ import java.util.Arrays;
  * @author Miquel Sas
  */
 public class Average implements Comparable<Average> {
-	
+
+	private static double getAverage(Type type, int period, FixedSizeList<Double> buffer) {
+		int startIndex = (buffer.size() < period ? 0 : buffer.size() - period);
+		int endIndex = buffer.size() - 1;
+		switch (type) {
+		case SMA:
+			return getAverageSMA(startIndex, endIndex, buffer);
+		case WMA:
+			return getAverageWMA(startIndex, endIndex, buffer);
+		}
+		throw new IllegalArgumentException();
+	}
+
+	private static double getAverageSMA(
+		int startIndex,
+		int endIndex,
+		FixedSizeList<Double> buffer) {
+
+		double average = 0;
+		for (int index = startIndex; index <= endIndex; index++) {
+			average += buffer.get(index);
+		}
+		average /= ((double) (endIndex - startIndex + 1));
+		return average;
+	}
+
+	private static double getAverageWMA(
+		int startIndex,
+		int endIndex,
+		FixedSizeList<Double> buffer) {
+
+		double average = 0;
+		double weight = 1;
+		double totalWeight = 0;
+		for (int index = startIndex; index <= endIndex; index++) {
+			average += (buffer.get(index) * weight);
+			totalWeight += weight;
+			weight += 1;
+		}
+		average /= totalWeight;
+		return average;
+	}
+
+	public static String getHeaderAverage(Average average) {
+		return "Avg " + average.toString();
+	}
+
+	public static String getHeaderSlope(Average average, String suffix) {
+		return "Avg-Slope " + average.getPeriod() + "_" + suffix;
+	}
+
+	public static String getHeaderSpread(Average fast, Average slow, String suffix) {
+		return "Avg-Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix;
+	}
+
+	public static String getLabelAverage(Average average) {
+		return "Average " + average.toString();
+	}
+
+	public static String getLabelSlope(Average average, String suffix) {
+		return "Average slope " + average.getPeriod() + "_" + suffix + " value";
+	}
+
+	public static String getLabelSpread(Average fast, Average slow, String suffix) {
+		return "Average Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix + " value";
+	}
+
+	public static String getNameAverage(Average average) {
+		return "average_" + average.getPeriod();
+	}
+
+	public static String getNameSlope(Average average, String suffix) {
+		return "average_slope_" + average.getPeriod() + "_" + suffix;
+	}
+
+	public static String getNameSpread(Average fast, Average slow, String suffix) {
+		return "average_spread_" + fast.getPeriod() + "_" + slow.getPeriod() + "_" + suffix;
+	}
+
 	/**
 	 * Types of averages used.
 	 */
@@ -40,6 +122,9 @@ public class Average implements Comparable<Average> {
 	private int[] smooths;
 	/** Average type. */
 	private Type type = Type.SMA;
+
+	/** Smooth buffers. */
+	private List<FixedSizeList<Double>> smoothBuffers;
 
 	/**
 	 * Constructor.
@@ -60,7 +145,6 @@ public class Average implements Comparable<Average> {
 		this.period = period;
 		this.smooths = (smooths == null ? new int[0] : smooths);
 	}
-
 
 	/**
 	 * {@inheritDoc}
@@ -91,6 +175,24 @@ public class Average implements Comparable<Average> {
 		}
 		return false;
 	}
+
+	/**
+	 * Return the average value.
+	 * 
+	 * @param buffer The fixed size list buffer of values to average.
+	 * @return The average value, conveniently smoothed.
+	 */
+	public double getAverage(FixedSizeList<Double> buffer) {
+		double average = getAverage(type, period, buffer);
+		for (int i = 0; i < smooths.length; i++) {
+			int smooth = smooths[i];
+			FixedSizeList<Double> smoothBuffer = getSmoothBuffers().get(i);
+			smoothBuffer.add(average);
+			average = getAverage(type, smooth, smoothBuffer);
+		}
+		return average;
+	}
+
 	/**
 	 * Returns the SMA period.
 	 * 
@@ -98,6 +200,19 @@ public class Average implements Comparable<Average> {
 	 */
 	public int getPeriod() {
 		return period;
+	}
+
+	/**
+	 * @return The list of smooth buffers.
+	 */
+	private List<FixedSizeList<Double>> getSmoothBuffers() {
+		if (smoothBuffers == null) {
+			smoothBuffers = new ArrayList<>();
+			for (int i = 0; i < smooths.length; i++) {
+				smoothBuffers.add(new FixedSizeList<>(smooths[i]));
+			}
+		}
+		return smoothBuffers;
 	}
 
 	/**

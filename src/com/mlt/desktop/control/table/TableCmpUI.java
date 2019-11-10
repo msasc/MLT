@@ -168,9 +168,11 @@ class TableCmpUI extends BasicTableUI {
 				/*
 				 * For mouse pressed, only take into account toggle, extends should always be false.
 				 */
-				boolean toggle = Mask.check(e, Mask.CTRL);
-				boolean extend = (toggle ? false : Mask.check(e, Mask.SHIFT));
-				tableCmp.moveSelection(row, column, toggle, extend);
+				if (Mask.check(e, Mask.BUTTON1)) {
+					boolean toggle = Mask.check(e, Mask.CTRL);
+					boolean extend = (toggle ? false : Mask.check(e, Mask.SHIFT));
+					tableCmp.moveSelection(row, column, toggle, extend);
+				}
 			}
 
 			e.consume();

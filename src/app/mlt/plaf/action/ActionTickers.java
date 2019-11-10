@@ -99,13 +99,13 @@ public class ActionTickers extends ActionRun {
 				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
-				String key = "BROWSE-" + instrumentId + "-" + periodId;
+				String key = "BROWSE-TICKER" + instrumentId + "-" + periodId;
 				String text = instrument.getDescription() + " " + period;
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 				ListPersistor persistor =
-					new ListPersistor(DB.persistor_data(instrument, period));
-				persistor.setCacheSize(40000);
+					new ListPersistor(DB.persistor_ticker(instrument, period));
+				persistor.setCacheSize(10000);
 				persistor.setPageSize(100);
 
 				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
@@ -163,7 +163,7 @@ public class ActionTickers extends ActionRun {
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 				ListPersistor persistor =
-					new ListPersistor(DB.persistor_data(instrument, period));
+					new ListPersistor(DB.persistor_ticker(instrument, period));
 				persistor.setCacheSize(10000);
 				persistor.setCacheFactor(0.0);
 				persistor.setPageSize(100);
@@ -266,7 +266,7 @@ public class ActionTickers extends ActionRun {
 
 				/* Create the record and the table. */
 				DB.persistor_tickers().insert(rcTicker);
-				Table data = DB.table_data(instrument, period);
+				Table data = DB.table_ticker(instrument, period);
 				DB.ddl().buildTable(data);
 				RecordSet rs = tableTickers.getModel().getRecordSet();
 				Order order = DB.persistor_tickers().getView().getOrderBy();
@@ -330,7 +330,7 @@ public class ActionTickers extends ActionRun {
 				Period period = DB.to_period(rcPeriod);
 
 				/* Drop table, delete ticker and refresh view. */
-				Table data = DB.table_data(instrument, period);
+				Table data = DB.table_ticker(instrument, period);
 				DB.ddl().dropTable(data);
 				DB.persistor_tickers().delete(rcTicker);
 				RecordSet rs = tableTickers.getModel().getRecordSet();

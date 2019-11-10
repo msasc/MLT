@@ -71,7 +71,7 @@ public class TaskAveragesRaw extends Task {
 	 */
 	@Override
 	protected void compute() throws Throwable {
-		
+
 		/* Count. */
 		calculateTotalWork();
 
@@ -81,7 +81,7 @@ public class TaskAveragesRaw extends Task {
 
 		/* Delete data (if process from scratch) */
 		states.getPersistor().delete((Criteria) null);
-		
+
 		/* Averages and maximum period. */
 		List<Average> averages = stats.getAverages();
 		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
@@ -91,8 +91,9 @@ public class TaskAveragesRaw extends Task {
 		long workDone = 0;
 		FixedSizeList<Double> buffer = new FixedSizeList<>(maxPeriod);
 		RecordIterator iter = ticker.getPersistor().iterator(null, ticker.getPrimaryKey());
+		Record rcPrev = null;
 		while (iter.hasNext()) {
-			
+
 			/* Check cancel requested. */
 			if (isCancelRequested()) {
 				setCancelled();
@@ -103,7 +104,7 @@ public class TaskAveragesRaw extends Task {
 			Record rcTick = iter.next();
 			double close = rcTick.getValue(Fields.BAR_CLOSE).getDouble();
 			buffer.add(close);
-			
+
 			/* Notify work. */
 			workDone++;
 			if (workDone % 100 == 0 || workDone == totalWork) {
@@ -119,7 +120,7 @@ public class TaskAveragesRaw extends Task {
 				b.append(rcTick.toString(Fields.BAR_CLOSE));
 				update(b.toString(), workDone, totalWork);
 			}
-			
+
 			/* Statistics record. */
 			Record rcStat = states.getDefaultRecord();
 			rcStat.setValue(Fields.BAR_TIME, rcTick.getValue(Fields.BAR_TIME));
@@ -127,7 +128,7 @@ public class TaskAveragesRaw extends Task {
 			rcStat.setValue(Fields.BAR_HIGH, rcTick.getValue(Fields.BAR_HIGH));
 			rcStat.setValue(Fields.BAR_LOW, rcTick.getValue(Fields.BAR_LOW));
 			rcStat.setValue(Fields.BAR_CLOSE, rcTick.getValue(Fields.BAR_CLOSE));
-			
+
 			/* Calculate averages. */
 			for (int i = 0; i < averages.size(); i++) {
 				Average average = averages.get(i);
@@ -135,9 +136,28 @@ public class TaskAveragesRaw extends Task {
 				String name = Average.getNameAverage(average);
 				rcStat.setValue(name, new Value(value));
 			}
-			
+
+			/* Calculate raw slopes. */
+			if (rcPrev != null) {
+				for (int i = 0; i < averages.size(); i++) {
+					Average average = averages.get(i);
+					String nameAverage = Average.getNameAverage(average);
+					double prev = rcPrev.getValue(nameAverage).getDouble();
+					double curr = rcStat.getValue(nameAverage).getDouble();
+					double slope = 0;
+					if (prev != 0) {
+						slope = (curr / prev) - 1;
+					}
+					String nameSlope = Average.getNameSlope(average, "raw");
+					rcStat.setValue(nameSlope, new Value(slope));
+				}
+			}
+
 			/* Insert the record. */
 			states.getPersistor().insert(rcStat);
+
+			/* Register previous record. */
+			rcPrev = rcStat;
 		}
 		iter.close();
 	}

@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import org.xml.sax.Attributes;
@@ -126,14 +127,21 @@ public class StatisticsAverages extends Statistics {
 				model.addColumn(Fields.BAR_HIGH);
 				model.addColumn(Fields.BAR_LOW);
 				model.addColumn(Fields.BAR_CLOSE);
+
 				for (int i = 0; i < getFieldListAverages().size(); i++) {
 					model.addColumn(getFieldListAverages().get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListAverageSlopes().size(); i++) {
-					model.addColumn(getFieldListAverageSlopes().get(i).getAlias());
+				for (int i = 0; i < getFieldListAverageSlopes("raw").size(); i++) {
+					model.addColumn(getFieldListAverageSlopes("raw").get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListAverageSpreads().size(); i++) {
-					model.addColumn(getFieldListAverageSpreads().get(i).getAlias());
+				for (int i = 0; i < getFieldListAverageSpreads("raw").size(); i++) {
+					model.addColumn(getFieldListAverageSpreads("raw").get(i).getAlias());
+				}
+				for (int i = 0; i < getFieldListAverageSlopes("nrm").size(); i++) {
+					model.addColumn(getFieldListAverageSlopes("nrm").get(i).getAlias());
+				}
+				for (int i = 0; i < getFieldListAverageSpreads("nrm").size(); i++) {
+					model.addColumn(getFieldListAverageSpreads("nrm").get(i).getAlias());
 				}
 				for (int i = 0; i < getFieldListCandles().size(); i++) {
 					model.addColumn(getFieldListCandles().get(i).getAlias());
@@ -315,13 +323,10 @@ public class StatisticsAverages extends Statistics {
 	private Table tableStates;
 	/** Ranges table. */
 	private Table tableRanges;
-	
-	/** Averages field list. */
-	private List<Field> fieldListAverages;
-	/** Average slopes field list. */
-	private List<Field> fieldListAverageSlopes;
-	/** Average spreads field list. */
-	private List<Field> fieldListAverageSpreads;
+
+	/** Map of field lists. */
+	private HashMap<String, List<Field>> mapLists = new HashMap<>();
+
 	/** Candles field list. */
 	private List<Field> fieldListCandles;
 
@@ -379,86 +384,81 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of average fields.
 	 */
 	public List<Field> getFieldListAverages() {
-		if (fieldListAverages == null) {
-			fieldListAverages = new ArrayList<>();
+		List<Field> fields = mapLists.get("averages");
+		if (fields == null) {
+			fields = new ArrayList<>();
 			for (int i = 0; i < averages.size(); i++) {
 				Average average = averages.get(i);
 				String name = Average.getNameAverage(average);
 				String header = Average.getHeaderAverage(average);
 				String label = Average.getLabelAverage(average);
 				Field field = Domains.getDouble(name, header, label);
-				field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
-				fieldListAverages.add(field);
+				field.setStringConverter(
+					new NumberScaleConverter(getInstrument().getPipScale() * 2));
+				fields.add(field);
 			}
+			mapLists.put("averages", fields);
 		}
-		return fieldListAverages;
+		return fields;
 	}
 
 	/**
 	 * Return the list of fields for slopes. For each slope, a raw and a normalized
 	 * value.
 	 * 
+	 * @param suffix The suffix.
 	 * @return The list of fields for slopes.
 	 */
-	public List<Field> getFieldListAverageSlopes() {
-		if (fieldListAverageSlopes == null) {
-			fieldListAverageSlopes = new ArrayList<>();
+	public List<Field> getFieldListAverageSlopes(String suffix) {
+		List<Field> fields = mapLists.get("slopes-" + suffix);
+		if (fields == null) {
+			fields = new ArrayList<>();
 			String name, header, label;
 			Field field;
 			for (int i = 0; i < averages.size(); i++) {
 				Average average = averages.get(i);
-				/* Raw value. */
-				name = Average.getNameSlope(average, "raw");
-				header = Average.getHeaderSlope(average, "raw");
-				label = Average.getLabelSlope(average, "raw");
+				name = Average.getNameSlope(average, suffix);
+				header = Average.getHeaderSlope(average, suffix);
+				label = Average.getLabelSlope(average, suffix);
 				field = Domains.getDouble(name, header, label);
-				field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
-				fieldListAverageSlopes.add(field);
-				/* Normalized value. */
-				name = Average.getNameSlope(average, "nrm");
-				header = Average.getHeaderSlope(average, "nrm");
-				label = Average.getLabelSlope(average, "nrm");
-				field = Domains.getDouble(name, header, label);
-				field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
-				fieldListAverageSlopes.add(field);
+				field.setStringConverter(
+					new NumberScaleConverter(getInstrument().getPipScale() * 4));
+				fields.add(field);
 			}
+			mapLists.put("slopes-" + suffix, fields);
 		}
-		return fieldListAverageSlopes;
+		return fields;
 	}
 
 	/**
 	 * Return the list of fields for spreads. For each spread, a raw and a normalize
 	 * value.
 	 * 
+	 * @param suffix The suffix.
 	 * @return The list of fields for slopes.
 	 */
-	public List<Field> getFieldListAverageSpreads() {
-		if (fieldListAverageSpreads == null) {
-			fieldListAverageSpreads = new ArrayList<>();
+	public List<Field> getFieldListAverageSpreads(String suffix) {
+		List<Field> fields = mapLists.get("spreads-" + suffix);
+		if (fields == null) {
+			fields = new ArrayList<>();
 			String name, header, label;
 			Field field;
 			for (int i = 0; i < averages.size(); i++) {
 				Average fast = averages.get(i);
 				for (int j = i + 1; j < averages.size(); j++) {
 					Average slow = averages.get(j);
-					/* Raw value. */
-					name = Average.getNameSpread(fast, slow, "raw");
-					header = Average.getHeaderSpread(fast, slow, "raw");
-					label = Average.getLabelSpread(fast, slow, "raw");
+					name = Average.getNameSpread(fast, slow, suffix);
+					header = Average.getHeaderSpread(fast, slow, suffix);
+					label = Average.getLabelSpread(fast, slow, suffix);
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
-					fieldListAverageSpreads.add(field);
-					/* Normalized value. */
-					name = Average.getNameSpread(fast, slow, "nrm");
-					header = Average.getHeaderSpread(fast, slow, "nrm");
-					label = Average.getLabelSpread(fast, slow, "nrm");
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
-					fieldListAverageSpreads.add(field);
+					field.setStringConverter(
+						new NumberScaleConverter(getInstrument().getPipScale()));
+					fields.add(field);
 				}
 			}
+			mapLists.put("spreads-" + suffix, fields);
 		}
-		return fieldListAverageSpreads;
+		return fields;
 	}
 
 	/**
@@ -495,25 +495,29 @@ public class StatisticsAverages extends Statistics {
 					header = "Open " + id;
 					label = "Open " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(
+						new NumberScaleConverter(getInstrument().getPipScale()));
 					fieldListCandles.add(field);
 					name = "high_" + id;
 					header = "High " + id;
 					label = "High " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(
+						new NumberScaleConverter(getInstrument().getPipScale()));
 					fieldListCandles.add(field);
 					name = "low_" + id;
 					header = "Low " + id;
 					label = "Low " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(
+						new NumberScaleConverter(getInstrument().getPipScale()));
 					fieldListCandles.add(field);
 					name = "close_" + id;
 					header = "Close " + id;
 					label = "Close " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(
+						new NumberScaleConverter(getInstrument().getPipScale()));
 					fieldListCandles.add(field);
 
 					/* Sign: 1, 0, -1 */
@@ -828,27 +832,42 @@ public class StatisticsAverages extends Statistics {
 		/* Label (Long=1, Out=0, Short=-1) */
 		tableStates.addField(Domains.getInteger("label", "Label", "Label"));
 
+		/* Lists of fields. */
+		List<Field> fields;
+
 		/* Average fields. */
-		List<Field> averageFields = getFieldListAverages();
-		for (Field field : averageFields) {
+		fields = getFieldListAverages();
+		for (Field field : fields) {
 			tableStates.addField(field);
 		}
 
-		/* Slopes of averages: raw and normalized. */
-		List<Field> slopeFields = getFieldListAverageSlopes();
-		for (Field field : slopeFields) {
+		/* Slopes of averages: raw. */
+		fields = getFieldListAverageSlopes("raw");
+		for (Field field : fields) {
 			tableStates.addField(field);
 		}
 
-		/* Spreads within averages: raw and normalized. */
-		List<Field> spreadFields = getFieldListAverageSpreads();
-		for (Field field : spreadFields) {
+		/* Spreads within averages: raw. */
+		fields = getFieldListAverageSpreads("raw");
+		for (Field field : fields) {
+			tableStates.addField(field);
+		}
+
+		/* Slopes of averages: normalized. */
+		fields = getFieldListAverageSlopes("nrm");
+		for (Field field : fields) {
+			tableStates.addField(field);
+		}
+
+		/* Spreads within averages: normalized. */
+		fields = getFieldListAverageSpreads("nrm");
+		for (Field field : fields) {
 			tableStates.addField(field);
 		}
 
 		/* Candle fields. */
-		List<Field> candleFields = getFieldListCandles();
-		for (Field field : candleFields) {
+		fields = getFieldListCandles();
+		for (Field field : fields) {
 			tableStates.addField(field);
 		}
 

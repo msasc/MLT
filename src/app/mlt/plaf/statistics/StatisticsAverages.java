@@ -48,6 +48,7 @@ import com.mlt.mkt.data.Period;
 import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
+import com.mlt.util.StringConverter;
 import com.mlt.util.Strings;
 import com.mlt.util.xml.Parser;
 import com.mlt.util.xml.ParserHandler;
@@ -131,17 +132,17 @@ public class StatisticsAverages extends Statistics {
 				for (int i = 0; i < getFieldListAverages().size(); i++) {
 					model.addColumn(getFieldListAverages().get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListAverageSlopes("raw").size(); i++) {
-					model.addColumn(getFieldListAverageSlopes("raw").get(i).getAlias());
+				for (int i = 0; i < getFieldListSlopes("raw").size(); i++) {
+					model.addColumn(getFieldListSlopes("raw").get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListAverageSpreads("raw").size(); i++) {
-					model.addColumn(getFieldListAverageSpreads("raw").get(i).getAlias());
+				for (int i = 0; i < getFieldListSpreads("raw").size(); i++) {
+					model.addColumn(getFieldListSpreads("raw").get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListAverageSlopes("nrm").size(); i++) {
-					model.addColumn(getFieldListAverageSlopes("nrm").get(i).getAlias());
+				for (int i = 0; i < getFieldListSlopes("nrm").size(); i++) {
+					model.addColumn(getFieldListSlopes("nrm").get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListAverageSpreads("nrm").size(); i++) {
-					model.addColumn(getFieldListAverageSpreads("nrm").get(i).getAlias());
+				for (int i = 0; i < getFieldListSpreads("nrm").size(); i++) {
+					model.addColumn(getFieldListSpreads("nrm").get(i).getAlias());
 				}
 				for (int i = 0; i < getFieldListCandles().size(); i++) {
 					model.addColumn(getFieldListCandles().get(i).getAlias());
@@ -379,6 +380,59 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Return the candle field.
+	 * 
+	 * @param name   Field name.
+	 * @param header Field header.
+	 * @param label  Field label.
+	 * @param fast   Fast period.
+	 * @param slow   Slow period.
+	 * @param index  Field index.
+	 * @param scale  Format scale.
+	 * @return The field.
+	 */
+	private Field getCandleField(
+		String name,
+		String header,
+		String label,
+		int fast,
+		int slow,
+		int index,
+		int scale) {
+		return getCandleField(name, header, label, fast, slow, index, scale, null);
+	}
+
+	/**
+	 * Return the candle field.
+	 * 
+	 * @param name   Field name.
+	 * @param header Field header.
+	 * @param label  Field label.
+	 * @param fast   Fast period.
+	 * @param slow   Slow period.
+	 * @param index  Field index.
+	 * @param scale  Format scale.
+	 * @param suffix Optional suffix.
+	 * @return The field.
+	 */
+	private Field getCandleField(
+		String name,
+		String header,
+		String label,
+		int fast,
+		int slow,
+		int index,
+		int scale,
+		String suffix) {
+		name = getNameCandle(name, fast, slow, index, suffix);
+		header = getHeaderCandle(header, fast, slow, index, suffix);
+		label = getLabelCandle(label, fast, slow, index, suffix);
+		Field field = Domains.getDouble(name, header, label);
+		field.setStringConverter(getNumberConverter(scale));
+		return field;
+	}
+
+	/**
 	 * Return the list of average fields.
 	 * 
 	 * @return The list of average fields.
@@ -388,75 +442,14 @@ public class StatisticsAverages extends Statistics {
 		if (fields == null) {
 			fields = new ArrayList<>();
 			for (int i = 0; i < averages.size(); i++) {
-				Average average = averages.get(i);
-				String name = Average.getNameAverage(average);
-				String header = Average.getHeaderAverage(average);
-				String label = Average.getLabelAverage(average);
+				String name = getNameAverage(i);
+				String header = getHeaderAverage(i);
+				String label = getLabelAverage(i);
 				Field field = Domains.getDouble(name, header, label);
-				field.setStringConverter(
-					new NumberScaleConverter(getInstrument().getPipScale() * 2));
+				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
 			mapLists.put("averages", fields);
-		}
-		return fields;
-	}
-
-	/**
-	 * Return the list of fields for slopes. For each slope, a raw and a normalized
-	 * value.
-	 * 
-	 * @param suffix The suffix.
-	 * @return The list of fields for slopes.
-	 */
-	public List<Field> getFieldListAverageSlopes(String suffix) {
-		List<Field> fields = mapLists.get("slopes-" + suffix);
-		if (fields == null) {
-			fields = new ArrayList<>();
-			String name, header, label;
-			Field field;
-			for (int i = 0; i < averages.size(); i++) {
-				Average average = averages.get(i);
-				name = Average.getNameSlope(average, suffix);
-				header = Average.getHeaderSlope(average, suffix);
-				label = Average.getLabelSlope(average, suffix);
-				field = Domains.getDouble(name, header, label);
-				field.setStringConverter(
-					new NumberScaleConverter(getInstrument().getPipScale() * 4));
-				fields.add(field);
-			}
-			mapLists.put("slopes-" + suffix, fields);
-		}
-		return fields;
-	}
-
-	/**
-	 * Return the list of fields for spreads. For each spread, a raw and a normalize
-	 * value.
-	 * 
-	 * @param suffix The suffix.
-	 * @return The list of fields for slopes.
-	 */
-	public List<Field> getFieldListAverageSpreads(String suffix) {
-		List<Field> fields = mapLists.get("spreads-" + suffix);
-		if (fields == null) {
-			fields = new ArrayList<>();
-			String name, header, label;
-			Field field;
-			for (int i = 0; i < averages.size(); i++) {
-				Average fast = averages.get(i);
-				for (int j = i + 1; j < averages.size(); j++) {
-					Average slow = averages.get(j);
-					name = Average.getNameSpread(fast, slow, suffix);
-					header = Average.getHeaderSpread(fast, slow, suffix);
-					label = Average.getLabelSpread(fast, slow, suffix);
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(
-						new NumberScaleConverter(getInstrument().getPipScale()));
-					fields.add(field);
-				}
-			}
-			mapLists.put("spreads-" + suffix, fields);
 		}
 		return fields;
 	}
@@ -467,6 +460,45 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of candle related fields.
 	 */
 	public List<Field> getFieldListCandles() {
+		List<Field> fields = mapLists.get("candles");
+		if (fields == null) {
+			fields = new ArrayList<>();
+			for (int i = 0; i < averages.size(); i++) {
+				int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
+				int slow = averages.get(i).getPeriod();
+				int count = slow / fast;
+				for (int j = 0; j < count; j++) {
+					// @formatter:off
+
+					/* Open, high, low, close. */
+					fields.add(getCandleField("open", "Open", "Open", fast, slow, j, 4));
+					fields.add(getCandleField("high", "High", "High", fast, slow, j, 4));
+					fields.add(getCandleField("low", "Low", "Low", fast, slow, j, 4));
+					fields.add(getCandleField("close", "Close", "Close", fast, slow, j, 4));
+
+					/* Range and body size raw. */
+					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 4, "raw"));
+					fields.add(getCandleField("body_size", "Body size", "Body size", fast, slow, j, 4, "raw"));
+					
+					/* Range, body size and body position normalized. */
+					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 8, "nrm"));
+					fields.add(getCandleField("body_size", "Body size", "Body size", fast, slow, j, 8, "nrm"));
+					fields.add(getCandleField("body_pos", "Body pos", "Body position", fast, slow, j, 8, "nrm"));
+					
+					// @formatter:on
+				}
+			}
+			mapLists.put("candles", fields);
+		}
+		return fields;
+	}
+
+	/**
+	 * Returns the list of candle related fields.
+	 * 
+	 * @return The list of candle related fields.
+	 */
+	public List<Field> getFieldListCandlesOld() {
 		if (fieldListCandles == null) {
 
 			fieldListCandles = new ArrayList<>();
@@ -495,58 +527,64 @@ public class StatisticsAverages extends Statistics {
 					header = "Open " + id;
 					label = "Open " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(
-						new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(getNumberConverter(4));
 					fieldListCandles.add(field);
 					name = "high_" + id;
 					header = "High " + id;
 					label = "High " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(
-						new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(getNumberConverter(4));
 					fieldListCandles.add(field);
 					name = "low_" + id;
 					header = "Low " + id;
 					label = "Low " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(
-						new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(getNumberConverter(4));
 					fieldListCandles.add(field);
 					name = "close_" + id;
 					header = "Close " + id;
 					label = "Close " + id;
 					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(
-						new NumberScaleConverter(getInstrument().getPipScale()));
+					field.setStringConverter(getNumberConverter(4));
 					fieldListCandles.add(field);
 
 					/* Sign: 1, 0, -1 */
 					name = "sign_" + id;
 					header = "Sign " + id;
 					label = "Sign " + id;
-					fieldListCandles.add(Domains.getDouble(name, header, label));
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(getNumberConverter(4));
+					fieldListCandles.add(field);
 
 					/* Range, raw and normalized. */
 					name = "range_" + id + "_raw";
 					header = "Range " + id + " raw";
 					label = "Range " + id + " raw value";
-					fieldListCandles.add(Domains.getDouble(name, header, label));
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(getNumberConverter(4));
+					fieldListCandles.add(field);
 					name = "range_" + id + "_nrm";
 					header = "Range " + id + " nrm";
 					label = "Range " + id + " normalized value";
-					fieldListCandles.add(Domains.getDouble(name, header, label));
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(getNumberConverter(4));
+					fieldListCandles.add(field);
 
 					/* Body size as a factor of the range, no need to normalize. */
 					name = "body_size_" + id;
 					header = "Body-size " + id;
 					label = "Body size " + id;
-					fieldListCandles.add(Domains.getDouble(name, header, label));
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(getNumberConverter(4));
+					fieldListCandles.add(field);
 
 					/* Body relative position within the range. */
 					name = "body_pos_" + id;
 					header = "Body-pos " + id;
 					label = "Body position " + id;
-					fieldListCandles.add(Domains.getDouble(name, header, label));
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(getNumberConverter(4));
+					fieldListCandles.add(field);
 
 					/*
 					 * Factor of change of open, high, low and close, of this candle versus the next
@@ -559,41 +597,111 @@ public class StatisticsAverages extends Statistics {
 						name = "open_" + id + "_factor_raw";
 						header = "Open " + id + " factor raw";
 						label = "Open " + id + " factor raw value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 						name = "high_" + id + "_factor_raw";
 						header = "High " + id + " factor raw";
 						label = "High " + id + " factor raw value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 						name = "low_" + id + "_factor_raw";
 						header = "Low " + id + " factor raw";
 						label = "Low " + id + " factor raw value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 						name = "close_" + id + "_factor_raw";
 						header = "Close " + id + " factor raw";
 						label = "Close " + id + " factor raw value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 						/* Normalized values. */
 						name = "open_" + id + "_factor_nrm";
 						header = "Open " + id + " factor nrm";
 						label = "Open " + id + " factor normalized value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 						name = "high_" + id + "_factor_nrm";
 						header = "High " + id + " factor nrm";
 						label = "High " + id + " factor normalized value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 						name = "low_" + id + "_factor_nrm";
 						header = "Low " + id + " factor nrm";
 						label = "Low " + id + " factor normalized value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 						name = "close_" + id + "_factor_nrm";
 						header = "Close " + id + " factor nrm";
 						label = "Close " + id + " factor normalized value";
-						fieldListCandles.add(Domains.getDouble(name, header, label));
+						field = Domains.getDouble(name, header, label);
+						field.setStringConverter(getNumberConverter(4));
+						fieldListCandles.add(field);
 					}
 				}
 			}
 		}
 		return fieldListCandles;
+	}
+
+	/**
+	 * Return the list of fields for slopes. For each slope, a raw and a normalized
+	 * value.
+	 * 
+	 * @param suffix The suffix.
+	 * @return The list of fields for slopes.
+	 */
+	public List<Field> getFieldListSlopes(String suffix) {
+		List<Field> fields = mapLists.get("slopes-" + suffix);
+		if (fields == null) {
+			fields = new ArrayList<>();
+			String name, header, label;
+			Field field;
+			for (int i = 0; i < averages.size(); i++) {
+				name = getNameSlope(i, suffix);
+				header = getHeaderSlope(i, suffix);
+				label = getLabelSlope(i, suffix);
+				field = Domains.getDouble(name, header, label);
+				field.setStringConverter(getNumberConverter(8));
+				fields.add(field);
+			}
+			mapLists.put("slopes-" + suffix, fields);
+		}
+		return fields;
+	}
+
+	/**
+	 * Return the list of fields for spreads. For each spread, a raw and a normalize
+	 * value.
+	 * 
+	 * @param suffix The suffix.
+	 * @return The list of fields for slopes.
+	 */
+	public List<Field> getFieldListSpreads(String suffix) {
+		List<Field> fields = mapLists.get("spreads-" + suffix);
+		if (fields == null) {
+			fields = new ArrayList<>();
+			String name, header, label;
+			Field field;
+			for (int i = 0; i < averages.size(); i++) {
+				for (int j = i + 1; j < averages.size(); j++) {
+					name = getNameSpread(i, j, suffix);
+					header = getHeaderSpread(i, j, suffix);
+					label = getLabelSpread(i, j, suffix);
+					field = Domains.getDouble(name, header, label);
+					field.setStringConverter(getNumberConverter(8));
+					fields.add(field);
+				}
+			}
+			mapLists.put("spreads-" + suffix, fields);
+		}
+		return fields;
 	}
 
 	/**
@@ -613,6 +721,72 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Get the average header.
+	 * 
+	 * @param index The average index.
+	 * @return The header.
+	 */
+	public String getHeaderAverage(int index) {
+		Average avg = averages.get(index);
+		return "Avg " + avg.toString();
+	}
+
+	/**
+	 * Return the header of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param header The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @return The name of the candle.
+	 */
+	public String getHeaderCandle(String header, int fast, int slow, int index) {
+		return getHeaderCandle(header, fast, slow, index, null);
+	}
+
+	/**
+	 * Return the header of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param header The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getHeaderCandle(String header, int fast, int slow, int index, String suffix) {
+		return getLabelCandle(header, fast, slow, index, suffix);
+	}
+
+	/**
+	 * Get the slope header.
+	 * 
+	 * @param index  The average index.
+	 * @param suffix The suffix.
+	 * @return The slope header.
+	 */
+	public String getHeaderSlope(int index, String suffix) {
+		Average avg = averages.get(index);
+		return "Slope " + avg.getPeriod() + "_" + suffix;
+	}
+
+	/**
+	 * Get the spread header.
+	 * 
+	 * @param fastIndex The fast average index.
+	 * @param slowIndex The slow average index.
+	 * @param suffix    The suffix.
+	 * @return The spread header.
+	 */
+	public String getHeaderSpread(int fastIndex, int slowIndex, String suffix) {
+		Average fast = averages.get(fastIndex);
+		Average slow = averages.get(slowIndex);
+		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -629,12 +803,182 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Return the average field label.
+	 * 
+	 * @param index Index of the average.
+	 * @return The label.
+	 */
+	public String getLabelAverage(int index) {
+		Average avg = averages.get(index);
+		return "Average " + avg.toString();
+	}
+
+	/**
+	 * Return the label of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param label The name (open/high/low/close)
+	 * @param fast  The fast period.
+	 * @param slow  The slow period.
+	 * @param index The index.
+	 * @return The name of the candle.
+	 */
+	public String getLabelCandle(String label, int fast, int slow, int index) {
+		return getLabelCandle(label, fast, slow, index, null);
+	}
+
+	/**
+	 * Return the label of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param label  The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getLabelCandle(String label, int fast, int slow, int index, String suffix) {
+		int count = slow / fast;
+		int pad = Numbers.getDigits(count);
+		StringBuilder b = new StringBuilder();
+		b.append(label);
+		b.append(" ");
+		b.append(fast);
+		b.append("/");
+		b.append(slow);
+		b.append("/");
+		b.append(Strings.leftPad(Integer.toString(index), pad));
+		if (suffix != null) {
+			b.append(" ");
+			b.append(suffix);
+		}
+		return b.toString();
+	}
+
+	/**
+	 * Return the average slope field label.
+	 * 
+	 * @param index  The average index.
+	 * @param suffix The suffix.
+	 * @return The slope field label.
+	 */
+	public String getLabelSlope(int index, String suffix) {
+		Average avg = averages.get(index);
+		return "Slope " + avg.getPeriod() + "_" + suffix + " value";
+	}
+
+	/**
+	 * Return the average spread field label.
+	 * 
+	 * @param indexFast The index of the fast average.
+	 * @param indexSlow The index of the slow average.
+	 * @param suffix    The suffix.
+	 * @return The average spread field label.
+	 */
+	public String getLabelSpread(int indexFast, int indexSlow, String suffix) {
+		Average fast = averages.get(indexFast);
+		Average slow = averages.get(indexSlow);
+		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix + " value";
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public String getLegend() {
 		HTML html = new HTML();
 		return html.toString();
+	}
+
+	/**
+	 * Return the name of the average.
+	 * 
+	 * @param index The average index.
+	 * @return The name.
+	 */
+	public String getNameAverage(int index) {
+		Average avg = averages.get(index);
+		return "average_" + avg.getPeriod();
+	}
+
+	/**
+	 * Return the name of an open/high/low/close... candle that relates the fast and
+	 * slow periods.
+	 * 
+	 * @param name  The name (open/high/low/close)
+	 * @param fast  The fast period.
+	 * @param slow  The slow period.
+	 * @param index The index.
+	 * @return The name of the candle.
+	 */
+	public String getNameCandle(String name, int fast, int slow, int index) {
+		return getNameCandle(name, fast, slow, index, null);
+	}
+
+	/**
+	 * Return the name of an open/high/low/close... candle that relates the fast and
+	 * slow periods.
+	 * 
+	 * @param name   The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getNameCandle(String name, int fast, int slow, int index, String suffix) {
+		int count = slow / fast;
+		int pad = Numbers.getDigits(count);
+		StringBuilder b = new StringBuilder();
+		b.append(name);
+		b.append("_");
+		b.append(fast);
+		b.append("_");
+		b.append(slow);
+		b.append("_");
+		b.append(Strings.leftPad(Integer.toString(index), pad));
+		if (suffix != null) {
+			b.append("_");
+			b.append(suffix);
+		}
+		return b.toString();
+	}
+
+	/**
+	 * Return the name of the slope.
+	 * 
+	 * @param index  The average index.
+	 * @param suffix The suffix.
+	 * @return The name.
+	 */
+	public String getNameSlope(int index, String suffix) {
+		Average avg = averages.get(index);
+		return "slope_" + avg.getPeriod() + "_" + suffix;
+	}
+
+	/**
+	 * Return the name of the spread field.
+	 * 
+	 * @param indexFast Index of the fas average.
+	 * @param indexSlow Index of the slow average.
+	 * @param suffix    Suffix (raw-nrm)
+	 * @return The name of the spread field.
+	 */
+	public String getNameSpread(int indexFast, int indexSlow, String suffix) {
+		Average fast = averages.get(indexFast);
+		Average slow = averages.get(indexSlow);
+		return "spread_" + fast.getPeriod() + "_" + slow.getPeriod() + "_" + suffix;
+	}
+
+	/**
+	 * Return the number string converter.
+	 * 
+	 * @param scale The scale
+	 * @return The converter.
+	 */
+	private StringConverter getNumberConverter(int scale) {
+		return new NumberScaleConverter(scale);
 	}
 
 	/**
@@ -842,25 +1186,25 @@ public class StatisticsAverages extends Statistics {
 		}
 
 		/* Slopes of averages: raw. */
-		fields = getFieldListAverageSlopes("raw");
+		fields = getFieldListSlopes("raw");
 		for (Field field : fields) {
 			tableStates.addField(field);
 		}
 
 		/* Spreads within averages: raw. */
-		fields = getFieldListAverageSpreads("raw");
+		fields = getFieldListSpreads("raw");
 		for (Field field : fields) {
 			tableStates.addField(field);
 		}
 
 		/* Slopes of averages: normalized. */
-		fields = getFieldListAverageSlopes("nrm");
+		fields = getFieldListSlopes("nrm");
 		for (Field field : fields) {
 			tableStates.addField(field);
 		}
 
 		/* Spreads within averages: normalized. */
-		fields = getFieldListAverageSpreads("nrm");
+		fields = getFieldListSpreads("nrm");
 		for (Field field : fields) {
 			tableStates.addField(field);
 		}

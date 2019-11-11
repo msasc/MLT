@@ -133,22 +133,21 @@ public class TaskAveragesRaw extends Task {
 			for (int i = 0; i < averages.size(); i++) {
 				Average average = averages.get(i);
 				double value = average.getAverage(buffer);
-				String name = Average.getNameAverage(average);
+				String name = stats.getNameAverage(i);
 				rcStat.setValue(name, new Value(value));
 			}
 
 			/* Calculate raw slopes. */
 			if (rcPrev != null) {
 				for (int i = 0; i < averages.size(); i++) {
-					Average average = averages.get(i);
-					String nameAverage = Average.getNameAverage(average);
+					String nameAverage = stats.getNameAverage(i);
 					double prev = rcPrev.getValue(nameAverage).getDouble();
 					double curr = rcStat.getValue(nameAverage).getDouble();
 					double slope = 0;
 					if (prev != 0) {
 						slope = (curr / prev) - 1;
 					}
-					String nameSlope = Average.getNameSlope(average, "raw");
+					String nameSlope = stats.getNameSlope(i, "raw");
 					rcStat.setValue(nameSlope, new Value(slope));
 				}
 			}

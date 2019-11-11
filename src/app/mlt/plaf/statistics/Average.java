@@ -72,42 +72,6 @@ public class Average implements Comparable<Average> {
 		return average;
 	}
 
-	public static String getHeaderAverage(Average average) {
-		return "Avg " + average.toString();
-	}
-
-	public static String getHeaderSlope(Average average, String suffix) {
-		return "Avg-Slope " + average.getPeriod() + "_" + suffix;
-	}
-
-	public static String getHeaderSpread(Average fast, Average slow, String suffix) {
-		return "Avg-Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix;
-	}
-
-	public static String getLabelAverage(Average average) {
-		return "Average " + average.toString();
-	}
-
-	public static String getLabelSlope(Average average, String suffix) {
-		return "Average slope " + average.getPeriod() + "_" + suffix + " value";
-	}
-
-	public static String getLabelSpread(Average fast, Average slow, String suffix) {
-		return "Average Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix + " value";
-	}
-
-	public static String getNameAverage(Average average) {
-		return "average_" + average.getPeriod();
-	}
-
-	public static String getNameSlope(Average average, String suffix) {
-		return "average_slope_" + average.getPeriod() + "_" + suffix;
-	}
-
-	public static String getNameSpread(Average fast, Average slow, String suffix) {
-		return "average_spread_" + fast.getPeriod() + "_" + slow.getPeriod() + "_" + suffix;
-	}
-
 	/**
 	 * Types of averages used.
 	 */

@@ -328,9 +328,6 @@ public class StatisticsAverages extends Statistics {
 	/** Map of field lists. */
 	private HashMap<String, List<Field>> mapLists = new HashMap<>();
 
-	/** Candles field list. */
-	private List<Field> fieldListCandles;
-
 	/**
 	 * Constructor.
 	 * 
@@ -424,9 +421,36 @@ public class StatisticsAverages extends Statistics {
 		int index,
 		int scale,
 		String suffix) {
-		name = getNameCandle(name, fast, slow, index, suffix);
-		header = getHeaderCandle(header, fast, slow, index, suffix);
-		label = getLabelCandle(label, fast, slow, index, suffix);
+		return getCandleField(name, header, label, fast, slow, index, -1, scale, suffix);
+	}
+
+	/**
+	 * Return the candle field.
+	 * 
+	 * @param name   Field name.
+	 * @param header Field header.
+	 * @param label  Field label.
+	 * @param fast   Fast period.
+	 * @param slow   Slow period.
+	 * @param index0  Field first index.
+	 * @param index1  Field second index.
+	 * @param scale  Format scale.
+	 * @param suffix Optional suffix.
+	 * @return The field.
+	 */
+	private Field getCandleField(
+		String name,
+		String header,
+		String label,
+		int fast,
+		int slow,
+		int index0,
+		int index1,
+		int scale,
+		String suffix) {
+		name = getNameCandle(name, fast, slow, index0, index1, suffix);
+		header = getHeaderCandle(header, fast, slow, index0, index1, suffix);
+		label = getLabelCandle(label, fast, slow, index0, index1, suffix);
 		Field field = Domains.getDouble(name, header, label);
 		field.setStringConverter(getNumberConverter(scale));
 		return field;
@@ -463,9 +487,9 @@ public class StatisticsAverages extends Statistics {
 		List<Field> fields = mapLists.get("candles");
 		if (fields == null) {
 			fields = new ArrayList<>();
-			for (int i = 0; i < averages.size(); i++) {
-				int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
-				int slow = averages.get(i).getPeriod();
+			for (int i = 0; i < averages.size() - 1; i++) {
+				int fast = averages.get(i).getPeriod();
+				int slow = averages.get(i + 1).getPeriod();
 				int count = slow / fast;
 				for (int j = 0; j < count; j++) {
 					// @formatter:off
@@ -485,169 +509,21 @@ public class StatisticsAverages extends Statistics {
 					fields.add(getCandleField("body_size", "Body size", "Body size", fast, slow, j, 8, "nrm"));
 					fields.add(getCandleField("body_pos", "Body pos", "Body position", fast, slow, j, 8, "nrm"));
 					
+					/* Sign, continuous from -1 to 1. */
+					fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "nrm"));
+					
+					/* Factor of change of the center of this candle versus the next candle. Raw and normalized values. */
+					if (j < count - 1) {
+						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "raw"));
+						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "nrm"));
+					}
+					
 					// @formatter:on
 				}
 			}
 			mapLists.put("candles", fields);
 		}
 		return fields;
-	}
-
-	/**
-	 * Returns the list of candle related fields.
-	 * 
-	 * @return The list of candle related fields.
-	 */
-	public List<Field> getFieldListCandlesOld() {
-		if (fieldListCandles == null) {
-
-			fieldListCandles = new ArrayList<>();
-			String name, header, label;
-			Field field;
-			for (int i = 0; i < averages.size(); i++) {
-
-				/* Number of candles and pad for index. */
-				int count, period;
-				if (i == 0) {
-					count = averages.get(i).getPeriod();
-					period = 0;
-				} else {
-					count = averages.get(i).getPeriod() / averages.get(i - 1).getPeriod();
-					period = averages.get(i - 1).getPeriod();
-				}
-				int pad = Numbers.getDigits(count);
-
-				/* Create the candles fields for level candles. */
-				for (int j = 0; j < count; j++) {
-					String curr = Strings.leftPad(Integer.toString(j), pad);
-					String id = period + "_" + curr;
-
-					/* Open, high, low, close. */
-					name = "open_" + id;
-					header = "Open " + id;
-					label = "Open " + id;
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-					name = "high_" + id;
-					header = "High " + id;
-					label = "High " + id;
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-					name = "low_" + id;
-					header = "Low " + id;
-					label = "Low " + id;
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-					name = "close_" + id;
-					header = "Close " + id;
-					label = "Close " + id;
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-
-					/* Sign: 1, 0, -1 */
-					name = "sign_" + id;
-					header = "Sign " + id;
-					label = "Sign " + id;
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-
-					/* Range, raw and normalized. */
-					name = "range_" + id + "_raw";
-					header = "Range " + id + " raw";
-					label = "Range " + id + " raw value";
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-					name = "range_" + id + "_nrm";
-					header = "Range " + id + " nrm";
-					label = "Range " + id + " normalized value";
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-
-					/* Body size as a factor of the range, no need to normalize. */
-					name = "body_size_" + id;
-					header = "Body-size " + id;
-					label = "Body size " + id;
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-
-					/* Body relative position within the range. */
-					name = "body_pos_" + id;
-					header = "Body-pos " + id;
-					label = "Body position " + id;
-					field = Domains.getDouble(name, header, label);
-					field.setStringConverter(getNumberConverter(4));
-					fieldListCandles.add(field);
-
-					/*
-					 * Factor of change of open, high, low and close, of this candle versus the next
-					 * candle. Raw and normalized values.
-					 */
-					if (j < count - 1) {
-						String next = Strings.leftPad(Integer.toString(j + 1), pad);
-						id = period + "_" + curr + "_" + next;
-						/* Raw values. */
-						name = "open_" + id + "_factor_raw";
-						header = "Open " + id + " factor raw";
-						label = "Open " + id + " factor raw value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-						name = "high_" + id + "_factor_raw";
-						header = "High " + id + " factor raw";
-						label = "High " + id + " factor raw value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-						name = "low_" + id + "_factor_raw";
-						header = "Low " + id + " factor raw";
-						label = "Low " + id + " factor raw value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-						name = "close_" + id + "_factor_raw";
-						header = "Close " + id + " factor raw";
-						label = "Close " + id + " factor raw value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-						/* Normalized values. */
-						name = "open_" + id + "_factor_nrm";
-						header = "Open " + id + " factor nrm";
-						label = "Open " + id + " factor normalized value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-						name = "high_" + id + "_factor_nrm";
-						header = "High " + id + " factor nrm";
-						label = "High " + id + " factor normalized value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-						name = "low_" + id + "_factor_nrm";
-						header = "Low " + id + " factor nrm";
-						label = "Low " + id + " factor normalized value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-						name = "close_" + id + "_factor_nrm";
-						header = "Close " + id + " factor nrm";
-						label = "Close " + id + " factor normalized value";
-						field = Domains.getDouble(name, header, label);
-						field.setStringConverter(getNumberConverter(4));
-						fieldListCandles.add(field);
-					}
-				}
-			}
-		}
-		return fieldListCandles;
 	}
 
 	/**
@@ -761,6 +637,28 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Return the label of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param label  The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index0 The first index.
+	 * @param index1 The second index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getHeaderCandle(
+		String label,
+		int fast,
+		int slow,
+		int index0,
+		int index1,
+		String suffix) {
+		return getLabelCandle(label, fast, slow, index0, index1, suffix);
+	}
+
+	/**
 	 * Get the slope header.
 	 * 
 	 * @param index  The average index.
@@ -839,6 +737,28 @@ public class StatisticsAverages extends Statistics {
 	 * @return The name of the candle.
 	 */
 	public String getLabelCandle(String label, int fast, int slow, int index, String suffix) {
+		return getLabelCandle(label, fast, slow, index, -1, suffix);
+	}
+
+	/**
+	 * Return the label of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param label  The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index0 The first index.
+	 * @param index1 The second index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getLabelCandle(
+		String label,
+		int fast,
+		int slow,
+		int index0,
+		int index1,
+		String suffix) {
 		int count = slow / fast;
 		int pad = Numbers.getDigits(count);
 		StringBuilder b = new StringBuilder();
@@ -848,7 +768,11 @@ public class StatisticsAverages extends Statistics {
 		b.append("/");
 		b.append(slow);
 		b.append("/");
-		b.append(Strings.leftPad(Integer.toString(index), pad));
+		b.append(Strings.leftPad(Integer.toString(index0), pad));
+		if (index1 >= 0) {
+			b.append("vs");
+			b.append(Strings.leftPad(Integer.toString(index1), pad));
+		}
 		if (suffix != null) {
 			b.append(" ");
 			b.append(suffix);
@@ -928,6 +852,27 @@ public class StatisticsAverages extends Statistics {
 	 * @return The name of the candle.
 	 */
 	public String getNameCandle(String name, int fast, int slow, int index, String suffix) {
+		return getNameCandle(name, fast, slow, index, -1, suffix);
+	}
+
+	/**
+	 * Return the name of an open/high/low/close... candle that relates the fast and
+	 * slow periods.
+	 * 
+	 * @param name   The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getNameCandle(
+		String name,
+		int fast,
+		int slow,
+		int index0,
+		int index1,
+		String suffix) {
 		int count = slow / fast;
 		int pad = Numbers.getDigits(count);
 		StringBuilder b = new StringBuilder();
@@ -937,7 +882,11 @@ public class StatisticsAverages extends Statistics {
 		b.append("_");
 		b.append(slow);
 		b.append("_");
-		b.append(Strings.leftPad(Integer.toString(index), pad));
+		b.append(Strings.leftPad(Integer.toString(index0), pad));
+		if (index1 >= 0) {
+			b.append("vs");
+			b.append(Strings.leftPad(Integer.toString(index1), pad));
+		}
 		if (suffix != null) {
 			b.append("_");
 			b.append(suffix);

@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.task;
@@ -27,14 +32,17 @@ import com.mlt.util.Resources;
 import java.util.Locale;
 
 /**
- * A <em>Runnable</em> and <em>Callable&#60;Void&#62;</em> task that publishes states and messages.
+ * A <em>Runnable</em> and <em>Callable&#60;Void&#62;</em> task that publishes
+ * states and messages.
  * <p>
  * Four string messages are published:
  * <ul>
  * <li><em>title</em>, a user task title.</li>
  * <li><em>message</em>, a user message.</li>
- * <li><em>progressMessage</em>, an internally and standard updated progress message.</li>
- * <li><em>timeMessage</em>, an internally and standard updated time message.</li>
+ * <li><em>progressMessage</em>, an internally and standard updated progress
+ * message.</li>
+ * <li><em>timeMessage</em>, an internally and standard updated time
+ * message.</li>
  * </ul>
  * A list of additional messages tagged by key can also be defined.
  *
@@ -56,6 +64,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 		}
 	}
 
+	/** Task identifier. */
+	private String id;
 	/** Task title. */
 	private String title;
 	/** State. */
@@ -87,7 +97,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 	/** A boolean that indicates if the task is counting steps. */
 	private boolean counting = false;
 	/**
-	 * Timer to update the time elapsed when it is not possible to predict the total time or when there is no step
+	 * Timer to update the time elapsed when it is not possible to predict the total
+	 * time or when there is no step
 	 * notification.
 	 */
 	private Timer elapsedTimer;
@@ -178,7 +189,7 @@ public abstract class Task implements Runnable, Callable<Void> {
 	protected void clearMessage() {
 		updateMessage("");
 	}
-	
+
 	/**
 	 * Clear all status keys.
 	 */
@@ -197,18 +208,21 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
-	 * Compute the task. Extenders should implement this method to effectively perform the task.
+	 * Compute the task. Extenders should implement this method to effectively
+	 * perform the task.
 	 *
 	 * @throws java.lang.Throwable
 	 */
 	protected abstract void compute() throws Throwable;
 
 	/**
-	 * Execute the task setting the proper states and registering the exception if any.
+	 * Execute the task setting the proper states and registering the exception if
+	 * any.
 	 */
 	private void execute() {
 
 		/* Set state to RUNNING. */
+		reinitialize();
 		setState(State.RUNNING);
 
 		/* Perform computation and register any exception. */
@@ -237,6 +251,15 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 */
 	public Throwable getException() {
 		return exception;
+	}
+
+	/**
+	 * Return the optional string identifier.
+	 * 
+	 * @return The identifier.
+	 */
+	public String getId() {
+		return id;
 	}
 
 	/**
@@ -533,7 +556,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
-	 * Notify the <em>workDone</em>, <em>totalWork</em> and <em>progress</em> properties.
+	 * Notify the <em>workDone</em>, <em>totalWork</em> and <em>progress</em>
+	 * properties.
 	 *
 	 * @param workDone  Work done.
 	 * @param totalWork Total work.
@@ -611,7 +635,11 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 * @param workDone    Work done.
 	 * @param totalWork   Total work.
 	 */
-	protected void notifyStatusProgress(String statusKey, String progressKey, int workDone, int totalWork) {
+	protected void notifyStatusProgress(
+		String statusKey,
+		String progressKey,
+		int workDone,
+		int totalWork) {
 		for (int i = 0; i < listeners.size(); i++) {
 			listeners.get(i).onStatusProgress(statusKey, progressKey, workDone, totalWork);
 		}
@@ -626,7 +654,11 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 * @param workDone    Work done.
 	 * @param totalWork   Total work.
 	 */
-	protected void notifyStatusProgress(String statusKey, String progressKey, String text, int workDone,
+	protected void notifyStatusProgress(
+		String statusKey,
+		String progressKey,
+		String text,
+		int workDone,
 		int totalWork) {
 		for (int i = 0; i < listeners.size(); i++) {
 			listeners.get(i).onStatusProgress(statusKey, progressKey, text, workDone, totalWork);
@@ -704,7 +736,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
-	 * Indicate that the task has been already cancelled. Extender should call this method when acquainted of a request
+	 * Indicate that the task has been already cancelled. Extender should call this
+	 * method when acquainted of a request
 	 * of cancel, and immediately exit the main loop.
 	 */
 	protected void setCancelled() {
@@ -741,6 +774,15 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 */
 	protected void setException(Throwable exc) {
 		this.exception = exc;
+	}
+
+	/**
+	 * Set the optional string identifier.
+	 * 
+	 * @param id The identifier.
+	 */
+	public void setId(String id) {
+		this.id = id;
 	}
 
 	/**
@@ -850,7 +892,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
-	 * Updates the user message, the time and the progress messages for an indeterminate task.
+	 * Updates the user message, the time and the progress messages for an
+	 * indeterminate task.
 	 *
 	 * @param message The user message.
 	 */
@@ -862,7 +905,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
-	 * Updates the user message, the work done and total, the time and the progress messages.
+	 * Updates the user message, the work done and total, the time and the progress
+	 * messages.
 	 *
 	 * @param message   The user message.
 	 * @param workDone  The work done.
@@ -919,7 +963,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
-	 * Updates the <em>workDone</em>, <em>totalWork</em> and <em>progress</em> properties.
+	 * Updates the <em>workDone</em>, <em>totalWork</em> and <em>progress</em>
+	 * properties.
 	 *
 	 * @param workDone  Work done.
 	 * @param totalWork Total work.
@@ -929,7 +974,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 		if (isPooled()) {
 
 			/*
-			 * When pooled update the progress by accumulating the work done to the parent task pool.
+			 * When pooled update the progress by accumulating the work done to the parent
+			 * task pool.
 			 */
 			if (indeterminate || workDone < 0 || totalWork < 0) {
 				return;
@@ -942,10 +988,12 @@ public abstract class Task implements Runnable, Callable<Void> {
 				long totalWorkDelta = (getTotalWork() < 0 ? totalWork : totalWork - getTotalWork());
 				setTotalWork(totalWork);
 				// Parent workDone and total work to submit.
-				long parentWorkDone = (taskPool.getWorkDone() < 0 ? workDoneDelta
-					: taskPool.getWorkDone() + workDoneDelta);
-				long parentTotalWork = (taskPool.getTotalWork() < 0 ? totalWorkDelta
-					: taskPool.getTotalWork() + totalWorkDelta);
+				long parentWorkDone =
+					(taskPool.getWorkDone() < 0 ? workDoneDelta
+						: taskPool.getWorkDone() + workDoneDelta);
+				long parentTotalWork =
+					(taskPool.getTotalWork() < 0 ? totalWorkDelta
+						: taskPool.getTotalWork() + totalWorkDelta);
 				// Do submit.
 				taskPool.updateProgress(parentWorkDone, parentTotalWork);
 				taskPool.updateProgressMessage();
@@ -1016,7 +1064,11 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 * @param workDone    Work done.
 	 * @param totalWork   Total work.
 	 */
-	protected void updateStatusProgress(String statusKey, String progressKey, int workDone, int totalWork) {
+	protected void updateStatusProgress(
+		String statusKey,
+		String progressKey,
+		int workDone,
+		int totalWork) {
 		if (isPooled()) {
 			return;
 		}

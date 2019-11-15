@@ -18,7 +18,11 @@
  */
 package com.mlt.db;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -239,6 +243,146 @@ public class Record implements Comparable<Object> {
 	}
 
 	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, BigDecimal value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, boolean value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, Boolean value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, byte[] value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, double value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, Double value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, int value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, Integer value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, LocalDate value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, LocalDateTime value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, LocalTime value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, long value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, Long value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
+	public void setValue(int index, String value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
 	 * Set the value at the given index.
 	 *
 	 * @param index The index of the value.
@@ -262,7 +406,161 @@ public class Record implements Comparable<Object> {
 	}
 
 	/**
-	 * Set the value at the given index.
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, BigDecimal value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, boolean value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, Boolean value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, byte[] value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, double value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, Double value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, int value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, Integer value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, LocalDate value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, LocalDateTime value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, LocalTime value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, long value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, Long value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, String value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
 	 *
 	 * @param alias The alias of the field.
 	 * @param value The value to set.
@@ -549,7 +847,7 @@ public class Record implements Comparable<Object> {
 		}
 		return b.toString();
 	}
-	
+
 	/**
 	 * Return the string representation of the value at index.
 	 * 

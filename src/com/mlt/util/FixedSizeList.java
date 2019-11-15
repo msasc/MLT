@@ -94,6 +94,7 @@ public class FixedSizeList<E> {
 		if (size() != maximumSize) {
 			throw new IllegalStateException();
 		}
+		list.set(firstIndex, null);
 		firstIndex++;
 		lastIndex++;
 		if (list.size() > lastIndex) {
@@ -111,21 +112,49 @@ public class FixedSizeList<E> {
 			}
 			firstIndex = 0;
 			lastIndex = maximumSize - 1;
+			/* Clear rest to let GC do its work. */
+			for (int index = lastIndex + 1; index < list.size(); index++) {
+				list.set(index, null);
+			}
 		}
 
 	}
 
 	/**
-	 * Return the element at the given index.
+	 * Clear the list.
+	 */
+	public void clear() {
+		list.clear();
+		firstIndex = -1;
+		lastIndex = -1;
+	}
+
+	/**
+	 * Return the element at the given index starting with index 0 at the head or
+	 * origin of the queue.
 	 * 
 	 * @param index The index.
 	 * @return The element.
 	 */
-	public E get(int index) {
+	public E getHead(int index) {
 		if (index < 0 || index >= size()) {
 			throw new ArrayIndexOutOfBoundsException();
 		}
 		return list.get(firstIndex + index);
+	}
+
+	/**
+	 * Return the element at the given index starting with index 0 at the tail or
+	 * end of the queue.
+	 * 
+	 * @param index The index.
+	 * @return The element.
+	 */
+	public E getTail(int index) {
+		if (index < 0 || index >= size()) {
+			throw new ArrayIndexOutOfBoundsException();
+		}
+		return list.get(lastIndex - index);
 	}
 
 	/**
@@ -161,7 +190,7 @@ public class FixedSizeList<E> {
 				if (i > 0) {
 					b.append(", ");
 				}
-				b.append(get(i));
+				b.append(getHead(i));
 			}
 			b.append("]");
 		}

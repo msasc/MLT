@@ -83,8 +83,8 @@ public class MLT {
 	static class FrameListener extends Stage.Adapter {
 		@Override
 		public void closing(Stage stage) {
-			new ActionExitApplication()
-				.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Exit"));
+			ActionExitApplication exit = new ActionExitApplication();
+			exit.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Exit"));
 		}
 	}
 

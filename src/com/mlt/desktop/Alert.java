@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2017 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop;
@@ -34,9 +39,12 @@ import com.mlt.util.Lists;
 import com.mlt.util.Resources;
 
 /**
- * An alert dialog that supports the standard PLAIN, INFORMATION, WARNING, CONFIRMATION and ERROR configurations, with
- * some predefined buttons. The image is laid out in the left and the content is a text pane. If the text is an HTML
- * text, the pane is set a content type "text/html", if not, the default content type is "text/plain".
+ * An alert dialog that supports the standard PLAIN, INFORMATION, WARNING,
+ * CONFIRMATION and ERROR configurations, with
+ * some predefined buttons. The image is laid out in the left and the content is
+ * a text pane. If the text is an HTML
+ * text, the pane is set a content type "text/html", if not, the default content
+ * type is "text/plain".
  *
  * @author Miquel Sas
  */
@@ -72,7 +80,12 @@ public class Alert {
 	 * @param options List of options.
 	 * @return The selected option.
 	 */
-	public static Option alert(Stage owner, String title, String text, Icon icon, Option... options) {
+	public static Option alert(
+		Stage owner,
+		String title,
+		String text,
+		Icon icon,
+		Option... options) {
 		Alert alert = new Alert(owner);
 		alert.setTitle(title);
 		alert.setText(text);
@@ -91,7 +104,12 @@ public class Alert {
 	 * @param options List of options.
 	 * @return The selected option.
 	 */
-	public static Option alert(Stage owner, String title, String text, Type type, Option... options) {
+	public static Option alert(
+		Stage owner,
+		String title,
+		String text,
+		Type type,
+		Option... options) {
 		Alert alert = new Alert(owner);
 		alert.setTitle(title);
 		alert.setText(text);
@@ -355,6 +373,15 @@ public class Alert {
 	 */
 	public void setTitle(String title) {
 		wnd.setTitle(title);
+	}
+
+	/**
+	 * Set the text.
+	 * 
+	 * @param object The text object.
+	 */
+	public void setText(Object object) {
+		setText(object.toString());
 	}
 
 	/**

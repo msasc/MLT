@@ -159,6 +159,7 @@ public class TaskList extends Task {
 	 */
 	@Override
 	protected void compute() throws Throwable {
+		update("", 0, tasks.size());
 		executingTask = null;
 		for (int i = 0; i < tasks.size(); i++) {
 

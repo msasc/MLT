@@ -180,14 +180,18 @@ public class StatisticsAverages extends Statistics {
 		 */
 		@Override
 		public void run() {
-
-			/* Calculate raw values. */
-			TaskAveragesRaw taskRaw = new TaskAveragesRaw(StatisticsAverages.this);
-
-			/* Task frame. */
 			TaskFrame frame = new TaskFrame();
 			frame.setTitle(getLabel());
-			frame.addTasks(taskRaw);
+
+//			TaskList task = new TaskList();
+//			task.setId("tasks");
+//			task.setTitle("Calculate statistics");
+//			task.addTask(new TaskAveragesRaw(StatisticsAverages.this));
+//			task.addTask(new TaskAveragesRanges(StatisticsAverages.this));
+//			frame.addTasks(task);
+
+			frame.addTasks(new TaskAveragesRaw(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
 			frame.show();
 		}
 
@@ -432,8 +436,8 @@ public class StatisticsAverages extends Statistics {
 	 * @param label  Field label.
 	 * @param fast   Fast period.
 	 * @param slow   Slow period.
-	 * @param index0  Field first index.
-	 * @param index1  Field second index.
+	 * @param index0 Field first index.
+	 * @param index1 Field second index.
 	 * @param scale  Format scale.
 	 * @param suffix Optional suffix.
 	 * @return The field.
@@ -487,9 +491,9 @@ public class StatisticsAverages extends Statistics {
 		List<Field> fields = mapLists.get("candles");
 		if (fields == null) {
 			fields = new ArrayList<>();
-			for (int i = 0; i < averages.size() - 1; i++) {
-				int fast = averages.get(i).getPeriod();
-				int slow = averages.get(i + 1).getPeriod();
+			for (int i = 0; i < averages.size(); i++) {
+				int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
+				int slow = averages.get(i).getPeriod();
 				int count = slow / fast;
 				for (int j = 0; j < count; j++) {
 					// @formatter:off
@@ -502,11 +506,11 @@ public class StatisticsAverages extends Statistics {
 
 					/* Range and body size raw. */
 					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 4, "raw"));
-					fields.add(getCandleField("body_size", "Body size", "Body size", fast, slow, j, 4, "raw"));
+					fields.add(getCandleField("body_factor", "Body factor", "factor", fast, slow, j, 8, "raw"));
 					
 					/* Range, body size and body position normalized. */
 					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 8, "nrm"));
-					fields.add(getCandleField("body_size", "Body size", "Body size", fast, slow, j, 8, "nrm"));
+					fields.add(getCandleField("body_factor", "Body factor", "factor", fast, slow, j, 8, "nrm"));
 					fields.add(getCandleField("body_pos", "Body pos", "Body position", fast, slow, j, 8, "nrm"));
 					
 					/* Sign, continuous from -1 to 1. */
@@ -1069,6 +1073,7 @@ public class StatisticsAverages extends Statistics {
 		index.add(tableRanges.getField(Fields.RANGE_NAME));
 		index.add(tableRanges.getField(Fields.RANGE_MIN_MAX));
 		index.add(tableRanges.getField(Fields.RANGE_PERIOD));
+		index.add(tableRanges.getField(Fields.BAR_TIME));
 		index.setUnique(false);
 		tableRanges.addIndex(index);
 
@@ -1163,6 +1168,10 @@ public class StatisticsAverages extends Statistics {
 		for (Field field : fields) {
 			tableStates.addField(field);
 		}
+
+		/* Normailzed flag. */
+		Field normalized = Domains.getString(Fields.STATES_NORMALIZED, 1, "Nrm", "Normalized");
+		tableStates.addField(normalized);
 
 		tableStates.getField(Fields.BAR_TIME).setPrimaryKey(true);
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());

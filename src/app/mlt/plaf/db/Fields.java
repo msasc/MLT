@@ -23,18 +23,12 @@ package app.mlt.plaf.db;
  */
 public class Fields {
 
-	/*
-	 * Averages type, period and smooths.
-	 */
-
+	/* Averages type, period and smooths. */
 	public static final String AVERAGE_TYPE = "avg_type";
 	public static final String AVERAGE_PERIOD = "avg_period";
 	public static final String AVERAGE_SMOOTHS = "avg_smooths";
 
-	/*
-	 * Bar data, time, open, high, low, close, volume.
-	 */
-
+	/* Bar data, time, open, high, low, close, volume. */
 	public static final String BAR_TIME = "time";
 	public static final String BAR_TIME_FMT = "time_fmt";
 	public static final String BAR_OPEN = "open";
@@ -43,16 +37,10 @@ public class Fields {
 	public static final String BAR_CLOSE = "close";
 	public static final String BAR_VOLUME = "volume";
 
-	/*
-	 * Data filters.
-	 */
-
+	/* Data filters. */
 	public static final String DATA_FILTER = "data_filter";
 
-	/*
-	 * Instrument descriptors.
-	 */
-
+	/* Instrument descriptors. */
 	public static final String INSTRUMENT_ID = "instr_id";
 	public static final String INSTRUMENT_DESC = "instr_desc";
 	public static final String INSTRUMENT_PIP_VALUE = "instr_pipv";
@@ -63,51 +51,40 @@ public class Fields {
 	public static final String INSTRUMENT_TICK_SCALE = "instr_ticks";
 	public static final String INSTRUMENT_VOLUME_SCALE = "instr_vols";
 
-	/*
-	 * Offer sides.
-	 */
-
+	/* Offer sides. */
 	public static final String OFFER_SIDE = "offer_side";
 
-	/*
-	 * Period descriptors.
-	 */
-
+	/* Period descriptors. */
 	public static final String PERIOD = "period";
 	public static final String PERIOD_ID = "period_id";
 	public static final String PERIOD_NAME = "period_name";
 	public static final String PERIOD_SIZE = "period_size";
 	public static final String PERIOD_UNIT_INDEX = "period_unit_index";
-
-	/*
-	 * Range (statistics) fields.
-	 */
-
+	
+	/* Statistics process calculated track. */
+	public static final String PROCESS_ID = "process";
+	public static final String PROCESS_TRACK = "calculated";
+	
+	/* Range (statistics) fields. */
 	public static final String RANGE_NAME = "name";
 	public static final String RANGE_MIN_MAX = "min_max";
 	public static final String RANGE_PERIOD = "period";
 	public static final String RANGE_VALUE = "value";
 
-	/*
-	 * Server descriptors.
-	 */
-
+	/* Server descriptors. */
 	public static final String SERVER_ID = "server_id";
 	public static final String SERVER_NAME = "server_name";
 	public static final String SERVER_TITLE = "server_title";
+	
+	/* Normalized flag in the states table. */
+	public static final String STATES_NORMALIZED = "normalized";
 
-	/*
-	 * Statistics
-	 */
-
+	/* Statistics. */
 	public static final String STATISTICS_ID = "stats_id";
 	public static final String STATISTICS_KEY = "stats_key";
 	public static final String STATISTICS_PARAMS = "stats_params";
 	public static final String STATISTICS_PARAMS_DESC = "stats_params_desc";
 
-	/*
-	 * Ticker table name.
-	 */
-
+	/* Ticker table name. */
 	public static final String TABLE_NAME = "table_name";
 }

@@ -286,9 +286,13 @@ public class Condition {
 		/*
 		 * The number of values in the right operand.
 		 */
-		if ((operator.getRequiredValues() == -1 && values.isEmpty())
-			|| (operator.getRequiredValues() != values.size())) {
+		if (operator.getRequiredValues() == -1 && values.isEmpty()) {
 			throw new IllegalArgumentException("Invalid number of values for operator " + operator);
+		}
+		if (operator.getRequiredValues() >= 0) {
+			if (operator.getRequiredValues() != values.size()) {
+				throw new IllegalArgumentException("Invalid number of values for operator " + operator);
+			}
 		}
 	}
 

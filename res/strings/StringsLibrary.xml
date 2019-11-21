@@ -12,6 +12,7 @@
 	<entry key="buttonChart">Chart</entry>
 	<entry key="buttonCreate">Create</entry>
 	<entry key="buttonClose">Close</entry>
+	<entry key="buttonColumns">Columns</entry>
 	<entry key="buttonDelete">Delete</entry>
 	<entry key="buttonDownload">Download</entry>
 	<entry key="buttonFinish">Finish</entry>
@@ -28,6 +29,10 @@
 	<entry key="buttonSelect">Select</entry>
 	<entry key="buttonStart">Start</entry>
 	<entry key="buttonYes">Yes</entry>
+	
+	<!-- Buttons tooltips -->
+	
+	<entry key="buttonColumnsTooltip">Configure table columns</entry>
 	
 	<entry key="alertTitleError">Error</entry>
 	<entry key="alertTitleInfo">Information</entry>

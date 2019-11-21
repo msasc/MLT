@@ -167,6 +167,15 @@ public class FixedSizeList<E> {
 	}
 
 	/**
+	 * Check emptyness.
+	 * 
+	 * @return A boolean.
+	 */
+	public boolean isEmpty() {
+		return list.isEmpty();
+	}
+
+	/**
 	 * Return the working size of the queue.
 	 * 
 	 * @return The size.

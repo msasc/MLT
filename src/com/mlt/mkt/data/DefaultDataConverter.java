@@ -19,6 +19,8 @@
 
 package com.mlt.mkt.data;
 
+import java.util.HashMap;
+
 import com.mlt.db.Field;
 import com.mlt.db.Persistor;
 import com.mlt.db.Record;
@@ -42,6 +44,8 @@ public class DefaultDataConverter implements DataConverter {
 	private Record defaultRecord;
 	/** The indexes of the value fields. */
 	private int[] indexes;
+	/** Indexes map. */
+	private HashMap<String, Integer> mapIndexes;
 
 	/**
 	 * Constructor.
@@ -59,11 +63,13 @@ public class DefaultDataConverter implements DataConverter {
 			}
 		}
 		indexes = new int[length];
+		mapIndexes = new HashMap<>();
 		int index = 0;
 		for (int i = 1; i < persistor.getFieldCount(); i++) {
 			Field field = persistor.getField(i);
 			if (field.isDouble() && field.isPersistent()) {
 				indexes[index] = i;
+				mapIndexes.put(field.getAlias(), index);
 				index++;
 			}
 		}
@@ -95,6 +101,15 @@ public class DefaultDataConverter implements DataConverter {
 			record.setValue(index, new Value(value));
 		}
 		return record;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int getIndex(String alias) {
+		Integer index = mapIndexes.get(alias);
+		return (index == null ? -1 : index);
 	}
 
 }

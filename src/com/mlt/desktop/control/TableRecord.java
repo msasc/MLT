@@ -34,7 +34,26 @@ public class TableRecord extends Table {
 	 * Default constructor.
 	 */
 	public TableRecord() {
-		super();
+		super(false);
+	}
+
+	/**
+	 * Default constructor.
+	 * 
+	 * @param displayRowHeader A boolean that indicates whether to display a row header with row numbers.
+	 */
+	public TableRecord(boolean displayRowHeader) {
+		super(displayRowHeader);
+	}
+
+	/**
+	 * Constructor assigning the selection mode.
+	 * 
+	 * @param selectionMode The selection mode.
+	 * @param displayRowHeader A boolean that indicates whether to display a row header with row numbers.
+	 */
+	public TableRecord(SelectionMode selectionMode, boolean displayRowHeader) {
+		super(selectionMode, displayRowHeader);
 	}
 
 	/**
@@ -43,7 +62,7 @@ public class TableRecord extends Table {
 	 * @param selectionMode The selection mode.
 	 */
 	public TableRecord(SelectionMode selectionMode) {
-		super(selectionMode);
+		super(selectionMode, false);
 	}
 
 	/*

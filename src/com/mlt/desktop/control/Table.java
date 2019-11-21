@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control;
@@ -90,17 +95,21 @@ public class Table extends Control {
 
 	/**
 	 * Default constructor, with single selection.
+	 * 
+	 * @param displayRowHeader A boolean that indicates whether to display a row
+	 *                         header with row numbers.
 	 */
-	public Table() {
-		this(SelectionMode.SINGLE_ROW_SELECTION);
+	public Table(boolean displayRowHeader) {
+		this(SelectionMode.SINGLE_ROW_SELECTION, displayRowHeader);
 	}
 
 	/**
 	 * Constructor setting the selection mode.
 	 * 
 	 * @param selectionMode The selection mode.
+	 * @param displayRowHeader A boolean that indicates whether to display a row header with row numbers.
 	 */
-	public Table(SelectionMode selectionMode) {
+	public Table(SelectionMode selectionMode, boolean displayRowHeader) {
 		super();
 
 		setComponent(new JScrollPane(new TableCmp()));
@@ -109,7 +118,7 @@ public class Table extends Control {
 		getTableComponent().setTableControl(this);
 
 		/* Setup the table. */
-		getTableComponent().setup();
+		getTableComponent().setup(displayRowHeader);
 
 		/* Default selection mode. */
 		setSelectionMode(selectionMode);
@@ -126,7 +135,8 @@ public class Table extends Control {
 	}
 
 	/**
-	 * Adjust the column size. Based on the current header and row-column preferred width, scanning a maximum number of
+	 * Adjust the column size. Based on the current header and row-column preferred
+	 * width, scanning a maximum number of
 	 * rows randomly including the first and last rows.
 	 * 
 	 * @param column The column number.
@@ -149,12 +159,20 @@ public class Table extends Control {
 		getTableComponent().clearSelection();
 	}
 
-	protected int convertRowIndexToModel(int viewRow) {
+	public int convertRowIndexToModel(int viewRow) {
 		return getTableComponent().convertRowIndexToModel(viewRow);
 	}
 
-	protected int convertRowIndexToView(int viewRow) {
+	public int convertRowIndexToView(int viewRow) {
 		return getTableComponent().convertRowIndexToView(viewRow);
+	}
+	
+	public int convertColumnIndexToModel(int viewColumnIndex) {
+		return getTableComponent().convertColumnIndexToModel(viewColumnIndex);
+	}
+
+	public int convertColumnIndexToView(int modelColumnIndex) {
+		return getTableComponent().convertColumnIndexToView(modelColumnIndex);
 	}
 
 	/**
@@ -444,7 +462,7 @@ public class Table extends Control {
 	public boolean isSortingEnabled() {
 		return getTableComponent().isSortingEnabled();
 	}
-	
+
 	/**
 	 * Change the focus to the argument cell.
 	 *
@@ -454,7 +472,6 @@ public class Table extends Control {
 	public void moveFocus(int rowIndex, int columnIndex) {
 		getTableComponent().moveFocus(rowIndex, columnIndex);
 	}
-
 
 	/**
 	 * Select all cells, row or columns.
@@ -514,12 +531,20 @@ public class Table extends Control {
 	 * @param leftColumn  Left column.
 	 * @param bottomRow   Bottom row.
 	 * @param rightColumn Right column.
-	 * @param selected    A boolean that indicates whether the range must be selected.
-	 * @param clear       A boolean that indicated whether the list of previously selected ranges should be cleared.
+	 * @param selected    A boolean that indicates whether the range must be
+	 *                    selected.
+	 * @param clear       A boolean that indicated whether the list of previously
+	 *                    selected ranges should be cleared.
 	 */
-	public void setSelectedRange(int topRow, int leftColumn, int bottomRow, int rightColumn, boolean selected,
-	boolean clear) {
-		getTableComponent().setSelectedRange(topRow, leftColumn, bottomRow, rightColumn, selected, clear);
+	public void setSelectedRange(
+		int topRow,
+		int leftColumn,
+		int bottomRow,
+		int rightColumn,
+		boolean selected,
+		boolean clear) {
+		getTableComponent().setSelectedRange(topRow, leftColumn, bottomRow, rightColumn, selected,
+			clear);
 	}
 
 	/**
@@ -542,11 +567,13 @@ public class Table extends Control {
 	}
 
 	/**
-	 * Set the selected range of rows as selected indicating whether any previous selection should be cleared.
+	 * Set the selected range of rows as selected indicating whether any previous
+	 * selection should be cleared.
 	 * 
 	 * @param topRow    Top row.
 	 * @param bottomRow Bottom row.
-	 * @param clear     A boolean indicating whether any previous selection should be cleared.
+	 * @param clear     A boolean indicating whether any previous selection should
+	 *                  be cleared.
 	 */
 	public void setSelectedRowRange(int topRow, int bottomRow, boolean clear) {
 		getTableComponent().setSelectedRowRange(topRow, bottomRow, clear);

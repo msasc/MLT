@@ -18,13 +18,6 @@
  */
 package app.mlt.plaf.db.fields;
 
-import java.io.IOException;
-import java.util.List;
-
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.xml.sax.SAXException;
-
 import com.mlt.db.Calculator;
 import com.mlt.db.Field;
 import com.mlt.db.Record;
@@ -32,7 +25,6 @@ import com.mlt.db.Value;
 
 import app.mlt.plaf.db.Domains;
 import app.mlt.plaf.db.Fields;
-import app.mlt.plaf.statistics.Average;
 import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**

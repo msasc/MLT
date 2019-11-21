@@ -44,49 +44,27 @@ public class FieldProperties {
 		}
 	}
 
-	/**
-	 * Property alias: INDEX.
-	 */
+	/** Property alias: INDEX. */
 	public static final String INDEX = "INDEX";
-	/**
-	 * Property alias: GROUP.
-	 */
+	/** Property alias: GROUP. */
 	public static final String GROUP = "GROUP";
-	/**
-	 * Property alias: GROUP_INDEX.
-	 */
+	/** Property alias: GROUP_INDEX. */
 	public static final String GROUP_INDEX = "GROUP_INDEX";
-	/**
-	 * Property alias: NAME.
-	 */
+	/** Property alias: NAME. */
 	public static final String NAME = "NAME";
-	/**
-	 * Property alias: ALIAS.
-	 */
+	/** Property alias: ALIAS. */
 	public static final String ALIAS = "ALIAS";
-	/**
-	 * Property alias: HEADER.
-	 */
+	/** Property alias: HEADER. */
 	public static final String HEADER = "HEADER";
-	/**
-	 * Property alias: TITLE.
-	 */
+	/** Property alias: TITLE. */
 	public static final String TITLE = "TITLE";
-	/**
-	 * Property alias: TYPE.
-	 */
+	/** Property alias: TYPE. */
 	public static final String TYPE = "TYPE";
-	/**
-	 * Property alias: LENGTH.
-	 */
+	/** Property alias: LENGTH. */
 	public static final String LENGTH = "LENGTH";
-	/**
-	 * Property alias: DECIMALS.
-	 */
+	/** Property alias: DECIMALS. */
 	public static final String DECIMALS = "DECIMALS";
-	/**
-	 * Property alias: ASC.
-	 */
+	/** Property alias: ASC. */
 	public static final String ASCENDING = "ASC";
 
 	/**

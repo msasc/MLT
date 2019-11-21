@@ -67,9 +67,14 @@ public class Fields {
 	
 	/* Range (statistics) fields. */
 	public static final String RANGE_NAME = "name";
-	public static final String RANGE_MIN_MAX = "min_max";
 	public static final String RANGE_PERIOD = "period";
+	public static final String RANGE_MIN_MAX = "min_max";
 	public static final String RANGE_VALUE = "value";
+	public static final String RANGE_MINIMUM = "minimum";
+	public static final String RANGE_MAXIMUM = "maximum";
+	public static final String RANGE_AVERAGE = "average";
+	public static final String RANGE_STDDEV = "std_dev";
+	public static final String RANGE_RANGE = "range";
 
 	/* Server descriptors. */
 	public static final String SERVER_ID = "server_id";

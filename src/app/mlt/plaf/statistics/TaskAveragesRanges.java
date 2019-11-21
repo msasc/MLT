@@ -25,23 +25,66 @@ import com.mlt.db.Field;
 import com.mlt.db.Record;
 import com.mlt.db.RecordIterator;
 import com.mlt.db.Table;
-import com.mlt.db.Value;
-import com.mlt.task.Task;
-import com.mlt.util.FixedSizeList;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.db.Fields;
 
 /**
- * Calculate min-max values for all raw values that must be normalized, for the
- * 2 slowest periods.
+ * Calculate min-max values for all raw values that must be normalized.
  *
  * @author Miquel Sas
  */
-public class TaskAveragesRanges extends Task {
+public class TaskAveragesRanges extends TaskAverages {
 
-	/** Underlying statistics averages. */
-	private StatisticsAverages stats;
+	/**
+	 * Track buffer.
+	 */
+	static class Buffer {
+		List<Track> buffer;
+		int maxSize;
+
+		Buffer(int maxSize) {
+			this.maxSize = maxSize;
+			this.buffer = new ArrayList<>(maxSize * 4);
+		}
+
+		void add(long time, double value, boolean min) {
+			int index = 0;
+			for (int i = 0; i < buffer.size(); i++) {
+				if (min ? value >= buffer.get(i).value : value <= buffer.get(i).value) {
+					break;
+				}
+				index++;
+			}
+			buffer.add(index, new Track(time, value));
+			if (buffer.size() > maxSize) {
+				buffer.remove(0);
+			}
+		}
+
+		void addMax(long time, double value) {
+			add(time, value, false);
+		}
+
+		void addMin(long time, double value) {
+			add(time, value, true);
+		}
+
+	}
+
+	/**
+	 * Min-max value and time structure.
+	 */
+	static class Track {
+
+		long time;
+		double value;
+
+		Track(long time, double value) {
+			this.time = time;
+			this.value = value;
+		}
+	}
 
 	/**
 	 * Constructor.
@@ -49,8 +92,7 @@ public class TaskAveragesRanges extends Task {
 	 * @param stats The statistics averages.
 	 */
 	public TaskAveragesRanges(StatisticsAverages stats) {
-		super();
-		this.stats = stats;
+		super(stats);
 		setId("averages-ranges");
 		setTitle(stats.getLabel() + " - Calculate min-max raw values");
 	}
@@ -72,7 +114,7 @@ public class TaskAveragesRanges extends Task {
 	@Override
 	protected void compute() throws Throwable {
 
-		/* To calculate from scratch drop/create the table. */
+		/* Alwways calculate from scratch drop/create the table. */
 		Table ranges = stats.getTableRanges();
 		if (DB.ddl().existsTable(ranges)) {
 			DB.ddl().dropTable(ranges);
@@ -82,11 +124,13 @@ public class TaskAveragesRanges extends Task {
 		/* Count. */
 		calculateTotalWork();
 
-		/* List of states record buffers. */
-		List<FixedSizeList<Record>> buffers = createBuffers();
-
-		/* List of fields to normalize (raw values) */
+		/* List of fields to normalize (raw values). Set their buffers. */
 		List<Field> fields = stats.getFieldListToNormalize();
+		int maxBufferSize = 50;
+		for (Field field : fields) {
+			field.getProperties().setObject("buffer-max", new Buffer(maxBufferSize));
+			field.getProperties().setObject("buffer-min", new Buffer(maxBufferSize));
+		}
 
 		/* Iterate states. */
 		long totalWork = getTotalWork();
@@ -106,7 +150,7 @@ public class TaskAveragesRanges extends Task {
 
 			/* Notify work. */
 			workDone++;
-			if (workDone % 100 == 0 || workDone == totalWork) {
+			if (workDone % 10 == 0 || workDone == totalWork) {
 				StringBuilder b = new StringBuilder();
 				b.append(rcStates.toString(Fields.BAR_TIME_FMT));
 				b.append(", ");
@@ -119,74 +163,60 @@ public class TaskAveragesRanges extends Task {
 				b.append(rcStates.toString(Fields.BAR_CLOSE));
 				update(b.toString(), workDone, totalWork);
 			}
-			
-			/* Push the record in the buffers. */
-			for (FixedSizeList<Record> buffer : buffers) {
-				buffer.add(rcStates);
-			}
 
-			/* Check trigger calculations. */
-			for (FixedSizeList<Record> buffer : buffers) {
-				if (buffer.size() == buffer.getMaximumSize()) {
-					int period = buffer.getMaximumSize();
-					for (Field field : fields) {
-						double maxValue = Double.MIN_VALUE;
-						long maxTime = -1;
-						double minValue = Double.MAX_VALUE;
-						long minTime = -1;
-						String name = field.getAlias();
-						for (int i = 0; i < buffer.size(); i++) {
-							Record rc = buffer.getHead(i);
-							long time = rc.getValue(Fields.BAR_TIME).getLong();
-							double value = rc.getValue(name).getDouble();
-							if (value > maxValue) {
-								maxValue = value;
-								maxTime = time;
-							}
-							if (value < minValue) {
-								minValue = value;
-								minTime = time;
-							}
-						}
-						if (maxTime >= 0) {
-							Record rcMax = ranges.getDefaultRecord();
-							rcMax.setValue(Fields.RANGE_NAME, new Value(name));
-							rcMax.setValue(Fields.RANGE_MIN_MAX, new Value("max"));
-							rcMax.setValue(Fields.RANGE_PERIOD, new Value(period));
-							rcMax.setValue(Fields.RANGE_VALUE, new Value(maxValue));
-							rcMax.setValue(Fields.BAR_TIME, new Value(maxTime));
-							ranges.getPersistor().insert(rcMax);
-						}
-						if (minTime >= 0) {
-							Record rcMin = ranges.getDefaultRecord();
-							rcMin.setValue(Fields.RANGE_NAME, new Value(name));
-							rcMin.setValue(Fields.RANGE_MIN_MAX, new Value("min"));
-							rcMin.setValue(Fields.RANGE_PERIOD, new Value(period));
-							rcMin.setValue(Fields.RANGE_VALUE, new Value(minValue));
-							rcMin.setValue(Fields.BAR_TIME, new Value(minTime));
-							ranges.getPersistor().insert(rcMin);
-						}
-					}
-					buffer.clear();
-				}
+			/* Iterate fields and buil the list of maximums and minimums per field. */
+			for (Field field : fields) {
+
+				Buffer bufferMax = (Buffer) field.getProperties().getObject("buffer-max");
+				Buffer bufferMin = (Buffer) field.getProperties().getObject("buffer-min");
+
+				String alias = field.getAlias();
+				long time = rcStates.getValue(Fields.BAR_TIME).getLong();
+				double value = rcStates.getValue(alias).getDouble();
+
+				bufferMax.addMax(time, value);
+				bufferMin.addMin(time, value);
 			}
 		}
 		iter.close();
+
+		/* Save. First calculate new total work. */
+		totalWork = 0;
+		for (Field field : fields) {
+			Buffer bufferMax = (Buffer) field.getProperties().getObject("buffer-max");
+			Buffer bufferMin = (Buffer) field.getProperties().getObject("buffer-min");
+			totalWork += bufferMax.buffer.size();
+			totalWork += bufferMin.buffer.size();
+		}
+		workDone = 0;
+		update("", workDone, totalWork);
+		for (Field field : fields) {
+			String name = field.getName();
+			Buffer bufferMax = (Buffer) field.getProperties().getObject("buffer-max");
+			Buffer bufferMin = (Buffer) field.getProperties().getObject("buffer-min");
+			for (int i = 0; i < bufferMax.buffer.size(); i++) {
+				workDone++;
+				update("Save " + name + " - max - " + (i + 1), workDone, totalWork);
+				Track track = bufferMax.buffer.get(i);
+				Record rc = ranges.getDefaultRecord();
+				rc.setValue(Fields.RANGE_NAME, name);
+				rc.setValue(Fields.RANGE_MIN_MAX, "max");
+				rc.setValue(Fields.RANGE_VALUE, track.value);
+				rc.setValue(Fields.BAR_TIME, track.time);
+				ranges.getPersistor().insert(rc);
+			}
+			for (int i = 0; i < bufferMin.buffer.size(); i++) {
+				workDone++;
+				update("Save " + name + " - min - " + (i + 1), workDone, totalWork);
+				Track track = bufferMin.buffer.get(i);
+				Record rc = ranges.getDefaultRecord();
+				rc.setValue(Fields.RANGE_NAME, name);
+				rc.setValue(Fields.RANGE_MIN_MAX, "min");
+				rc.setValue(Fields.RANGE_VALUE, track.value);
+				rc.setValue(Fields.BAR_TIME, track.time);
+				ranges.getPersistor().insert(rc);
+			}
+		}
 	}
 
-	/**
-	 * Create the list of buffers. The buffer maximum size is the average period and
-	 * triggers the scan to calculate ranges.
-	 * 
-	 * @return The list of states record buffers.
-	 */
-	private List<FixedSizeList<Record>> createBuffers() {
-		List<Average> avgs = stats.getAverages();
-		List<FixedSizeList<Record>> buffers = new ArrayList<>();
-		if (avgs.size() > 1) {
-			buffers.add(new FixedSizeList<>(avgs.get(avgs.size() - 2).getPeriod()));
-		}
-		buffers.add(new FixedSizeList<>(avgs.get(avgs.size() - 1).getPeriod()));
-		return buffers;
-	}
 }

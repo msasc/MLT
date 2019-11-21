@@ -24,15 +24,11 @@ import com.mlt.db.Persistor;
 import com.mlt.db.Record;
 import com.mlt.db.RecordIterator;
 import com.mlt.db.Table;
-import com.mlt.db.Value;
-import com.mlt.desktop.Alert;
 import com.mlt.desktop.Option;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
-import com.mlt.task.Task;
 import com.mlt.util.FixedSizeList;
-import com.mlt.util.HTML;
 import com.mlt.util.Numbers;
 
 import app.mlt.plaf.DB;
@@ -43,10 +39,7 @@ import app.mlt.plaf.db.Fields;
  *
  * @author Miquel Sas
  */
-public class TaskAveragesRaw extends Task {
-
-	/** Underlying statistics averages. */
-	private StatisticsAverages stats;
+public class TaskAveragesRaw extends TaskAverages {
 
 	/**
 	 * Constructor.
@@ -54,8 +47,7 @@ public class TaskAveragesRaw extends Task {
 	 * @param stats The statistics averages.
 	 */
 	public TaskAveragesRaw(StatisticsAverages stats) {
-		super();
-		this.stats = stats;
+		super(stats);
 		setId("averages-raw");
 		setTitle(stats.getLabel() + " - Calculate raw values");
 	}
@@ -77,7 +69,7 @@ public class TaskAveragesRaw extends Task {
 	 */
 	@Override
 	protected void compute() throws Throwable {
-		
+
 		/* Query option. */
 		Option option = queryOption();
 		if (option.equals("CANCEL")) {
@@ -101,7 +93,7 @@ public class TaskAveragesRaw extends Task {
 		calculateTotalWork();
 		long totalWork = getTotalWork();
 		long calculated = states.getPersistor().count(null);
-		
+
 		/* If already all calculated, do nothing. */
 		if (calculated == totalWork) {
 			return;
@@ -146,7 +138,7 @@ public class TaskAveragesRaw extends Task {
 				b.append(rcTick.toString(Fields.BAR_CLOSE));
 				update(b.toString(), workDone, totalWork);
 			}
-			
+
 			/* If workDone < calculated - (maxPeriod * 2), do nothig. */
 			if (workDone < calculated - (maxPeriod * 2)) {
 				continue;
@@ -165,7 +157,7 @@ public class TaskAveragesRaw extends Task {
 				Average average = averages.get(i);
 				double value = average.getAverage(avgBuffer);
 				String name = stats.getNameAverage(i);
-				rcStat.setValue(name, new Value(value));
+				rcStat.setValue(name, value);
 			}
 
 			/* Calculate raw slopes. */
@@ -181,7 +173,7 @@ public class TaskAveragesRaw extends Task {
 					slope = (curr / prev) - 1;
 				}
 				String nameSlope = stats.getNameSlope(i, "raw");
-				rcStat.setValue(nameSlope, new Value(slope));
+				rcStat.setValue(nameSlope, slope);
 			}
 
 			/* Calculate raw spreads. */
@@ -193,13 +185,13 @@ public class TaskAveragesRaw extends Task {
 					double avgSlow = rcStat.getValue(nameSlow).getDouble();
 					double spread = (avgFast / avgSlow) - 1;
 					String nameSpread = stats.getNameSpread(i, j, "raw");
-					rcStat.setValue(nameSpread, new Value(spread));
+					rcStat.setValue(nameSpread, spread);
 				}
 			}
 
 			/* Calculate candles raw values. */
 			for (int i = 0; i < averages.size(); i++) {
-				int fast = (i == 0 ? 1 : averages.get(i-1).getPeriod());
+				int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
 				int slow = averages.get(i).getPeriod();
 				List<Data> candles = getCandles(fast, slow, rcBuffer);
 				for (int j = 0; j < candles.size(); j++) {
@@ -207,38 +199,41 @@ public class TaskAveragesRaw extends Task {
 					Data candle = candles.get(j);
 
 					String open = stats.getNameCandle("open", fast, slow, j);
-					rcStat.setValue(open, new Value(Candles.open(candle)));
+					rcStat.setValue(open, Candles.open(candle));
 
 					String high = stats.getNameCandle("high", fast, slow, j);
-					rcStat.setValue(high, new Value(Candles.high(candle)));
+					rcStat.setValue(high, Candles.high(candle));
 
 					String low = stats.getNameCandle("low", fast, slow, j);
-					rcStat.setValue(low, new Value(Candles.low(candle)));
+					rcStat.setValue(low, Candles.low(candle));
 
 					String close = stats.getNameCandle("close", fast, slow, j);
-					rcStat.setValue(close, new Value(Candles.close(candle)));
+					rcStat.setValue(close, Candles.close(candle));
 
 					String range = stats.getNameCandle("range", fast, slow, j, "raw");
-					rcStat.setValue(range, new Value(Candles.range(candle)));
+					rcStat.setValue(range, Candles.range(candle));
 
 					String bodyFactor = stats.getNameCandle("body_factor", fast, slow, j, "raw");
-					rcStat.setValue(bodyFactor, new Value(Candles.bodyFactor(candle)));
+					rcStat.setValue(bodyFactor, Candles.bodyFactor(candle));
 
-					String sign = stats.getNameCandle("sign", fast, slow, j, "nrm");
-					rcStat.setValue(sign, new Value(Candles.sign(candle)));
+					String bodyPos = stats.getNameCandle("body_pos", fast, slow, j, "raw");
+					rcStat.setValue(bodyPos, Candles.bodyPos(candle));
+
+					String sign = stats.getNameCandle("sign", fast, slow, j, "raw");
+					rcStat.setValue(sign, Candles.sign(candle));
 
 					if (j < candles.size() - 1) {
 						Data previous = candles.get(j + 1);
 						String center =
 							stats.getNameCandle("center_factor", fast, slow, j, j + 1, "raw");
-						rcStat.setValue(center, new Value(Candles.centerFactor(candle, previous)));
+						rcStat.setValue(center, Candles.centerFactor(candle, previous));
 					}
 				}
 			}
 
 			/* Register previous record and calculated (modulus). */
 			rcPrev = rcStat;
-			
+
 			/* Insert if passed already calculated. */
 			if (workDone > calculated) {
 				states.getPersistor().insert(rcStat);
@@ -293,40 +288,4 @@ public class TaskAveragesRaw extends Task {
 		return candles;
 	}
 
-	/**
-	 * @return The calculation option.
-	 */
-	private Option queryOption() {
-
-		HTML text = new HTML();
-		text.startTag("h2");
-		text.print("Start from the begining or continue from last record calculated?");
-		text.endTag("h2");
-
-		Option optionContinue = new Option();
-		optionContinue.setKey("CONITNUE");
-		optionContinue.setText("Continue from last calculated record");
-		optionContinue.setToolTip("Continue calculations from last calculated record");
-		optionContinue.setCloseWindow(true);
-
-		Option optionStart = new Option();
-		optionStart.setKey("START");
-		optionStart.setText("Start from begining");
-		optionStart.setToolTip("Start calculations from the begining");
-		optionStart.setCloseWindow(true);
-
-		Option optionCancel = new Option();
-		optionCancel.setKey("CANCEL");
-		optionCancel.setText("Cancel calculations");
-		optionCancel.setToolTip("Cancel calculations");
-		optionCancel.setCloseWindow(true);
-
-		Alert alert = new Alert();
-		alert.setType(Alert.Type.CONFIRMATION);
-		alert.setTitle("Calculation option");
-		alert.setText(text);
-		alert.setOptions(optionContinue, optionStart, optionCancel);
-
-		return alert.show();
-	}
 }

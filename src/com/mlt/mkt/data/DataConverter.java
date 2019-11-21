@@ -44,4 +44,12 @@ public interface DataConverter {
 	 * @return The record.
 	 */
 	Record getRecord(Data data);
+
+	/**
+	 * Return the data index given a field alias or name.
+	 * 
+	 * @param alias The field alias.
+	 * @return The data index.
+	 */
+	int getIndex(String alias);
 }

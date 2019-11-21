@@ -38,6 +38,7 @@ import com.mlt.desktop.control.Control;
 import com.mlt.desktop.control.Menu;
 import com.mlt.desktop.control.MenuItem;
 import com.mlt.desktop.control.PopupMenu;
+import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.util.Lists;
 import com.mlt.util.Numbers;
@@ -241,6 +242,8 @@ public class Option {
 	public static final String KEY_CANCEL = "CANCEL";
 	/** Pre-defined key CLOSE. */
 	public static final String KEY_CLOSE = "CLOSE";
+	/** Pre-defined key COLUMNS. */
+	public static final String KEY_COLUMNS = "COLUMNS";
 	/** Pre-defined key FINISH. */
 	public static final String KEY_FINISH = "FINISH";
 	/** Pre-defined key IGNORE. */
@@ -858,6 +861,29 @@ public class Option {
 			Resources.getText("buttonClose"),
 			Resources.getText("buttonClose"),
 			accelerator, true, true);
+	}
+
+	public static Option option_COLUMNS(TableRecord table) {
+		return option_COLUMNS(table, null);
+	}
+
+	public static Option option_COLUMNS(TableRecord table, KeyStroke accelerator) {
+		
+		Option option = new Option();
+		option.setKey(KEY_COLUMNS);
+		option.setText(Resources.getText("buttonColumns"));
+		option.setToolTip(Resources.getText("buttonColumnsTooltip"));
+		option.setOptionGroup(Group.CONFIGURE);
+		option.setDefaultClose(false);
+		option.setCloseWindow(false);
+		if (accelerator != null) {
+			option.setAccelerator(accelerator);
+		}
+		option.setAction(l -> {
+			ColumnChooser chooser = new ColumnChooser(table);
+			chooser.show();
+		});
+		return option;
 	}
 
 	public static Option option_FINISH() {

@@ -27,16 +27,26 @@ import java.util.List;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
+import com.mlt.db.Calculator;
 import com.mlt.db.Field;
+import com.mlt.db.FieldGroup;
 import com.mlt.db.Index;
 import com.mlt.db.ListPersistor;
+import com.mlt.db.Order;
+import com.mlt.db.Persistor;
+import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
+import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
+import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.desktop.Option;
 import com.mlt.desktop.TaskFrame;
 import com.mlt.desktop.action.ActionRun;
+import com.mlt.desktop.control.Control;
+import com.mlt.desktop.control.PopupMenu;
+import com.mlt.desktop.control.PopupMenuProvider;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.control.TableRecordModel;
@@ -45,6 +55,7 @@ import com.mlt.desktop.icon.IconGrid;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
+import com.mlt.ml.function.Normalizer;
 import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
@@ -61,7 +72,6 @@ import app.mlt.plaf.db.Domains;
 import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.db.converters.NumberScaleConverter;
 import app.mlt.plaf.db.fields.FieldDataInst;
-import app.mlt.plaf.db.fields.FieldPeriod;
 import app.mlt.plaf.db.fields.FieldTime;
 import app.mlt.plaf.db.fields.FieldTimeFmt;
 
@@ -80,6 +90,155 @@ import app.mlt.plaf.db.fields.FieldTimeFmt;
  * @author Miquel Sas
  */
 public class StatisticsAverages extends Statistics {
+
+	/**
+	 * Browse the ranges.
+	 */
+	class ActionBrowseRanges extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			String key = null;
+			try {
+				Instrument instrument = getInstrument();
+				Period period = getPeriod();
+
+				StringBuilder keyBuilder = new StringBuilder();
+				keyBuilder.append("BROWSE-RANGES-");
+				keyBuilder.append(instrument.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(period.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getKey());
+				key = keyBuilder.toString();
+
+				StringBuilder textBuilder = new StringBuilder();
+				textBuilder.append(instrument.getDescription());
+				textBuilder.append(" ");
+				textBuilder.append(period);
+				textBuilder.append(" ");
+				textBuilder.append(getId());
+				textBuilder.append(" ");
+				textBuilder.append(getKey());
+				textBuilder.append(" Ranges");
+				String text = textBuilder.toString();
+
+				Persistor persistor = getViewRanges().getPersistor();
+				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
+
+				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
+				model.addColumn(Fields.RANGE_NAME);
+				model.addColumn(Fields.RANGE_MIN_MAX);
+				model.addColumn(Fields.RANGE_MINIMUM);
+				model.addColumn(Fields.RANGE_MAXIMUM);
+				model.addColumn(Fields.RANGE_AVERAGE);
+				model.addColumn(Fields.RANGE_STDDEV);
+				model.addColumn(Fields.RANGE_RANGE);
+
+				model.setRecordSet(getViewRanges().getPersistor().select(null));
+
+				TableRecord table = new TableRecord();
+				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
+				table.setModel(model);
+				table.setSelectedRow(0);
+
+				TablePane tablePane = new TablePane(table);
+
+				IconGrid iconGrid = new IconGrid();
+				iconGrid.setSize(16, 16);
+				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
+
+				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
+				MLT.getStatusBar().removeProgress(key);
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+				MLT.getStatusBar().removeProgress(key);
+			}
+		}
+	}
+
+	/**
+	 * Browse the ranges.
+	 */
+	class ActionBrowseRangesRaw extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			String key = null;
+			try {
+				Instrument instrument = getInstrument();
+				Period period = getPeriod();
+
+				StringBuilder keyBuilder = new StringBuilder();
+				keyBuilder.append("BROWSE-RANGES-RAW");
+				keyBuilder.append(instrument.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(period.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getKey());
+				key = keyBuilder.toString();
+
+				StringBuilder textBuilder = new StringBuilder();
+				textBuilder.append(instrument.getDescription());
+				textBuilder.append(" ");
+				textBuilder.append(period);
+				textBuilder.append(" ");
+				textBuilder.append(getId());
+				textBuilder.append(" ");
+				textBuilder.append(getKey());
+				textBuilder.append(" Ranges raw");
+				String text = textBuilder.toString();
+
+				Persistor persistor = getTableRanges().getPersistor();
+				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
+
+				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
+				for (int i = 0; i < getTableRanges().getFieldCount(); i++) {
+					String alias = getTableRanges().getField(i).getAlias();
+					if (alias.equals(Fields.BAR_TIME)) {
+						continue;
+					}
+					model.addColumn(alias);
+				}
+
+				Order order = new Order();
+				order.add(getTableRanges().getField(Fields.RANGE_NAME));
+				order.add(getTableRanges().getField(Fields.RANGE_MIN_MAX));
+				order.add(getTableRanges().getField(Fields.RANGE_VALUE));
+
+				model.setRecordSet(getTableRanges().getPersistor().select(null, order));
+
+				TableRecord table = new TableRecord(true);
+				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
+				table.setModel(model);
+				table.setSelectedRow(0);
+
+				TablePane tablePane = new TablePane(table);
+
+				IconGrid iconGrid = new IconGrid();
+				iconGrid.setSize(16, 16);
+				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
+
+				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
+				MLT.getStatusBar().removeProgress(key);
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+				MLT.getStatusBar().removeProgress(key);
+			}
+		}
+	}
 
 	/**
 	 * Browse the statistics.
@@ -114,6 +273,7 @@ public class StatisticsAverages extends Statistics {
 				textBuilder.append(getId());
 				textBuilder.append(" ");
 				textBuilder.append(getKey());
+				textBuilder.append(" States");
 				String text = textBuilder.toString();
 
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
@@ -129,31 +289,47 @@ public class StatisticsAverages extends Statistics {
 				model.addColumn(Fields.BAR_LOW);
 				model.addColumn(Fields.BAR_CLOSE);
 
-				for (int i = 0; i < getFieldListAverages().size(); i++) {
-					model.addColumn(getFieldListAverages().get(i).getAlias());
+				List<Field> fields = null;
+
+				fields = getFieldListAverages();
+				for (int i = 0; i < fields.size(); i++) {
+					model.addColumn(fields.get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListSlopes("raw").size(); i++) {
-					model.addColumn(getFieldListSlopes("raw").get(i).getAlias());
+
+				fields = getFieldListSlopes("raw");
+				for (int i = 0; i < fields.size(); i++) {
+					model.addColumn(fields.get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListSpreads("raw").size(); i++) {
-					model.addColumn(getFieldListSpreads("raw").get(i).getAlias());
+
+				fields = getFieldListSpreads("raw");
+				for (int i = 0; i < fields.size(); i++) {
+					model.addColumn(fields.get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListSlopes("nrm").size(); i++) {
-					model.addColumn(getFieldListSlopes("nrm").get(i).getAlias());
+
+				fields = getFieldListSlopes("nrm");
+				for (int i = 0; i < fields.size(); i++) {
+					model.addColumn(fields.get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListSpreads("nrm").size(); i++) {
-					model.addColumn(getFieldListSpreads("nrm").get(i).getAlias());
+
+				fields = getFieldListSpreads("nrm");
+				for (int i = 0; i < fields.size(); i++) {
+					model.addColumn(fields.get(i).getAlias());
 				}
-				for (int i = 0; i < getFieldListCandles().size(); i++) {
-					model.addColumn(getFieldListCandles().get(i).getAlias());
+
+				for (int i = 0; i < averages.size(); i++) {
+					fields = getFieldListCandles(i);
+					for (int j = 0; j < fields.size(); j++) {
+						model.addColumn(fields.get(j).getAlias());
+					}
 				}
 
 				model.setRecordSet(new DataRecordSet(persistor));
 
-				TableRecord table = new TableRecord();
+				TableRecord table = new TableRecord(true);
 				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
 				table.setModel(model);
 				table.setSelectedRow(0);
+				table.setPopupMenuProvider(new MenuStates(table));
 
 				TablePane tablePane = new TablePane(table);
 
@@ -192,7 +368,42 @@ public class StatisticsAverages extends Statistics {
 
 			frame.addTasks(new TaskAveragesRaw(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
 			frame.show();
+		}
+
+	}
+
+	/**
+	 * Range calculator (average + 2 * std_dev)
+	 */
+	class CalculatorRange implements Calculator {
+		@Override
+		public Value getValue(Record record) {
+			String min_max = record.getValue(Fields.RANGE_MIN_MAX).getString();
+			double average = record.getValue(Fields.RANGE_AVERAGE).getDouble();
+			double std_dev = record.getValue(Fields.RANGE_STDDEV).getDouble();
+			double mult = (min_max.equals("min") ? -1 : 1);
+			double value = average + (2 * mult * std_dev);
+			return new Value(value);
+		}
+	}
+
+	/**
+	 * Popup menu for browse states.
+	 */
+	class MenuStates implements PopupMenuProvider {
+		TableRecord table;
+
+		MenuStates(TableRecord table) {
+			this.table = table;
+		}
+
+		@Override
+		public PopupMenu getPopupMenu(Control control) {
+			PopupMenu popup = new PopupMenu();
+			popup.add(Option.option_COLUMNS(table).getMenuItem());
+			return popup;
 		}
 
 	}
@@ -461,6 +672,40 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Return the name of the field group for candles of the average.
+	 * 
+	 * @param avg Average index.
+	 * @return The name of the field group for candles.
+	 */
+	public String getCandleGroupName(int avg) {
+		int fast = (avg == 0 ? 1 : averages.get(avg - 1).getPeriod());
+		int slow = averages.get(avg).getPeriod();
+		StringBuilder b = new StringBuilder();
+		b.append("candles_");
+		b.append(fast);
+		b.append("_");
+		b.append(slow);
+		return b.toString();
+	}
+
+	/**
+	 * Return the title of the field group for candles of the average.
+	 * 
+	 * @param avg Average index.
+	 * @return The title of the field group for candles.
+	 */
+	public String getCandleGroupTitle(int avg) {
+		int fast = (avg == 0 ? 1 : averages.get(avg - 1).getPeriod());
+		int slow = averages.get(avg).getPeriod();
+		StringBuilder b = new StringBuilder();
+		b.append("Candles ");
+		b.append(fast);
+		b.append("/");
+		b.append(slow);
+		return b.toString();
+	}
+
+	/**
 	 * Return the list of average fields.
 	 * 
 	 * @return The list of average fields.
@@ -483,20 +728,21 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Returns the list of candle related fields.
+	 * Returns the list of candle related fields of an average.
 	 * 
+	 * @param i The average index.
 	 * @return The list of candle related fields.
 	 */
-	public List<Field> getFieldListCandles() {
-		List<Field> fields = mapLists.get("candles");
+	public List<Field> getFieldListCandles(int i) {
+		String key = getCandleGroupName(i);
+		List<Field> fields = mapLists.get(key);
 		if (fields == null) {
 			fields = new ArrayList<>();
-			for (int i = 0; i < averages.size(); i++) {
-				int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
-				int slow = averages.get(i).getPeriod();
-				int count = slow / fast;
-				for (int j = 0; j < count; j++) {
-					// @formatter:off
+			int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
+			int slow = averages.get(i).getPeriod();
+			int count = slow / fast;
+			for (int j = 0; j < count; j++) {
+				// @formatter:off
 
 					/* Open, high, low, close. */
 					fields.add(getCandleField("open", "Open", "Open", fast, slow, j, 4));
@@ -504,28 +750,29 @@ public class StatisticsAverages extends Statistics {
 					fields.add(getCandleField("low", "Low", "Low", fast, slow, j, 4));
 					fields.add(getCandleField("close", "Close", "Close", fast, slow, j, 4));
 
-					/* Range and body size raw. */
+					/* Raw values. */
 					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 4, "raw"));
 					fields.add(getCandleField("body_factor", "Body factor", "factor", fast, slow, j, 8, "raw"));
+					fields.add(getCandleField("body_pos", "Body pos", "Body position", fast, slow, j, 8, "raw"));
+					if (j < count - 1) {
+						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "raw"));
+					}
+					fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "raw"));
 					
-					/* Range, body size and body position normalized. */
+					/* Normalized values. */
 					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 8, "nrm"));
 					fields.add(getCandleField("body_factor", "Body factor", "factor", fast, slow, j, 8, "nrm"));
 					fields.add(getCandleField("body_pos", "Body pos", "Body position", fast, slow, j, 8, "nrm"));
+					if (j < count - 1) {
+						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "nrm"));
+					}
 					
 					/* Sign, continuous from -1 to 1. */
 					fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "nrm"));
 					
-					/* Factor of change of the center of this candle versus the next candle. Raw and normalized values. */
-					if (j < count - 1) {
-						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "raw"));
-						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "nrm"));
-					}
-					
 					// @formatter:on
-				}
 			}
-			mapLists.put("candles", fields);
+			mapLists.put(key, fields);
 		}
 		return fields;
 	}
@@ -771,14 +1018,14 @@ public class StatisticsAverages extends Statistics {
 		b.append(fast);
 		b.append("/");
 		b.append(slow);
-		b.append("/");
+		b.append(" - ");
 		b.append(Strings.leftPad(Integer.toString(index0), pad));
 		if (index1 >= 0) {
-			b.append("vs");
+			b.append(" vs ");
 			b.append(Strings.leftPad(Integer.toString(index1), pad));
 		}
 		if (suffix != null) {
-			b.append(" ");
+			b.append(" - ");
 			b.append(suffix);
 		}
 		return b.toString();
@@ -817,6 +1064,43 @@ public class StatisticsAverages extends Statistics {
 	public String getLegend() {
 		HTML html = new HTML();
 		return html.toString();
+	}
+
+	/**
+	 * @return The map with the normalizers of the range fields.
+	 */
+	public HashMap<String, Normalizer> getMapNormalizers() throws PersistorException {
+		HashMap<String, Normalizer> map = new HashMap<>();
+		RecordSet recordSet = getViewRanges().getPersistor().select(null);
+		for (Record record : recordSet) {
+			String name = record.getValue(Fields.RANGE_NAME).getString();
+			String min_max = record.getValue(Fields.RANGE_MIN_MAX).getString();
+			double minimum = record.getValue(Fields.RANGE_MINIMUM).getDouble();
+			double maximum = record.getValue(Fields.RANGE_MAXIMUM).getDouble();
+			double range = record.getValue(Fields.RANGE_RANGE).getDouble();
+			if (min_max.equals("max")) {
+				if (range > maximum) {
+					range = maximum;
+				}
+			} else {
+				if (range < minimum) {
+					range = minimum;
+				}
+			}
+			Normalizer normalizer = map.get(name);
+			if (normalizer == null) {
+				normalizer = new Normalizer();
+				normalizer.setNormalizedLow(-1);
+				normalizer.setNormalizedHigh(1);
+				map.put(name, normalizer);
+			}
+			if (min_max.equals("max")) {
+				normalizer.setDataHigh(range);
+			} else {
+				normalizer.setDataLow(range);
+			}
+		}
+		return map;
 	}
 
 	/**
@@ -947,15 +1231,39 @@ public class StatisticsAverages extends Statistics {
 		optionCalculate.setText("Calculate");
 		optionCalculate.setToolTip("Calculate all statistics values");
 		optionCalculate.setAction(new ActionCalculate());
+		optionCalculate.setOptionGroup(new Option.Group("CALCULATE", 1));
 		options.add(optionCalculate);
 
 		/* Browse statictics. */
 		Option optionBrowseStats = new Option();
 		optionBrowseStats.setKey("BROWSE-STATS");
-		optionBrowseStats.setText("Browse statistics");
-		optionBrowseStats.setToolTip("Browse statistics values");
+		optionBrowseStats.setText("Browse states");
+		optionBrowseStats.setToolTip("Browse state values");
 		optionBrowseStats.setAction(new ActionBrowseStats());
+		optionBrowseStats.setOptionGroup(new Option.Group("BROWSE", 2));
+		optionBrowseStats.setSortIndex(2);
 		options.add(optionBrowseStats);
+
+		/* Browse ranges. */
+		Option optionBrowseRanges = new Option();
+		optionBrowseRanges.setKey("BROWSE-RANGES");
+		optionBrowseRanges.setText("Browse ranges statistic values");
+		optionBrowseRanges
+			.setToolTip("Browse ranges minimum, maximum, average and standard deviation values");
+		optionBrowseRanges.setAction(new ActionBrowseRanges());
+		optionBrowseRanges.setOptionGroup(new Option.Group("BROWSE", 2));
+		optionBrowseRanges.setSortIndex(2);
+		options.add(optionBrowseRanges);
+
+		/* Browse ranges raw values. */
+		Option optionBrowseRangesRaw = new Option();
+		optionBrowseRangesRaw.setKey("BROWSE-RANGES-RAW");
+		optionBrowseRangesRaw.setText("Browse ranges raw values");
+		optionBrowseRangesRaw.setToolTip("Browse ranges raw values");
+		optionBrowseRangesRaw.setAction(new ActionBrowseRangesRaw());
+		optionBrowseRangesRaw.setOptionGroup(new Option.Group("BROWSE", 2));
+		optionBrowseRangesRaw.setSortIndex(3);
+		options.add(optionBrowseRangesRaw);
 
 		return options;
 	}
@@ -1056,23 +1364,20 @@ public class StatisticsAverages extends Statistics {
 		Field fieldMinMax = Domains.getString(Fields.RANGE_MIN_MAX, 3, "Min-Max", "Min-Max");
 		tableRanges.addField(fieldMinMax);
 
-		/* Period. */
-		Field fieldPeriod = new FieldPeriod(Fields.RANGE_PERIOD);
-		tableRanges.addField(fieldPeriod);
-
 		/* Value. */
 		Field fieldValue = Domains.getDouble(Fields.RANGE_VALUE, "Value", "Value");
+		fieldValue.setStringConverter(getNumberConverter(8));
 		tableRanges.addField(fieldValue);
 
 		/* Reference of the time of the registered values. */
 		Field fieldTime = new FieldTime(Fields.BAR_TIME);
 		tableRanges.addField(fieldTime);
+		tableRanges.addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
 
 		/* Non unique index on name, min-max and period. */
 		Index index = new Index();
 		index.add(tableRanges.getField(Fields.RANGE_NAME));
 		index.add(tableRanges.getField(Fields.RANGE_MIN_MAX));
-		index.add(tableRanges.getField(Fields.RANGE_PERIOD));
 		index.add(tableRanges.getField(Fields.BAR_TIME));
 		index.setUnique(false);
 		tableRanges.addIndex(index);
@@ -1124,60 +1429,143 @@ public class StatisticsAverages extends Statistics {
 
 		tableStates.addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
 
-		/* Calculated pivot (High=1, None=0, Low=-1) */
-		tableStates.addField(Domains.getInteger("pivot", "Pivot", "Pivot"));
+		int ndx = 0;
+		FieldGroup grpData = new FieldGroup(ndx++, "data", "Data");
+		tableStates.getField(Fields.BAR_TIME).setFieldGroup(grpData);
+		tableStates.getField(Fields.BAR_OPEN).setFieldGroup(grpData);
+		tableStates.getField(Fields.BAR_HIGH).setFieldGroup(grpData);
+		tableStates.getField(Fields.BAR_LOW).setFieldGroup(grpData);
+		tableStates.getField(Fields.BAR_CLOSE).setFieldGroup(grpData);
+		tableStates.getField(Fields.BAR_TIME_FMT).setFieldGroup(grpData);
 
-		/* Label (Long=1, Out=0, Short=-1) */
+		/*
+		 * Calculated pivot (High=1, None=0, Low=-1) and Label (Long=1, Out=0, Short=-1)
+		 */
+		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
+		tableStates.addField(Domains.getInteger("pivot", "Pivot", "Pivot"));
 		tableStates.addField(Domains.getInteger("label", "Label", "Label"));
+		tableStates.getField("pivot").setFieldGroup(grpLabels);
+		tableStates.getField("label").setFieldGroup(grpLabels);
 
 		/* Lists of fields. */
 		List<Field> fields;
 
 		/* Average fields. */
+		FieldGroup grpAverages = new FieldGroup(ndx++, "avgs", "Averages");
 		fields = getFieldListAverages();
 		for (Field field : fields) {
+			field.setFieldGroup(grpAverages);
 			tableStates.addField(field);
 		}
 
 		/* Slopes of averages: raw. */
+		FieldGroup grpSlopesRaw = new FieldGroup(ndx++, "slopes_raw", "Slopes raw");
 		fields = getFieldListSlopes("raw");
 		for (Field field : fields) {
+			field.setFieldGroup(grpSlopesRaw);
 			tableStates.addField(field);
 		}
 
 		/* Spreads within averages: raw. */
+		FieldGroup grpSpreadsRaw = new FieldGroup(ndx++, "spreads_raw", "Spreads raw");
 		fields = getFieldListSpreads("raw");
 		for (Field field : fields) {
+			field.setFieldGroup(grpSpreadsRaw);
 			tableStates.addField(field);
 		}
 
 		/* Slopes of averages: normalized. */
+		FieldGroup grpSlopesNrm = new FieldGroup(ndx++, "slopes_nrm", "Slopes nrm");
 		fields = getFieldListSlopes("nrm");
 		for (Field field : fields) {
+			field.setFieldGroup(grpSlopesNrm);
 			tableStates.addField(field);
 		}
 
 		/* Spreads within averages: normalized. */
+		FieldGroup grpSpreadsNrm = new FieldGroup(ndx++, "spreads_nrm", "Spreads nrm");
 		fields = getFieldListSpreads("nrm");
 		for (Field field : fields) {
+			field.setFieldGroup(grpSpreadsNrm);
 			tableStates.addField(field);
 		}
 
 		/* Candle fields. */
-		fields = getFieldListCandles();
-		for (Field field : fields) {
-			tableStates.addField(field);
+		for (int i = 0; i < averages.size(); i++) {
+			String grpName = getCandleGroupName(i);
+			String grpTitle = getCandleGroupTitle(i);
+			FieldGroup group = new FieldGroup(ndx++, grpName, grpTitle);
+			fields = getFieldListCandles(i);
+			for (Field field : fields) {
+				field.setFieldGroup(group);
+				tableStates.addField(field);
+			}
 		}
 
 		/* Normailzed flag. */
+		FieldGroup grpControls = new FieldGroup(ndx++, "controls", "Controls");
 		Field normalized = Domains.getString(Fields.STATES_NORMALIZED, 1, "Nrm", "Normalized");
+		normalized.setFieldGroup(grpControls);
 		tableStates.addField(normalized);
 
 		tableStates.getField(Fields.BAR_TIME).setPrimaryKey(true);
+		
+		Index index = new Index();
+		index.add(tableStates.getField(Fields.STATES_NORMALIZED));
+		tableStates.addIndex(index);
+		
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
 		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
 		return tableStates;
+	}
+
+	/**
+	 * Return the ranges view.
+	 * 
+	 * @return
+	 */
+	public View getViewRanges() {
+
+		View view = new View();
+		view.setMasterTable(getTableRanges());
+
+		Field name = getTableRanges().getField(Fields.RANGE_NAME);
+		Field min_max = getTableRanges().getField(Fields.RANGE_MIN_MAX);
+		Field minimum = Domains.getDouble(Fields.RANGE_MINIMUM, "Minimum", "Minimum");
+		minimum.setStringConverter(getNumberConverter(8));
+		minimum.setFunction("min(" + Fields.RANGE_VALUE + ")");
+		Field maximum = Domains.getDouble(Fields.RANGE_MAXIMUM, "Maximum", "Maximum");
+		maximum.setStringConverter(getNumberConverter(8));
+		maximum.setFunction("max(" + Fields.RANGE_VALUE + ")");
+		Field average = Domains.getDouble(Fields.RANGE_AVERAGE, "Average", "Average");
+		average.setStringConverter(getNumberConverter(8));
+		average.setFunction("avg(" + Fields.RANGE_VALUE + ")");
+		Field std_dev = Domains.getDouble(Fields.RANGE_STDDEV, "Std Dev", "Std Dev");
+		std_dev.setStringConverter(getNumberConverter(8));
+		std_dev.setFunction("stddev(" + Fields.RANGE_VALUE + ")");
+		Field range =
+			Domains.getDouble(Fields.RANGE_RANGE, "Range (avg+-2*stddev)", "Range (avg+-2*stddev)");
+		range.setPersistent(false);
+		range.setStringConverter(getNumberConverter(8));
+		range.setCalculator(new CalculatorRange());
+
+		view.addField(name);
+		view.addField(min_max);
+		view.addField(minimum);
+		view.addField(maximum);
+		view.addField(average);
+		view.addField(std_dev);
+		view.addField(range);
+
+		view.addGroupBy(name);
+		view.addGroupBy(min_max);
+
+		view.addOrderBy(name);
+		view.addOrderBy(min_max);
+
+		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+		return view;
 	}
 
 	/**

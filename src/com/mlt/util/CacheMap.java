@@ -35,18 +35,16 @@ import java.util.TreeMap;
  */
 public class CacheMap<K, V> implements Map<K, V> {
 
-	/**
-	 * Internal map.
-	 */
-	private Map<K, V> map = new TreeMap<>();
-	/**
-	 * Cache size. Less equal than zero, no cache.
-	 */
+	/** Internal data map. */
+	private Map<K, V> mapData = new TreeMap<>();
+	/** Internal time map. */
+	private Map<Long, K> mapTime = new TreeMap<>();
+	/** Last time key. */
+	private long time = Long.MIN_VALUE;
+	/** Cache size. Less equal than zero, no cache. */
 	private int cacheSize = 10000;
-	/**
-	 * Cache factor: 0.5, removes half of the cache.
-	 */
-	private double cacheFactor = 0.1;
+	/** Cache factor: 0.5, removes half of the cache. */
+	private double cacheFactor = 0.5;
 
 	/**
 	 * Constructor.
@@ -80,6 +78,9 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 * @param cacheSize The cache size.
 	 */
 	public void setCacheSize(int cacheSize) {
+		if (cacheSize <= 100) {
+			throw new IllegalArgumentException("Invalid cache size: " + cacheSize);
+		}
 		this.cacheSize = cacheSize;
 	}
 
@@ -98,8 +99,8 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 * @param cacheFactor The cache factor.
 	 */
 	public void setCacheFactor(double cacheFactor) {
-		if (cacheFactor < 0 || cacheFactor > 1) {
-			throw new IllegalArgumentException();
+		if (cacheFactor <= 0 || cacheFactor > 1) {
+			throw new IllegalArgumentException("Invalid chache factor: " + cacheFactor);
 		}
 		this.cacheFactor = cacheFactor;
 	}
@@ -111,7 +112,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public int size() {
-		return map.size();
+		return mapData.size();
 	}
 
 	/**
@@ -121,7 +122,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public boolean isEmpty() {
-		return map.isEmpty();
+		return mapData.isEmpty();
 	}
 
 	/**
@@ -131,7 +132,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public boolean containsKey(Object key) {
-		return map.containsKey(key);
+		return mapData.containsKey(key);
 	}
 
 	/**
@@ -141,7 +142,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public boolean containsValue(Object value) {
-		return map.containsValue(value);
+		return mapData.containsValue(value);
 	}
 
 	/**
@@ -151,7 +152,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public V get(Object key) {
-		return map.get(key);
+		return mapData.get(key);
 	}
 
 	/**
@@ -162,28 +163,31 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public V put(K key, V value) {
-		if (map.size() >= cacheSize) {
-			List<K> keysToRemove = getRemoveKeys();
-			for (K keyToRemove : keysToRemove) {
-				map.remove(keyToRemove);
+		
+		/* If the cache size is reached, remove older values. */
+		if (mapData.size() >= cacheSize) {
+			int count = Double.valueOf(Double.valueOf(cacheSize) * cacheFactor).intValue();
+			Iterator<Long> iterator = mapTime.keySet().iterator();
+			List<Long> times = new ArrayList<>();
+			List<K> keys = new ArrayList<>();
+			while (iterator.hasNext()) {
+				long t = iterator.next();
+				K k = mapTime.get(t);
+				times.add(t);
+				keys.add(k);
+				if (--count <= 0) {
+					break;
+				}
+			}
+			for (Long t : times) {
+				mapTime.remove(t);
+			}
+			for (K k : keys) {
+				mapData.remove(k);
 			}
 		}
-		return map.put(key, value);
-	}
-
-	/**
-	 * Returns the list of keys to remove.
-	 *
-	 * @return The list of keys to remove.
-	 */
-	private List<K> getRemoveKeys() {
-		int count = Double.valueOf(Double.valueOf(cacheSize) * cacheFactor).intValue();
-		List<K> keys = new ArrayList<>();
-		Iterator<K> iterator = map.keySet().iterator();
-		while (keys.size() < count && iterator.hasNext()) {
-			keys.add(iterator.next());
-		}
-		return keys;
+		mapTime.put(time++, key);
+		return mapData.put(key, value);
 	}
 
 	/**
@@ -193,7 +197,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public V remove(Object key) {
-		return map.remove(key);
+		return mapData.remove(key);
 	}
 
 	/**
@@ -209,7 +213,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public void clear() {
-		map.clear();
+		mapData.clear();
 	}
 
 	/**
@@ -219,7 +223,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public Set<K> keySet() {
-		return map.keySet();
+		return mapData.keySet();
 	}
 
 	/**
@@ -229,7 +233,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public Collection<V> values() {
-		return map.values();
+		return mapData.values();
 	}
 
 	/**
@@ -239,7 +243,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	 */
 	@Override
 	public Set<Map.Entry<K, V>> entrySet() {
-		return map.entrySet();
+		return mapData.entrySet();
 	}
 
 }

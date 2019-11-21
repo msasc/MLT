@@ -410,6 +410,9 @@ public class PlotterPane extends BorderPane {
 		int numBars = maxIndex - minIndex + 1;
 		int totalBars = pd.getDataSize();
 		infoPane.addInfo(" Bars " + numBars + " / " + totalBars, Font.PLAIN, Colors.BLUE);
+		
+		/* Current index. */
+		infoPane.addInfo(" Index " + index, Font.PLAIN, Colors.BLUE);
 
 		/* Number of visible periods. */
 		int startIndex = pd.getStartIndex();

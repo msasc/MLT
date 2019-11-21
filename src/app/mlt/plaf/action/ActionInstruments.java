@@ -78,7 +78,7 @@ public class ActionInstruments {
 				model.addColumn(Fields.INSTRUMENT_SECONDARY_CURRENCY);
 				model.setRecordSet(recordSet);
 
-				TableRecord table = new TableRecord();
+				TableRecord table = new TableRecord(true);
 				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
 				table.setModel(model);
 				table.setSelectedRow(0);

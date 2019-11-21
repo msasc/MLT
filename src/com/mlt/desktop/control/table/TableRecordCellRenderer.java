@@ -89,6 +89,10 @@ public class TableRecordCellRenderer extends CellRenderer {
 
 		/* Configure this table cell renderer (label) and return it. */
 		Value value = (Value) object;
+		if (value == null || value.isNull()) {
+			getLabel().setText("");
+			return this;
+		}
 
 		/* Password fields, fixed length of 10 asterisks. */
 		if (field.isPassword()) {

@@ -77,6 +77,17 @@ public class FieldGroup implements Comparable<FieldGroup> {
 	 * @param index       The sort index.
 	 * @param name        The name.
 	 * @param title       The title.
+	 */
+	public FieldGroup(int index, String name, String title) {
+		this(index, name, title, title);
+	}
+
+	/**
+	 * Constructor assigning fields.
+	 *
+	 * @param index       The sort index.
+	 * @param name        The name.
+	 * @param title       The title.
 	 * @param description The description.
 	 */
 	public FieldGroup(int index, String name, String title, String description) {

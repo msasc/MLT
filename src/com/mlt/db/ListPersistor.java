@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -330,8 +331,12 @@ public class ListPersistor implements Persistor {
 
 	/** Associated persistor. */
 	private Persistor persistor;
-	/** Applying order. */
-	private Order order;
+	/** Forward order (original). */
+	private Order forwardOrder;
+	/** Backward order. */
+	private Order backwardOrder;
+	/** List of order fields. */
+	private List<Field> orderFields;
 	/** A timer that refreshes the status data. */
 	private Timer refreshTimer;
 	/** Lock used when the source is sensitive. */
@@ -355,14 +360,7 @@ public class ListPersistor implements Persistor {
 	 * @param persistor The underlying persistor.
 	 */
 	public ListPersistor(Persistor persistor) {
-		super();
-		/* Must have a primary key. */
-		FieldList fields = persistor.getFieldList();
-		if (fields.getPrimaryKeyFields().isEmpty()) {
-			throw new IllegalArgumentException("Persistor must have primary key fields");
-		}
-		this.persistor = persistor;
-		this.order = persistor.getFieldList().getPrimaryOrder();
+		this(persistor, null);
 	}
 
 	/**
@@ -373,7 +371,21 @@ public class ListPersistor implements Persistor {
 	public ListPersistor(Persistor persistor, Order order) {
 		super();
 		this.persistor = persistor;
-		this.order = order;
+		if (order == null) {
+			/* Must have a primary key. */
+			FieldList fields = persistor.getFieldList();
+			if (fields.getPrimaryKeyFields().isEmpty()) {
+				throw new IllegalArgumentException("Persistor must have primary key fields");
+			}
+			order = persistor.getFieldList().getPrimaryOrder();
+		}
+		this.forwardOrder = new Order(order);
+		this.backwardOrder = new Order(order);
+		this.backwardOrder.invertAsc();
+		this.orderFields = new ArrayList<>();
+		for (int i = 0; i < order.size(); i++) {
+			this.orderFields.add(order.getField(i));
+		}
 	}
 
 	/**
@@ -473,11 +485,11 @@ public class ListPersistor implements Persistor {
 	 */
 	private Criteria getCriteriaMove(OrderKey key, Move move) {
 		Criteria criteriaSegments = new Criteria(Criteria.OR);
-		int segments = order.size();
+		int segments = orderFields.size();
 		while (segments > 0) {
 			Criteria criteriaSegment = new Criteria();
 			if (segments == 1) {
-				Field field = order.getField(0);
+				Field field = orderFields.get(0);
 				Value value = key.getValue(0);
 				if (move == Move.FORWARD) {
 					criteriaSegment.add(Condition.fieldGT(field, value));
@@ -486,7 +498,7 @@ public class ListPersistor implements Persistor {
 				}
 			} else {
 				for (int i = 0; i < segments; i++) {
-					Field field = order.getField(i);
+					Field field = orderFields.get(i);
 					Value value = key.getValue(i);
 					if (i < segments - 1) {
 						criteriaSegment.add(Condition.fieldEQ(field, value));
@@ -521,10 +533,6 @@ public class ListPersistor implements Persistor {
 		}
 		return getCriteriaMove(key, Move.BACKWARD);
 	}
-
-	/*
-	 * Persistor implementation.
-	 */
 
 	/**
 	 * {@inheritDoc}
@@ -566,11 +574,17 @@ public class ListPersistor implements Persistor {
 		return persistor.getFieldCount();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public int getFieldIndex(String alias) {
 		return persistor.getFieldIndex(alias);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public FieldList getFieldList() {
 		return persistor.getFieldList();
@@ -585,10 +599,9 @@ public class ListPersistor implements Persistor {
 		if (firstRecord == null) {
 			try {
 				lock.lock();
-				order.setAscending();
 				Criteria criteria = new Criteria();
 				if (globalCriteria != null) criteria.add(globalCriteria);
-				RecordIterator iter = persistor.iterator(criteria, order);
+				RecordIterator iter = persistor.iterator(criteria, forwardOrder);
 				if (iter.hasNext()) {
 					firstRecord = iter.next();
 				}
@@ -611,10 +624,9 @@ public class ListPersistor implements Persistor {
 		if (lastRecord == null) {
 			try {
 				lock.lock();
-				order.setDescending();
 				Criteria criteria = new Criteria();
 				if (globalCriteria != null) criteria.add(globalCriteria);
-				RecordIterator iter = persistor.iterator(criteria, order);
+				RecordIterator iter = persistor.iterator(criteria, backwardOrder);
 				if (iter.hasNext()) {
 					lastRecord = iter.next();
 				}
@@ -734,7 +746,7 @@ public class ListPersistor implements Persistor {
 			}
 			record = getRecord(key, skip, move);
 			if (record != null) {
-				key = record.getOrderKey(order);
+				key = record.getOrderKey(forwardOrder);
 				mapRecords.put(index, record);
 				loadPage(index, key);
 			}
@@ -775,12 +787,7 @@ public class ListPersistor implements Persistor {
 		Record record = null;
 		try {
 			Criteria criteria = getCriteriaMove(key, move);
-			if (move == Move.BACKWARD) {
-				order.setDescending();
-			}
-			if (move == Move.FORWARD) {
-				order.setAscending();
-			}
+			Order order = (move == Move.FORWARD ? forwardOrder : backwardOrder);
 			RecordIterator iter = persistor.iterator(criteria, order);
 			int skept = 0;
 			while (skept <= skip && iter.hasNext()) {
@@ -812,13 +819,12 @@ public class ListPersistor implements Persistor {
 		Record record = null;
 		try {
 			Criteria criteria = new Criteria();
-			for (int i = 0; i < order.size(); i++) {
-				Field field = order.getField(i);
+			for (int i = 0; i < orderFields.size(); i++) {
+				Field field = orderFields.get(i);
 				Value value = key.getValue(i);
 				criteria.add(Condition.fieldEQ(field, value));
 			}
-			order.setAscending();
-			RecordIterator iter = persistor.iterator(criteria, order);
+			RecordIterator iter = persistor.iterator(criteria, forwardOrder);
 			if (iter.hasNext()) {
 				record = iter.next();
 			}
@@ -829,10 +835,6 @@ public class ListPersistor implements Persistor {
 		return record;
 	}
 
-	/*
-	 * Persistor implementation.
-	 */
-
 	/**
 	 * {@inheritDoc}
 	 */
@@ -840,10 +842,6 @@ public class ListPersistor implements Persistor {
 	public Transaction getTransaction() {
 		return persistor.getTransaction();
 	}
-
-	/*
-	 * Persistor implementation.
-	 */
 
 	/**
 	 * {@inheritDoc}
@@ -886,16 +884,28 @@ public class ListPersistor implements Persistor {
 	 * @param key   Reference record key.
 	 */
 	private void loadPage(int index, OrderKey key) {
+		loadPage(index, key, Side.BEFORE);
+		loadPage(index, key, Side.AFTER);
+	}
+
+	/**
+	 * Load a page before or after the index.
+	 * 
+	 * @param index The index.
+	 * @param key   The key of the record at index.
+	 * @param side  The side, either AFTER or BEFORE.
+	 */
+	private void loadPage(int index, OrderKey key, Side side) {
 		try {
-			order.setAscending();
 
 			/* Check if the page is already loaded and mapped. */
 			int countMapped = 0;
+			int step = (side == Side.AFTER ? 1 : -1);
 			for (int i = 0; i < pageSize; i++) {
-				Record record = mapRecords.get(index + 1);
+				Record record = mapRecords.get(index + step);
 				if (record != null) {
-					key = record.getOrderKey(order);
-					index++;
+					key = record.getOrderKey(forwardOrder);
+					index += step;
 					countMapped++;
 				} else {
 					break;
@@ -909,11 +919,13 @@ public class ListPersistor implements Persistor {
 
 			/* Load and map the rest of records up to the page size. */
 			int toLoad = pageSize - countMapped;
-			Criteria criteria = getCriteriaSide(key, Side.AFTER);
+			Criteria criteria = getCriteriaSide(key, side);
+			Order order = (side == Side.AFTER ? forwardOrder : backwardOrder);
 			RecordIterator iter = persistor.iterator(criteria, order);
 			while (iter.hasNext()) {
 				Record record = iter.next();
-				mapRecords.put(++index, record);
+				index += step;
+				mapRecords.put(index, record);
 				if (--toLoad <= 0) {
 					break;
 				}
@@ -957,10 +969,6 @@ public class ListPersistor implements Persistor {
 		return persistor.min(criteria, aliases);
 	}
 
-	/*
-	 * Persistor implementation.
-	 */
-
 	/**
 	 * {@inheritDoc}
 	 */
@@ -970,10 +978,6 @@ public class ListPersistor implements Persistor {
 		clearLimits();
 		return persistor.refresh(record);
 	}
-
-	/*
-	 * Persistor implementation.
-	 */
 
 	/**
 	 * {@inheritDoc}
@@ -985,10 +989,6 @@ public class ListPersistor implements Persistor {
 		return persistor.save(record);
 	}
 
-	/*
-	 * Persistor implementation.
-	 */
-
 	/**
 	 * {@inheritDoc}
 	 */
@@ -996,10 +996,6 @@ public class ListPersistor implements Persistor {
 	public RecordSet select(Criteria criteria) throws PersistorException {
 		return persistor.select(criteria);
 	}
-
-	/*
-	 * Persistor implementation.
-	 */
 
 	/**
 	 * {@inheritDoc}
@@ -1081,10 +1077,6 @@ public class ListPersistor implements Persistor {
 		}
 		return size;
 	}
-
-	/*
-	 * Persistor implementation.
-	 */
 
 	/**
 	 * {@inheritDoc}

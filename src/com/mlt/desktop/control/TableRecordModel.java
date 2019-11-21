@@ -301,15 +301,16 @@ public class TableRecordModel extends TableModel {
 	 */
 	@Override
 	protected void sortModel(TableSorter tableSorter) {
-		/* Create an order. */
-		Order order = new Order();
-		for (TableSorter.Key key : tableSorter.getKeys()) {
-			int fieldIndex = getFieldIndex(key.getColumn());
-			Field field = masterRecord.getField(fieldIndex);
-			boolean ascending = key.isAscending();
-			order.add(field, ascending);
+		if (recordSet.isSortable()) {
+			Order order = new Order();
+			for (TableSorter.Key key : tableSorter.getKeys()) {
+				int fieldIndex = getFieldIndex(key.getColumn());
+				Field field = masterRecord.getField(fieldIndex);
+				boolean ascending = key.isAscending();
+				order.add(field, ascending);
+			}
+			recordSet.sort(order);
 		}
-		recordSet.sort(order);
 	}
 
 }

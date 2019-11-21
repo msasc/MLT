@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control.table;
@@ -68,11 +73,15 @@ public class TableCmp extends JTable {
 	private transient int rowHeight = -1;
 
 	/**
-	 * Fixed row height. By default fixed row height is set to true and a suitable row height is calculated every time
-	 * the width of the columns is recalculated, scanning 'rowsToAdjustColumnWidth' rows.
+	 * Fixed row height. By default fixed row height is set to true and a suitable
+	 * row height is calculated every time
+	 * the width of the columns is recalculated, scanning 'rowsToAdjustColumnWidth'
+	 * rows.
 	 * <p>
-	 * If fixed row height is set to false, a complete scan of all rows is required to set the height of each row. This
-	 * is done again when adjusting columns widths, and the 'rowsToAdjustColumnWidth' is replaced by the total number of
+	 * If fixed row height is set to false, a complete scan of all rows is required
+	 * to set the height of each row. This
+	 * is done again when adjusting columns widths, and the
+	 * 'rowsToAdjustColumnWidth' is replaced by the total number of
 	 * rows.
 	 */
 	private boolean fixedRowHeight = true;
@@ -141,7 +150,8 @@ public class TableCmp extends JTable {
 	}
 
 	/**
-	 * Adjust the column size. Based on the current header and row-column preferred width, scanning a maximum number of
+	 * Adjust the column size. Based on the current header and row-column preferred
+	 * width, scanning a maximum number of
 	 * rows randomly including the first and last rows.
 	 *
 	 * @param column The column number.
@@ -162,7 +172,8 @@ public class TableCmp extends JTable {
 		TableColumn tableColumn = getColumnModel().getColumn(viewColumn);
 
 		/*
-		 * First get the preferred width of the header by getting its value and its renderer.
+		 * First get the preferred width of the header by getting its value and its
+		 * renderer.
 		 */
 		Object headerValue = tableColumn.getHeaderValue();
 		TableCellRenderer headerRenderer = tableColumn.getHeaderRenderer();
@@ -173,7 +184,8 @@ public class TableCmp extends JTable {
 		int headerWidth = headerSize.width + marginToAdjustColumnWidth;
 
 		/*
-		 * Then scan the rows and the width of the column. Keep the maximum between the row and the header.
+		 * Then scan the rows and the width of the column. Keep the maximum between the
+		 * row and the header.
 		 */
 		int modelColumn = convertColumnIndexToModel(viewColumn);
 		int dataWidth = 0;
@@ -264,8 +276,7 @@ public class TableCmp extends JTable {
 			int modelColumn = convertColumnIndexToModel(column);
 			Object value = getModel().getValueAt(modelRow, modelColumn);
 			TableCellRenderer renderer = tableColumn.getCellRenderer();
-			if (renderer == null)
-				continue;
+			if (renderer == null) continue;
 			Dimension size = getPreferredSize(renderer, value, row, column);
 			rowHeight = Math.max(rowHeight, size.height);
 		}
@@ -277,8 +288,7 @@ public class TableCmp extends JTable {
 	 */
 	@Override
 	public void clearSelection() {
-		if (selectedRanges == null)
-			return;
+		if (selectedRanges == null) return;
 		selectedRanges.clear();
 		revalidate();
 		repaint();
@@ -292,8 +302,7 @@ public class TableCmp extends JTable {
 	 * @return A boolean.
 	 */
 	private boolean containsColumn(Range range, int column) {
-		if (getRangeHeight(range) < getRowCount())
-			return false;
+		if (getRangeHeight(range) < getRowCount()) return false;
 		return range.getLeftColumn() >= column && range.getRightColumn() <= column;
 	}
 
@@ -305,8 +314,7 @@ public class TableCmp extends JTable {
 	 * @return A boolean.
 	 */
 	private boolean containsRow(Range range, int row) {
-		if (getRangeWidth(range) < getColumnCount())
-			return false;
+		if (getRangeWidth(range) < getColumnCount()) return false;
 		return range.getTopRow() >= row && range.getBottomRow() <= row;
 	}
 
@@ -356,18 +364,14 @@ public class TableCmp extends JTable {
 
 		if (selectionMode.isCell() || selectionMode.isRow()) {
 			if (rowIndex >= range.getTopRow() && rowIndex <= range.getBottomRow()) {
-				if (verticalDirection.isUp())
-					bottomRow = rowIndex;
-				if (verticalDirection.isDown())
-					topRow = rowIndex;
+				if (verticalDirection.isUp()) bottomRow = rowIndex;
+				if (verticalDirection.isDown()) topRow = rowIndex;
 			}
 		}
 		if (selectionMode.isCell() || selectionMode.isColumn()) {
 			if (columnIndex >= range.getLeftColumn() && columnIndex <= range.getRightColumn()) {
-				if (horizontalDirection.isRight())
-					leftColumn = columnIndex;
-				if (horizontalDirection.isLeft())
-					rightColumn = columnIndex;
+				if (horizontalDirection.isRight()) leftColumn = columnIndex;
+				if (horizontalDirection.isLeft()) rightColumn = columnIndex;
 			}
 		}
 
@@ -435,8 +439,7 @@ public class TableCmp extends JTable {
 					firstRow++;
 				}
 			}
-			if (!isRowVisible(firstRow))
-				return 0;
+			if (!isRowVisible(firstRow)) return 0;
 			int lastRow = firstRow;
 			while (isRowVisible(lastRow + 1) && lastRow < getRowCount() - 1) {
 				lastRow++;
@@ -464,8 +467,13 @@ public class TableCmp extends JTable {
 	 * @param column   The column.
 	 * @return The preferred size.
 	 */
-	private Dimension getPreferredSize(TableCellRenderer renderer, Object value, int row, int column) {
-		return renderer.getTableCellRendererComponent(this, value, false, false, row, column).getPreferredSize();
+	private Dimension getPreferredSize(
+		TableCellRenderer renderer,
+		Object value,
+		int row,
+		int column) {
+		return renderer.getTableCellRendererComponent(this, value, false, false, row, column)
+			.getPreferredSize();
 	}
 
 	/**
@@ -519,8 +527,7 @@ public class TableCmp extends JTable {
 	 */
 	private List<Integer> getRangeColumns(Range range) {
 		List<Integer> columns = new ArrayList<>();
-		if (getRangeHeight(range) < getRowCount())
-			return columns;
+		if (getRangeHeight(range) < getRowCount()) return columns;
 		for (int column = range.getLeftColumn(); column <= range.getRightColumn(); column++) {
 			columns.add(column);
 		}
@@ -547,8 +554,7 @@ public class TableCmp extends JTable {
 	 * @return The number of columns.
 	 */
 	private int getRangeColumnsCount(Range range) {
-		if (getRangeHeight(range) < getRowCount())
-			return 0;
+		if (getRangeHeight(range) < getRowCount()) return 0;
 		return (range.getRightColumn() - range.getLeftColumn() + 1);
 	}
 
@@ -572,8 +578,7 @@ public class TableCmp extends JTable {
 	 */
 	private List<Integer> getRangeRows(Range range) {
 		List<Integer> rows = new ArrayList<>();
-		if (getRangeWidth(range) < getColumnCount())
-			return rows;
+		if (getRangeWidth(range) < getColumnCount()) return rows;
 		for (int row = range.getTopRow(); row <= range.getBottomRow(); row++) {
 			rows.add(row);
 		}
@@ -992,12 +997,15 @@ public class TableCmp extends JTable {
 	}
 
 	/**
-	 * Move the selection or the focus. If toggle and extend are null, only the focus is changed.
+	 * Move the selection or the focus. If toggle and extend are null, only the
+	 * focus is changed.
 	 *
 	 * @param rowIndex    Row index.
 	 * @param columnIndex Column index.
-	 * @param toggle      A boolean indicating if toggle (ctrl key) is pressed. The selection should be toggled.
-	 * @param extend      A boolean indicating whether to extend (shift key) the selection.
+	 * @param toggle      A boolean indicating if toggle (ctrl key) is pressed. The
+	 *                    selection should be toggled.
+	 * @param extend      A boolean indicating whether to extend (shift key) the
+	 *                    selection.
 	 */
 	void moveSelection(int rowIndex, int columnIndex, Boolean toggle, Boolean extend) {
 
@@ -1027,7 +1035,8 @@ public class TableCmp extends JTable {
 		}
 
 		/*
-		 * Check whether this is a selection change request or an only focus change request. When both toggle and extend
+		 * Check whether this is a selection change request or an only focus change
+		 * request. When both toggle and extend
 		 * are null, only the focus is changed.
 		 */
 		boolean selectionChange = (toggle != null && extend != null);
@@ -1047,12 +1056,10 @@ public class TableCmp extends JTable {
 					boolean selected = true;
 					boolean clear = true;
 					if (toggle) {
-						if (selectionMode.isCell())
-							selected = !isCellSelected(rowIndex, columnIndex);
-						if (selectionMode.isColumn())
-							selected = !isColumnSelected(columnIndex);
-						if (selectionMode.isRow())
-							selected = !isRowSelected(rowIndex);
+						if (selectionMode
+							.isCell()) selected = !isCellSelected(rowIndex, columnIndex);
+						if (selectionMode.isColumn()) selected = !isColumnSelected(columnIndex);
+						if (selectionMode.isRow()) selected = !isRowSelected(rowIndex);
 						clear = false;
 					}
 					setSelectedRange(convertCelltoRange(cell, selected), clear);
@@ -1076,8 +1083,7 @@ public class TableCmp extends JTable {
 			/* Fire focus change. */
 			fireFocusCellChanged();
 			/* Fire selection change if applicable. */
-			if (selectionChange)
-				fireSelectionChanged();
+			if (selectionChange) fireSelectionChanged();
 		}
 
 		/* Required repaint. */
@@ -1152,27 +1158,29 @@ public class TableCmp extends JTable {
 	 * @param leftColumn  Left column.
 	 * @param bottomRow   Bottom row.
 	 * @param rightColumn Right column.
-	 * @param selected    A boolean that indicates whether the range must be selected.
-	 * @param clear       A boolean that indicated whether the list of previously selected ranges should be cleared.
+	 * @param selected    A boolean that indicates whether the range must be
+	 *                    selected.
+	 * @param clear       A boolean that indicated whether the list of previously
+	 *                    selected ranges should be cleared.
 	 */
-	public void setSelectedRange(int topRow, int leftColumn, int bottomRow, int rightColumn, boolean selected,
-	boolean clear) {
+	public void setSelectedRange(
+		int topRow,
+		int leftColumn,
+		int bottomRow,
+		int rightColumn,
+		boolean selected,
+		boolean clear) {
 
-		if (topRow < 0)
-			return;
-		if (leftColumn < 0)
-			return;
-		if (bottomRow < 0)
-			return;
-		if (bottomRow >= getRowCount() && bottomRow != Numbers.MAX_INTEGER)
-			return;
-		if (rightColumn < 0)
-			return;
-		if (rightColumn >= getColumnCount() && rightColumn != Numbers.MAX_INTEGER)
-			return;
+		if (topRow < 0) return;
+		if (leftColumn < 0) return;
+		if (bottomRow < 0) return;
+		if (bottomRow >= getRowCount() && bottomRow != Numbers.MAX_INTEGER) return;
+		if (rightColumn < 0) return;
+		if (rightColumn >= getColumnCount() && rightColumn != Numbers.MAX_INTEGER) return;
 
 		EventQueue.invokeLater(() -> {
-			setSelectedRange(new Range(topRow, leftColumn, bottomRow, rightColumn, selected), clear);
+			setSelectedRange(new Range(topRow, leftColumn, bottomRow, rightColumn, selected),
+				clear);
 			if (leftColumn == 0 && rightColumn == Numbers.MAX_INTEGER) {
 				if (topRow == bottomRow) {
 					moveFocus(topRow, leftColumn);
@@ -1190,7 +1198,8 @@ public class TableCmp extends JTable {
 	 * Set/add the argument range to the list of selection ranges.
 	 *
 	 * @param range The range.
-	 * @param clear A boolean indicating whether the list of ranges should be cleared.
+	 * @param clear A boolean indicating whether the list of ranges should be
+	 *              cleared.
 	 */
 	private void setSelectedRange(Range range, boolean clear) {
 		if (clear) {
@@ -1213,7 +1222,8 @@ public class TableCmp extends JTable {
 	 * Select the row indicating whether any previous selection should be cleared.
 	 *
 	 * @param row   The row index.
-	 * @param clear A boolean indicating whether any previous selection should be cleared.
+	 * @param clear A boolean indicating whether any previous selection should be
+	 *              cleared.
 	 */
 	public void setSelectedRow(int row, boolean clear) {
 		setSelectedRange(row, 0, row, Numbers.MAX_INTEGER, true, clear);
@@ -1230,11 +1240,13 @@ public class TableCmp extends JTable {
 	}
 
 	/**
-	 * Set the selected range of rows as selected indicating whether any previous selection should be cleared.
+	 * Set the selected range of rows as selected indicating whether any previous
+	 * selection should be cleared.
 	 *
 	 * @param topRow    Top row.
 	 * @param bottomRow Bottom row.
-	 * @param clear     A boolean indicating whether any previous selection should be cleared.
+	 * @param clear     A boolean indicating whether any previous selection should
+	 *                  be cleared.
 	 */
 	public void setSelectedRowRange(int topRow, int bottomRow, boolean clear) {
 		setSelectedRange(topRow, 0, bottomRow, Numbers.MAX_INTEGER, true, clear);
@@ -1257,8 +1269,7 @@ public class TableCmp extends JTable {
 	 * @param selectionMode The selection mode.
 	 */
 	public void setSelectionMode(SelectionMode selectionMode) {
-		if (selectionMode == null)
-			throw new NullPointerException();
+		if (selectionMode == null) throw new NullPointerException();
 		this.selectionMode = selectionMode;
 	}
 
@@ -1277,8 +1288,11 @@ public class TableCmp extends JTable {
 
 	/**
 	 * Setup this table.
+	 * 
+	 * @param displayRowHeader A boolean that indicates whether to display a row
+	 *                         header with row numbers.
 	 */
-	public void setup() {
+	public void setup(boolean displayRowHeader) {
 
 		/* Auto-resize mode. */
 		setAutoResizeMode(TableCmp.AUTO_RESIZE_OFF);
@@ -1294,9 +1308,11 @@ public class TableCmp extends JTable {
 		getTableHeader().addMouseListener(new HeaderMouseHandler(this));
 
 		/* Set the row header. */
-		RowHeader rowHeader = new RowHeader(this);
-		addListener(rowHeader);
-		tableControl.getComponent().setRowHeaderView(rowHeader);
+		if (displayRowHeader) {
+			RowHeader rowHeader = new RowHeader(this);
+			addListener(rowHeader);
+			tableControl.getComponent().setRowHeaderView(rowHeader);
+		}
 	}
 
 	/**
@@ -1365,8 +1381,10 @@ public class TableCmp extends JTable {
 		List<TableSorter.Key> keys = tableSort.getKeys();
 
 		/*
-		 * Not control mask. If there is only one sort key and it matches the column, switch ascending/descending. If it
-		 * does not matches the column or there is more than one sort key, then reset the sort keys to the column
+		 * Not control mask. If there is only one sort key and it matches the column,
+		 * switch ascending/descending. If it
+		 * does not matches the column or there is more than one sort key, then reset
+		 * the sort keys to the column
 		 * ascending.
 		 */
 		if (!controlMask) {
@@ -1408,7 +1426,8 @@ public class TableCmp extends JTable {
 	 * Update header focus.
 	 */
 	private void updateHeaderFocus() {
-		if (previousFocusCell == null || focusCell == null || focusCell.getColumn() != previousFocusCell.getColumn()) {
+		if (previousFocusCell == null || focusCell == null
+			|| focusCell.getColumn() != previousFocusCell.getColumn()) {
 			getTableHeader().resizeAndRepaint();
 		}
 	}

@@ -245,11 +245,17 @@ public class ActionStatistics extends ActionRun {
 				try {
 					StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
 					List<Option> options = stats.getOptions();
+					Option.sort(options);
+					popup.addSeparator();
 					for (int i = 0; i < options.size(); i++) {
-						if (i == 0) {
-							popup.addSeparator();
-						}
 						popup.add(options.get(i).getMenuItem());
+						if (i < options.size() - 1) {
+							Option.Group gprev = options.get(i).getOptionGroup();
+							Option.Group gnext = options.get(i + 1).getOptionGroup();
+							if (!gprev.equals(gnext)) {
+								popup.addSeparator();
+							}
+						}
 					}
 				} catch (Exception exc) {
 					Logs.catching(exc);

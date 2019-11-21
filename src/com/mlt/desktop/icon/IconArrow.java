@@ -148,6 +148,22 @@ public class IconArrow extends AbstractIcon {
 			x2 = x1;
 			y2 = getHeight() - getMarginBottom();
 			break;
+		case UP:
+			x0 = getMarginLeft() + ((getWidth() - getMarginLeft() - getMarginRight()) / 2);
+			y0 = getMarginTop();
+			x1 = getMarginLeft();
+			y1 = getHeight() - getMarginBottom();
+			x2 = getWidth() - getMarginRight();
+			y2 = y1;
+			break;
+		case DOWN:
+			x0 = getMarginLeft() + ((getWidth() - getMarginLeft() - getMarginRight()) / 2);
+			y0 = getHeight() - getMarginBottom();
+			x1 = getMarginLeft();
+			y1 = getMarginTop();
+			x2 = getWidth() - getMarginRight();
+			y2 = y1;
+			break;
 		default:
 		}
 		paintArrow(g2d, x0, y0, x1, y1, x2, y2);

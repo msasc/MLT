@@ -117,7 +117,7 @@ public class ActionTickers extends ActionRun {
 				model.addColumn(Fields.BAR_VOLUME);
 				model.setRecordSet(new DataRecordSet(persistor));
 
-				TableRecord table = new TableRecord();
+				TableRecord table = new TableRecord(true);
 				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
 				table.setModel(model);
 				table.setSelectedRow(0);
@@ -165,7 +165,7 @@ public class ActionTickers extends ActionRun {
 				ListPersistor persistor =
 					new ListPersistor(DB.persistor_ticker(instrument, period));
 				persistor.setCacheSize(10000);
-				persistor.setCacheFactor(0.0);
+//				persistor.setCacheFactor(0.0);
 				persistor.setPageSize(100);
 
 				/* Build the plot data. */

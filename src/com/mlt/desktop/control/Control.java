@@ -123,7 +123,7 @@ public class Control {
 	private static Properties getProperties(JComponent component) {
 		InputMap map = component.getInputMap();
 		KeyStroke key = KeyStroke.getKeyStroke(Numbers.MIN_INTEGER, 0);
-		Properties properties =	(Properties) map.get(key);
+		Properties properties = (Properties) map.get(key);
 		if (properties == null) {
 			properties = new Properties();
 			map.put(key, properties);
@@ -140,9 +140,14 @@ public class Control {
 		public void mouseClicked(MouseEvent e) {
 			if (e.getClickCount() == 1 && e.getButton() == MouseEvent.BUTTON3) {
 				if (getPopupMenuProvider() != null) {
+					/*
+					 * Recalculate mouse relative location vs component, because with scroll panes
+					 * it is not correct.
+					 */
+					Point mp = e.getLocationOnScreen();
+					Point cp = getComponent().getLocationOnScreen();
+					Point p = new Point(mp.x - cp.x, mp.y - cp.y);
 					PopupMenu popupMenu = getPopupMenuProvider().getPopupMenu(Control.this);
-					Point p = getComponent().getPopupLocation(e);
-					if (p == null) p = e.getPoint();
 					popupMenu.getComponent().show(getComponent(), p.x, p.y);
 				}
 			}

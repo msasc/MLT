@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control.table;
@@ -35,8 +40,10 @@ import com.mlt.desktop.layout.Insets;
 import com.mlt.util.Numbers;
 
 /**
- * Cell renderer to manage range borders and intersection colors, intended to be used with a TableComponent. Note that
- * cell/column/row selection/focus is managed throw the renderer and thought the isSelectd and hasFocus parameters are
+ * Cell renderer to manage range borders and intersection colors, intended to be
+ * used with a TableComponent. Note that
+ * cell/column/row selection/focus is managed throw the renderer and thought the
+ * isSelectd and hasFocus parameters are
  * not used.
  * 
  * @author Miquel Sas
@@ -104,8 +111,13 @@ public class CellRenderer extends JPanel implements TableCellRenderer, PropertyC
 	 * {@inheritDoc}
 	 */
 	@Override
-	public Component getTableCellRendererComponent(JTable jtable, Object value, boolean isSelected, boolean hasFocus,
-	int row, int column) {
+	public Component getTableCellRendererComponent(
+		JTable jtable,
+		Object value,
+		boolean isSelected,
+		boolean hasFocus,
+		int row,
+		int column) {
 		return getRendererComponent(value, row, column);
 	}
 
@@ -151,21 +163,23 @@ public class CellRenderer extends JPanel implements TableCellRenderer, PropertyC
 		/* Cell, column and row focus flags. */
 		boolean cellFocused = tableCmp.isCellFocused(row, column);
 
-		/* Determine if the the cell is contained in any range and, if so, if it is selected. */
+		/*
+		 * Determine if the the cell is contained in any range and, if so, if it is
+		 * selected.
+		 */
 		boolean contained = false;
 		boolean selected = false;
 		List<Range> selectedRanges = tableCmp.getSelectedRanges();
 		for (int i = 0; i < selectedRanges.size(); i++) {
 			Range range = selectedRanges.get(i);
 			if (range.containsCell(row, column)) {
-				if (!top)
-					top = (range.getTopRow() == row);
-				if (!left)
-					left = range.getLeftColumn() == column;
-				if (!bottom)
-					bottom = (range.getBottomRow() == row || range.getBottomRow() == Numbers.MAX_INTEGER);
-				if (!right)
-					right = (range.getRightColumn() == column || range.getRightColumn() == Numbers.MAX_INTEGER);
+				if (!top) top = (range.getTopRow() == row);
+				if (!left) left = range.getLeftColumn() == column;
+				if (!bottom) bottom =
+					(range.getBottomRow() == row || range.getBottomRow() == Numbers.MAX_INTEGER);
+				if (!right) right =
+					(range.getRightColumn() == column
+						|| range.getRightColumn() == Numbers.MAX_INTEGER);
 				contained = true;
 				selected = range.isSelected();
 			}
@@ -181,7 +195,8 @@ public class CellRenderer extends JPanel implements TableCellRenderer, PropertyC
 		}
 
 		/*
-		 * If cell, column or row are focused, then this state prevails over selection. Get first the focus state and if
+		 * If cell, column or row are focused, then this state prevails over selection.
+		 * Get first the focus state and if
 		 * no focus, then get the selection state and do as appropriate.
 		 */
 

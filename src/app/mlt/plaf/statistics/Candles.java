@@ -79,16 +79,41 @@ public class Candles {
 	}
 
 	/**
+	 * @param candle Tha data candlestick.
+	 * @return The center of the body.
+	 */
+	public static double bodyCenter(Data candle) {
+		double open = open(candle);
+		double close = close(candle);
+		return (open + close) / 2;
+	}
+
+	/**
 	 * @param candle The data candlestick.
 	 * @return The factor body vs range (raw value from 0:1).
 	 */
 	public static double bodyFactor(Data candle) {
 		double body = body(candle);
 		double range = range(candle);
-		double factor = body / range;
+		if (body > range) {
+			body = range;
+		}
+		double factor = (range != 0 ? body / range : 1);
 		return factor;
 	}
-
+	
+	/**
+	 * @param candle The data candlestick.
+	 * @return The relative position of the body.
+	 */
+	public static double bodyPos(Data candle) {
+		double center = bodyCenter(candle);
+		double range = range(candle);
+		double low = low(candle);
+		double pos = (center - low) / range;
+		return pos;
+	}
+	
 	/**
 	 * @param candle The data candlestick.
 	 * @return The sign as a normalized value -1:1

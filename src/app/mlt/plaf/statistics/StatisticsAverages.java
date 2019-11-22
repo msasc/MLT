@@ -32,11 +32,7 @@ import com.mlt.db.Field;
 import com.mlt.db.FieldGroup;
 import com.mlt.db.Index;
 import com.mlt.db.ListPersistor;
-import com.mlt.db.Order;
-import com.mlt.db.Persistor;
-import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
-import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
 import com.mlt.db.Value;
 import com.mlt.db.View;
@@ -55,7 +51,6 @@ import com.mlt.desktop.icon.IconGrid;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
-import com.mlt.ml.function.Normalizer;
 import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
@@ -90,155 +85,6 @@ import app.mlt.plaf.db.fields.FieldTimeFmt;
  * @author Miquel Sas
  */
 public class StatisticsAverages extends Statistics {
-
-	/**
-	 * Browse the ranges.
-	 */
-	class ActionBrowseRanges extends ActionRun {
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public void run() {
-			String key = null;
-			try {
-				Instrument instrument = getInstrument();
-				Period period = getPeriod();
-
-				StringBuilder keyBuilder = new StringBuilder();
-				keyBuilder.append("BROWSE-RANGES-");
-				keyBuilder.append(instrument.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(period.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getKey());
-				key = keyBuilder.toString();
-
-				StringBuilder textBuilder = new StringBuilder();
-				textBuilder.append(instrument.getDescription());
-				textBuilder.append(" ");
-				textBuilder.append(period);
-				textBuilder.append(" ");
-				textBuilder.append(getId());
-				textBuilder.append(" ");
-				textBuilder.append(getKey());
-				textBuilder.append(" Ranges");
-				String text = textBuilder.toString();
-
-				Persistor persistor = getViewRanges().getPersistor();
-				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
-
-				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
-				model.addColumn(Fields.RANGE_NAME);
-				model.addColumn(Fields.RANGE_MIN_MAX);
-				model.addColumn(Fields.RANGE_MINIMUM);
-				model.addColumn(Fields.RANGE_MAXIMUM);
-				model.addColumn(Fields.RANGE_AVERAGE);
-				model.addColumn(Fields.RANGE_STDDEV);
-				model.addColumn(Fields.RANGE_RANGE);
-
-				model.setRecordSet(getViewRanges().getPersistor().select(null));
-
-				TableRecord table = new TableRecord();
-				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
-				table.setModel(model);
-				table.setSelectedRow(0);
-
-				TablePane tablePane = new TablePane(table);
-
-				IconGrid iconGrid = new IconGrid();
-				iconGrid.setSize(16, 16);
-				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
-
-				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
-				MLT.getStatusBar().removeProgress(key);
-
-			} catch (Exception exc) {
-				Logs.catching(exc);
-				MLT.getStatusBar().removeProgress(key);
-			}
-		}
-	}
-
-	/**
-	 * Browse the ranges.
-	 */
-	class ActionBrowseRangesRaw extends ActionRun {
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public void run() {
-			String key = null;
-			try {
-				Instrument instrument = getInstrument();
-				Period period = getPeriod();
-
-				StringBuilder keyBuilder = new StringBuilder();
-				keyBuilder.append("BROWSE-RANGES-RAW");
-				keyBuilder.append(instrument.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(period.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getKey());
-				key = keyBuilder.toString();
-
-				StringBuilder textBuilder = new StringBuilder();
-				textBuilder.append(instrument.getDescription());
-				textBuilder.append(" ");
-				textBuilder.append(period);
-				textBuilder.append(" ");
-				textBuilder.append(getId());
-				textBuilder.append(" ");
-				textBuilder.append(getKey());
-				textBuilder.append(" Ranges raw");
-				String text = textBuilder.toString();
-
-				Persistor persistor = getTableRanges().getPersistor();
-				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
-
-				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
-				for (int i = 0; i < getTableRanges().getFieldCount(); i++) {
-					String alias = getTableRanges().getField(i).getAlias();
-					if (alias.equals(Fields.BAR_TIME)) {
-						continue;
-					}
-					model.addColumn(alias);
-				}
-
-				Order order = new Order();
-				order.add(getTableRanges().getField(Fields.RANGE_NAME));
-				order.add(getTableRanges().getField(Fields.RANGE_MIN_MAX));
-				order.add(getTableRanges().getField(Fields.RANGE_VALUE));
-
-				model.setRecordSet(getTableRanges().getPersistor().select(null, order));
-
-				TableRecord table = new TableRecord(true);
-				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
-				table.setModel(model);
-				table.setSelectedRow(0);
-
-				TablePane tablePane = new TablePane(table);
-
-				IconGrid iconGrid = new IconGrid();
-				iconGrid.setSize(16, 16);
-				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
-
-				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
-				MLT.getStatusBar().removeProgress(key);
-
-			} catch (Exception exc) {
-				Logs.catching(exc);
-				MLT.getStatusBar().removeProgress(key);
-			}
-		}
-	}
 
 	/**
 	 * Browse the statistics.
@@ -368,25 +214,10 @@ public class StatisticsAverages extends Statistics {
 
 			frame.addTasks(new TaskAveragesRaw(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
-			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
+//			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
 			frame.show();
 		}
 
-	}
-
-	/**
-	 * Range calculator (average + 2 * std_dev)
-	 */
-	class CalculatorRange implements Calculator {
-		@Override
-		public Value getValue(Record record) {
-			String min_max = record.getValue(Fields.RANGE_MIN_MAX).getString();
-			double average = record.getValue(Fields.RANGE_AVERAGE).getDouble();
-			double std_dev = record.getValue(Fields.RANGE_STDDEV).getDouble();
-			double mult = (min_max.equals("min") ? -1 : 1);
-			double value = average + (2 * mult * std_dev);
-			return new Value(value);
-		}
 	}
 
 	/**
@@ -542,6 +373,9 @@ public class StatisticsAverages extends Statistics {
 
 	/** Map of field lists. */
 	private HashMap<String, List<Field>> mapLists = new HashMap<>();
+
+	/** Range factor to calculate min-max: average +- factor * std_dev. */
+	private double rangeStdDevFactor = 0.5;
 
 	/**
 	 * Constructor.
@@ -1067,43 +901,6 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @return The map with the normalizers of the range fields.
-	 */
-	public HashMap<String, Normalizer> getMapNormalizers() throws PersistorException {
-		HashMap<String, Normalizer> map = new HashMap<>();
-		RecordSet recordSet = getViewRanges().getPersistor().select(null);
-		for (Record record : recordSet) {
-			String name = record.getValue(Fields.RANGE_NAME).getString();
-			String min_max = record.getValue(Fields.RANGE_MIN_MAX).getString();
-			double minimum = record.getValue(Fields.RANGE_MINIMUM).getDouble();
-			double maximum = record.getValue(Fields.RANGE_MAXIMUM).getDouble();
-			double range = record.getValue(Fields.RANGE_RANGE).getDouble();
-			if (min_max.equals("max")) {
-				if (range > maximum) {
-					range = maximum;
-				}
-			} else {
-				if (range < minimum) {
-					range = minimum;
-				}
-			}
-			Normalizer normalizer = map.get(name);
-			if (normalizer == null) {
-				normalizer = new Normalizer();
-				normalizer.setNormalizedLow(-1);
-				normalizer.setNormalizedHigh(1);
-				map.put(name, normalizer);
-			}
-			if (min_max.equals("max")) {
-				normalizer.setDataHigh(range);
-			} else {
-				normalizer.setDataLow(range);
-			}
-		}
-		return map;
-	}
-
-	/**
 	 * Return the name of the average.
 	 * 
 	 * @param index The average index.
@@ -1244,27 +1041,6 @@ public class StatisticsAverages extends Statistics {
 		optionBrowseStats.setSortIndex(2);
 		options.add(optionBrowseStats);
 
-		/* Browse ranges. */
-		Option optionBrowseRanges = new Option();
-		optionBrowseRanges.setKey("BROWSE-RANGES");
-		optionBrowseRanges.setText("Browse ranges statistic values");
-		optionBrowseRanges
-			.setToolTip("Browse ranges minimum, maximum, average and standard deviation values");
-		optionBrowseRanges.setAction(new ActionBrowseRanges());
-		optionBrowseRanges.setOptionGroup(new Option.Group("BROWSE", 2));
-		optionBrowseRanges.setSortIndex(2);
-		options.add(optionBrowseRanges);
-
-		/* Browse ranges raw values. */
-		Option optionBrowseRangesRaw = new Option();
-		optionBrowseRangesRaw.setKey("BROWSE-RANGES-RAW");
-		optionBrowseRangesRaw.setText("Browse ranges raw values");
-		optionBrowseRangesRaw.setToolTip("Browse ranges raw values");
-		optionBrowseRangesRaw.setAction(new ActionBrowseRangesRaw());
-		optionBrowseRangesRaw.setOptionGroup(new Option.Group("BROWSE", 2));
-		optionBrowseRangesRaw.setSortIndex(3);
-		options.add(optionBrowseRangesRaw);
-
 		return options;
 	}
 
@@ -1356,35 +1132,17 @@ public class StatisticsAverages extends Statistics {
 		tableRanges.setSchema(DB.schema_server());
 		tableRanges.setName(name);
 
-		/* Name of the field. */
-		Field fieldName = Domains.getString(Fields.RANGE_NAME, 60, "Name", "Field name");
-		tableRanges.addField(fieldName);
+		tableRanges.addField(Domains.getString(Fields.RANGE_NAME, 60, "Name"));
+		tableRanges.addField(Domains.getDouble(Fields.RANGE_MINIMUM, "Minimum"));
+		tableRanges.addField(Domains.getDouble(Fields.RANGE_MAXIMUM, "Maximum"));
+		tableRanges.addField(Domains.getDouble(Fields.RANGE_AVERAGE, "Average"));
+		tableRanges.addField(Domains.getDouble(Fields.RANGE_STDDEV, "Std Dev"));
 
-		/* Min-max indicator. */
-		Field fieldMinMax = Domains.getString(Fields.RANGE_MIN_MAX, 3, "Min-Max", "Min-Max");
-		tableRanges.addField(fieldMinMax);
+		/* Primary key. */
+		tableRanges.getField(Fields.RANGE_NAME).setPrimaryKey(true);
 
-		/* Value. */
-		Field fieldValue = Domains.getDouble(Fields.RANGE_VALUE, "Value", "Value");
-		fieldValue.setStringConverter(getNumberConverter(8));
-		tableRanges.addField(fieldValue);
-
-		/* Reference of the time of the registered values. */
-		Field fieldTime = new FieldTime(Fields.BAR_TIME);
-		tableRanges.addField(fieldTime);
-		tableRanges.addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
-
-		/* Non unique index on name, min-max and period. */
-		Index index = new Index();
-		index.add(tableRanges.getField(Fields.RANGE_NAME));
-		index.add(tableRanges.getField(Fields.RANGE_MIN_MAX));
-		index.add(tableRanges.getField(Fields.BAR_TIME));
-		index.setUnique(false);
-		tableRanges.addIndex(index);
-
-		View view = tableRanges.getComplexView(index);
+		View view = tableRanges.getComplexView(tableRanges.getPrimaryKey());
 		tableRanges.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
-
 		return tableRanges;
 	}
 
@@ -1509,63 +1267,15 @@ public class StatisticsAverages extends Statistics {
 		tableStates.addField(normalized);
 
 		tableStates.getField(Fields.BAR_TIME).setPrimaryKey(true);
-		
+
 		Index index = new Index();
 		index.add(tableStates.getField(Fields.STATES_NORMALIZED));
 		tableStates.addIndex(index);
-		
+
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
 		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
 		return tableStates;
-	}
-
-	/**
-	 * Return the ranges view.
-	 * 
-	 * @return
-	 */
-	public View getViewRanges() {
-
-		View view = new View();
-		view.setMasterTable(getTableRanges());
-
-		Field name = getTableRanges().getField(Fields.RANGE_NAME);
-		Field min_max = getTableRanges().getField(Fields.RANGE_MIN_MAX);
-		Field minimum = Domains.getDouble(Fields.RANGE_MINIMUM, "Minimum", "Minimum");
-		minimum.setStringConverter(getNumberConverter(8));
-		minimum.setFunction("min(" + Fields.RANGE_VALUE + ")");
-		Field maximum = Domains.getDouble(Fields.RANGE_MAXIMUM, "Maximum", "Maximum");
-		maximum.setStringConverter(getNumberConverter(8));
-		maximum.setFunction("max(" + Fields.RANGE_VALUE + ")");
-		Field average = Domains.getDouble(Fields.RANGE_AVERAGE, "Average", "Average");
-		average.setStringConverter(getNumberConverter(8));
-		average.setFunction("avg(" + Fields.RANGE_VALUE + ")");
-		Field std_dev = Domains.getDouble(Fields.RANGE_STDDEV, "Std Dev", "Std Dev");
-		std_dev.setStringConverter(getNumberConverter(8));
-		std_dev.setFunction("stddev(" + Fields.RANGE_VALUE + ")");
-		Field range =
-			Domains.getDouble(Fields.RANGE_RANGE, "Range (avg+-2*stddev)", "Range (avg+-2*stddev)");
-		range.setPersistent(false);
-		range.setStringConverter(getNumberConverter(8));
-		range.setCalculator(new CalculatorRange());
-
-		view.addField(name);
-		view.addField(min_max);
-		view.addField(minimum);
-		view.addField(maximum);
-		view.addField(average);
-		view.addField(std_dev);
-		view.addField(range);
-
-		view.addGroupBy(name);
-		view.addGroupBy(min_max);
-
-		view.addOrderBy(name);
-		view.addOrderBy(min_max);
-
-		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
-		return view;
 	}
 
 	/**

@@ -30,11 +30,11 @@ public class Domains {
 	/**
 	 * Returns field definition for a double value.
 	 * 
-	 * @param name Field name.
+	 * @param name   Field name.
+	 * @param header The field header.
 	 * @return The field definition.
 	 */
-	public static Field getDouble(String name) {
-		String header = Strings.parseCapitalize(name, "_", " ");
+	public static Field getDouble(String name, String header) {
 		return getDouble(name, name, header, header, header);
 	}
 
@@ -82,6 +82,18 @@ public class Domains {
 	 */
 	public static Field getString(String name, int length) {
 		String header = Strings.parseCapitalize(name, "_", " ");
+		return getString(name, name, length, header, header, header);
+	}
+
+	/**
+	 * Returns field definition for a string value.
+	 * 
+	 * @param name   Field name.
+	 * @param length Field length.
+	 * @param header The field header.
+	 * @return The field definition.
+	 */
+	public static Field getString(String name, int length, String header) {
 		return getString(name, name, length, header, header, header);
 	}
 

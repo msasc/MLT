@@ -28,6 +28,8 @@ import com.mlt.db.Record;
 import com.mlt.db.RecordIterator;
 import com.mlt.db.Table;
 import com.mlt.db.Value;
+import com.mlt.db.ValueMap;
+import com.mlt.desktop.Option;
 import com.mlt.ml.function.Normalizer;
 
 import app.mlt.plaf.db.Fields;
@@ -65,12 +67,28 @@ public class TaskAveragesNormalize extends TaskAverages {
 	@Override
 	protected void compute() throws Throwable {
 
+		/* Query option. */
+		Option option = queryOption();
+		if (option.equals("CANCEL")) {
+			throw new Exception("Calculation cancelled by user.");
+		}
+		if (option.equals("START")) {
+			Persistor persistor = stats.getTableStates().getPersistor();
+			ValueMap map = new ValueMap();
+			map.put(Fields.STATES_NORMALIZED, new Value(""));
+			Field field = persistor.getField(Fields.STATES_NORMALIZED);
+			Criteria criteria = new Criteria();
+			criteria.add(Condition.fieldEQ(field, new Value("Y")));
+			persistor.update(criteria, map);
+		}
+		
 		/* Count. */
 		calculateTotalWork();
 
 		/* List of fields to normalize (raw values) and normalizers. */
 		List<Field> fields = stats.getFieldListToNormalize();
-		HashMap<String, Normalizer> normalizers = stats.getMapNormalizers();
+//		HashMap<String, Normalizer> normalizers = stats.getNormalizers();
+		HashMap<String, Normalizer> normalizers = null;
 		if (normalizers.size() != fields.size()) {
 			throw new IllegalStateException("Bad normalizers");
 		}
@@ -129,7 +147,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 		Persistor persistor = stats.getTableStates().getPersistor();
 		Field field = persistor.getField(Fields.STATES_NORMALIZED);
 		Criteria criteria = new Criteria();
-		criteria.add(Condition.fieldEQ(field, new Value("")));
+		criteria.add(Condition.fieldNE(field, new Value("Y")));
 		return criteria;
 	}
 }

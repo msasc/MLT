@@ -110,7 +110,7 @@ public class Candles {
 		double center = bodyCenter(candle);
 		double range = range(candle);
 		double low = low(candle);
-		double pos = (center - low) / range;
+		double pos = (range != 0 ? (center - low) / range : 1);
 		return pos;
 	}
 	

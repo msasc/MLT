@@ -89,6 +89,17 @@ public abstract class Task implements Runnable, Callable<Void> {
 	/** Total work. */
 	private long totalWork = 0;
 
+	/** Estimated speed: work done. */
+	private double speedWork = -1;
+	/** Estimated speed: time. */
+	private double speedTime = -1;
+	/** Estimated speed: work / time. */
+	private double speedEstimated = -1;
+	/** Estimated speed: waiting time (10 seconds) in millis. */
+	private double speedWait = 10000;
+	/** A boolean to control whether to estimate speed. */
+	private boolean estimateSpeed = true;
+
 	/** Progress decimals for the progress message. */
 	private int progressDecimals = 1;
 	/** Progress modulus. */
@@ -98,8 +109,7 @@ public abstract class Task implements Runnable, Callable<Void> {
 	private boolean counting = false;
 	/**
 	 * Timer to update the time elapsed when it is not possible to predict the total
-	 * time or when there is no step
-	 * notification.
+	 * time or when there is no step notification.
 	 */
 	private Timer elapsedTimer;
 	/** A boolean that indicates if cancel is supported. */
@@ -340,8 +350,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 		if (timeStart < 0) {
 			return "";
 		}
-		double currenTime = System.currentTimeMillis();
-		timeElapsed = currenTime - timeStart;
+		double currentTime = System.currentTimeMillis();
+		timeElapsed = currentTime - timeStart;
 		StringBuilder b = new StringBuilder();
 		b.append(getText("tokenTime"));
 		b.append(" ");
@@ -349,9 +359,35 @@ public abstract class Task implements Runnable, Callable<Void> {
 		b.append(" ");
 		b.append(getTimeString(timeElapsed));
 		if (!counting && !indeterminate && totalWork > 0) {
-			double progress = (double) workDone / totalWork;
-			timeEstimated = timeElapsed / progress;
+
+			/* Estimated speed. */
+			if (estimateSpeed) {
+				if (speedWork == -1 && speedTime == -1) {
+					speedWork = workDone;
+					speedTime = currentTime;
+				}
+				if (currentTime - speedTime >= speedWait && workDone > speedWork) {
+					double work = workDone - speedWork;
+					double time = currentTime - speedTime;
+					speedEstimated = work / time;
+					speedWork = -1;
+					speedTime = -1;
+				}
+			}
+
+			if (speedEstimated == -1) {
+				/* No estimated speed, estimate time proportionally. */
+				double progress = (double) workDone / totalWork;
+				timeEstimated = timeElapsed / progress;
+			} else {
+				/* Time pending from last speed estimated. */
+				double workPending = totalWork - workDone;
+				double timePending = workPending / speedEstimated;
+				timeEstimated = timeElapsed + timePending;
+			}
 			timeRemaining = timeEstimated - timeElapsed;
+
+			/* Rest of message. */
 			b.append(", ");
 			b.append(getText("tokenEstimated").toLowerCase());
 			b.append(" ");
@@ -768,6 +804,13 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
+	 * @param estimateSpeed A boolean that indicates whether to estimate speed.
+	 */
+	public void setEstimateSpeed(boolean estimateSpeed) {
+		this.estimateSpeed = estimateSpeed;
+	}
+
+	/**
 	 * Set the exception.
 	 *
 	 * @param exc The exception.
@@ -1006,7 +1049,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 			/*
 			 * Do the normal progress update.
 			 */
-			// Adjustments.
+
+			/* Adjustments. */
 			if (Double.isInfinite(workDone) || Double.isNaN(workDone)) {
 				workDone = 0;
 			}
@@ -1023,11 +1067,11 @@ public abstract class Task implements Runnable, Callable<Void> {
 				workDone = totalWork;
 			}
 
-			// Register.
+			/* Register. */
 			this.workDone = (workDone > totalWork ? totalWork : workDone);
 			this.totalWork = totalWork;
 
-			// Notify.
+			/* Notify. */
 			notifyProgress(workDone, totalWork);
 		}
 	}

@@ -825,7 +825,8 @@ public class DBEngine {
 	 * @throws SQLException If such an error occurs.
 	 */
 	public int executeUpdate(Table table, Filter filter, ValueMap map) throws SQLException {
-		return executeUpdate(getDBEngineAdapter().getStatementUpdate(table, filter, map),
+		return executeUpdate(
+			getDBEngineAdapter().getStatementUpdate(table, filter, map),
 			(Connection) null);
 	}
 

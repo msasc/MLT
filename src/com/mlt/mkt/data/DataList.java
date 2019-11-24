@@ -185,10 +185,10 @@ public abstract class DataList {
 				dataPlotters.add(new CandlestickPlotter());
 				break;
 			case HISTOGRAM:
-				dataPlotters.add(new HistogramPlotter(Data.VOLUME));
+				dataPlotters.add(new HistogramPlotter(OHLC.VOLUME));
 				break;
 			case LINE:
-				dataPlotters.add(new LinePlotter(Data.CLOSE));
+				dataPlotters.add(new LinePlotter(OHLC.CLOSE));
 				break;
 			default:
 				break;

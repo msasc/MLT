@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.db.converters;
+package com.mlt.desktop.converters;
 
 import java.text.ParseException;
 import java.util.Locale;

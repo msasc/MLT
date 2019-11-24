@@ -17,31 +17,34 @@
 
 package app.mlt.plaf;
 
+import java.awt.Font;
 import java.util.Currency;
-import java.util.HashMap;
 
+import com.mlt.db.Calculator;
 import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
 import com.mlt.db.Field;
+import com.mlt.db.ForeignKey;
+import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorDDL;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
+import com.mlt.db.Types;
 import com.mlt.db.Value;
+import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.db.rdbms.DBPersistorDDL;
+import com.mlt.desktop.EditContext;
 import com.mlt.desktop.LookupRecords;
+import com.mlt.desktop.control.TextArea;
+import com.mlt.desktop.layout.Dimension;
+import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
-import app.mlt.plaf.db.Fields;
-import app.mlt.plaf.db.tables.TableTicker;
-import app.mlt.plaf.db.tables.TableInstruments;
-import app.mlt.plaf.db.tables.TablePeriods;
-import app.mlt.plaf.db.tables.TableServers;
-import app.mlt.plaf.db.tables.TableStatistics;
-import app.mlt.plaf.db.tables.TableTickers;
+import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**
  * Statically centralizes access to lookups, persistors, records, recordsets,
@@ -51,17 +54,35 @@ import app.mlt.plaf.db.tables.TableTickers;
  */
 public class DB {
 
+	/**
+	 * Calculator to display the parameters description..
+	 */
+	static class ParamsDesc implements Calculator {
+		@Override
+		public Value getValue(Record record) {
+			String id = record.getValue(Fields.STATISTICS_ID).toString();
+			String params = record.getValue(Fields.STATISTICS_PARAMS).toString();
+			if (id.equals("AVG") && !params.isEmpty()) {
+				try {
+					StatisticsAverages stats = StatisticsAverages.getStatistics(record);
+					return new Value(stats.getParametersDescription());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			return null;
+		}
+	}
+
 	public static final String INSTRUMENTS = "instruments";
 	public static final String PERIODS = "periods";
 	public static final String SERVERS = "servers";
 	public static final String STATISTICS = "statistics";
 	public static final String TICKERS = "tickers";
 
-	/** Map of tables. */
-	private static HashMap<String, Table> tables = new HashMap<>();
 	/** DDL. */
 	private static PersistorDDL ddl;
-	
+
 	/**
 	 * Return the proper persistor DDL.
 	 * 
@@ -385,89 +406,201 @@ public class DB {
 	}
 
 	/**
-	 * Access the instruments table.
-	 * 
-	 * @return The table.
+	 * @return The instruments table.
 	 */
-	public static TableInstruments table_instruments() {
-		TableInstruments table = (TableInstruments) tables.get(INSTRUMENTS);
-		if (table == null) {
-			table = new TableInstruments();
-			tables.put(INSTRUMENTS, table);
-		}
+	public static Table table_instruments() {
+
+		Table table = new Table();
+		table.setName(DB.INSTRUMENTS);
+		table.setSchema(DB.schema_system());
+
+		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
+		table.addField(Fields.getString(Fields.INSTRUMENT_ID, 20, "Instrument"));
+		table.addField(Fields.getString(Fields.INSTRUMENT_DESC, 120, "Instrument description"));
+		table.addField(Fields.getDouble(Fields.INSTRUMENT_PIP_VALUE, "Pip value"));
+		table.addField(Fields.getInteger(Fields.INSTRUMENT_PIP_SCALE, "Pip scale"));
+		table.addField(Fields.getDouble(
+			Fields.INSTRUMENT_TICK_VALUE, "Tick value", "Instrument tick value"));
+		table.addField(Fields.getInteger(
+			Fields.INSTRUMENT_TICK_SCALE, "Tick scale", "Instrument tick scale"));
+		table.addField(Fields.getInteger(
+			Fields.INSTRUMENT_VOLUME_SCALE, "Volume scale", "Instrument volume scale"));
+		table.addField(Fields.getString(
+			Fields.INSTRUMENT_PRIMARY_CURRENCY, 6, "P-Currency", "Primary currency"));
+		table.addField(Fields.getString(
+			Fields.INSTRUMENT_SECONDARY_CURRENCY, 6, "S-Currency", "Secondary currency"));
+
+		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
+		table.getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);
+
+		table.setPersistor(
+			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
+
 		return table;
 	}
 
 	/**
-	 * Access the periods table.
-	 * 
-	 * @return The table.
+	 * @return The periods table.
 	 */
-	public static TablePeriods table_periods() {
-		TablePeriods table = (TablePeriods) tables.get(PERIODS);
-		if (table == null) {
-			table = new TablePeriods();
-			tables.put(PERIODS, table);
-		}
+	public static Table table_periods() {
+		Table table = new Table();
+		table.setName(DB.PERIODS);
+		table.setSchema(DB.schema_system());
+
+		table.addField(Fields.getString(Fields.PERIOD_ID, 5, "Period id"));
+		table.addField(Fields.getString(Fields.PERIOD_NAME, 15, "Period name"));
+		table.addField(Fields.getInteger(Fields.PERIOD_UNIT_INDEX, "Period unit index"));
+		table.addField(Fields.getInteger(Fields.PERIOD_SIZE, "Period size"));
+
+		table.getField(Fields.PERIOD_ID).setPrimaryKey(true);
+
+		Order order = new Order();
+		order.add(table.getField(Fields.PERIOD_UNIT_INDEX));
+		order.add(table.getField(Fields.PERIOD_SIZE));
+
+		table.setPersistor(new DBPersistor(MLT.getDBEngine(), table.getComplexView(order)));
+
 		return table;
 	}
 
 	/**
-	 * Access the servers table.
-	 * 
-	 * @return The table.
+	 * @return The servers table.
 	 */
-	public static TableServers table_servers() {
-		TableServers table = (TableServers) tables.get(SERVERS);
-		if (table == null) {
-			table = new TableServers();
-			tables.put(SERVERS, table);
-		}
+	public static Table table_servers() {
+		Table table = new Table();
+		table.setName(DB.SERVERS);
+		table.setSchema(DB.schema_system());
+
+		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
+		table.addField(Fields.getString(Fields.SERVER_NAME, 60, "Server name"));
+		table.addField(Fields.getString(Fields.SERVER_TITLE, 120, "Server title"));
+
+		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
+
+		table.setPersistor(
+			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
+
 		return table;
 	}
 
 	/**
-	 * Access the statistics table.
-	 * 
-	 * @return The table.
+	 * @return The statistics table.
 	 */
-	public static TableStatistics table_statistics() {
-		TableStatistics table = (TableStatistics) tables.get(STATISTICS);
-		if (table == null) {
-			table = new TableStatistics();
-			tables.put(STATISTICS, table);
-		}
+	public static Table table_statistics() {
+		Table table = new Table();
+		table.setName(DB.STATISTICS);
+		table.setSchema(DB.schema_system());
+
+		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
+		table.addField(Fields.getString(Fields.INSTRUMENT_ID, 20, "Instrument"));
+		table.addField(Fields.getString(Fields.PERIOD_ID, 5, "Period id"));
+
+		table.addField(Fields.getString(Fields.STATISTICS_ID, 5, "Id", "Statistics id"));
+		table.getField(Fields.STATISTICS_ID).addPossibleValue("AVG", "Averages");
+
+		table.addField(Fields.getString(Fields.STATISTICS_KEY, 2, "Key", "Statistics key"));
+
+		Field params =
+			Fields.getString(
+				Fields.STATISTICS_PARAMS,
+				Types.FIXED_LENGTH * 10,
+				"Statistics params");
+		TextArea textArea = new TextArea();
+		textArea.setPreferredSize(new Dimension(600, 300));
+		textArea.setFont(new Font("Courier", Font.PLAIN, 14));
+		params.getProperties().setObject(EditContext.EDIT_FIELD, textArea);
+		params.getProperties().setObject(EditContext.FILL, Fill.BOTH);
+		table.addField(params);
+
+		Field paramsDesc =
+			Fields.getString(
+				Fields.STATISTICS_PARAMS_DESC,
+				1024,
+				"Parameters description");
+		paramsDesc.setPersistent(false);
+		paramsDesc.setCalculator(new ParamsDesc());
+		table.addField(paramsDesc);
+
+		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
+		table.getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);
+		table.getField(Fields.PERIOD_ID).setPrimaryKey(true);
+		table.getField(Fields.STATISTICS_ID).setPrimaryKey(true);
+		table.getField(Fields.STATISTICS_KEY).setPrimaryKey(true);
+
+		Table tablePeriods = DB.table_periods();
+		ForeignKey fkPeriods = new ForeignKey(false);
+		fkPeriods.setLocalTable(table);
+		fkPeriods.setForeignTable(tablePeriods);
+		fkPeriods.add(table.getField(Fields.PERIOD_ID),
+			tablePeriods.getField(Fields.PERIOD_ID));
+		table.addForeignKey(fkPeriods);
+
+		table.setPersistor(
+			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
+
 		return table;
 	}
 
 	/**
-	 * Access to the price table.
-	 * 
 	 * @param instrument Instrument.
 	 * @param period     Period.
-	 * @return The table.
+	 * @return The ticker table.
 	 */
-	public static TableTicker table_ticker(Instrument instrument, Period period) {
-		String name = name_ticker(instrument, period);
-		TableTicker table = (TableTicker) tables.get(name);
-		if (table == null) {
-			table = new TableTicker(instrument, period);
-			tables.put(name, table);
-		}
+	public static Table table_ticker(Instrument instrument, Period period) {
+		Table table = new Table();
+		table.setName(DB.name_ticker(instrument, period));
+		table.setSchema(DB.schema_server());
+
+		table.addField(Fields.getLong(Fields.BAR_TIME, "Time"));
+		table.addField(Fields.getData(instrument, Fields.BAR_OPEN, "Open"));
+		table.addField(Fields.getData(instrument, Fields.BAR_HIGH, "High"));
+		table.addField(Fields.getData(instrument, Fields.BAR_LOW, "Low"));
+		table.addField(Fields.getData(instrument, Fields.BAR_CLOSE, "Close"));
+		table.addField(Fields.getDouble(Fields.BAR_VOLUME, "Volume"));
+		table.getField(Fields.BAR_VOLUME).setDecimals(instrument.getVolumeScale());
+		table.addField(
+			Fields.getTimeFmt(period, Fields.BAR_TIME, Fields.BAR_TIME_FMT, "Time fmt"));
+
+		table.getField(Fields.BAR_TIME).setPrimaryKey(true);
+		table.setPersistor(
+			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
+
 		return table;
 	}
 
 	/**
-	 * Access the tickers table.
-	 * 
-	 * @return The table.
+	 * @return The tickers table.
 	 */
-	public static TableTickers table_tickers() {
-		TableTickers table = (TableTickers) tables.get(TICKERS);
-		if (table == null) {
-			table = new TableTickers();
-			tables.put(TICKERS, table);
-		}
+	public static Table table_tickers() {
+		Table table = new Table();
+		table.setName(DB.TICKERS);
+		table.setSchema(DB.schema_system());
+
+		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
+		table.addField(Fields.getString(Fields.INSTRUMENT_ID, 20, "Instrument"));
+		table.addField(Fields.getString(Fields.PERIOD_ID, 5, "Period id"));
+		table.addField(Fields.getString(Fields.TABLE_NAME, 30, "Table name"));
+
+		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
+		table.getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);
+		table.getField(Fields.PERIOD_ID).setPrimaryKey(true);
+
+		Table tablePeriods = DB.table_periods();
+		ForeignKey fkPeriods = new ForeignKey(false);
+		fkPeriods.setLocalTable(table);
+		fkPeriods.setForeignTable(tablePeriods);
+		fkPeriods.add(
+			table.getField(Fields.PERIOD_ID),
+			tablePeriods.getField(Fields.PERIOD_ID));
+		table.addForeignKey(fkPeriods);
+
+		Order order = new Order();
+		order.add(table.getField(Fields.SERVER_ID));
+		order.add(table.getField(Fields.INSTRUMENT_ID));
+		order.add(tablePeriods.getField(Fields.PERIOD_UNIT_INDEX));
+		order.add(tablePeriods.getField(Fields.PERIOD_SIZE));
+
+		table.setPersistor(new DBPersistor(MLT.getDBEngine(), table.getComplexView(order)));
 		return table;
 	}
 

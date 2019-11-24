@@ -27,14 +27,15 @@ import java.util.List;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
-import com.mlt.db.Calculator;
 import com.mlt.db.Field;
 import com.mlt.db.FieldGroup;
 import com.mlt.db.Index;
 import com.mlt.db.ListPersistor;
+import com.mlt.db.Persistor;
+import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
+import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
-import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.desktop.Option;
@@ -47,10 +48,12 @@ import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.control.TableRecordModel;
 import com.mlt.desktop.control.table.SelectionMode;
+import com.mlt.desktop.converters.NumberScaleConverter;
 import com.mlt.desktop.icon.IconGrid;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
+import com.mlt.ml.function.Normalizer;
 import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
@@ -62,13 +65,8 @@ import com.mlt.util.xml.XMLAttribute;
 import com.mlt.util.xml.XMLWriter;
 
 import app.mlt.plaf.DB;
+import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Domains;
-import app.mlt.plaf.db.Fields;
-import app.mlt.plaf.db.converters.NumberScaleConverter;
-import app.mlt.plaf.db.fields.FieldDataInst;
-import app.mlt.plaf.db.fields.FieldTime;
-import app.mlt.plaf.db.fields.FieldTimeFmt;
 
 /**
  * Statistics built on a list of averages. Average statistics is the main source
@@ -193,6 +191,77 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Browse the ranges table.
+	 */
+	class ActionBrowseRanges extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				Instrument instrument = getInstrument();
+				Period period = getPeriod();
+
+				StringBuilder keyBuilder = new StringBuilder();
+				keyBuilder.append("BROWSE-RANGES-");
+				keyBuilder.append(instrument.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(period.getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getId());
+				keyBuilder.append("-");
+				keyBuilder.append(getKey());
+				String key = keyBuilder.toString();
+
+				StringBuilder textBuilder = new StringBuilder();
+				textBuilder.append(instrument.getDescription());
+				textBuilder.append(" ");
+				textBuilder.append(period);
+				textBuilder.append(" ");
+				textBuilder.append(getId());
+				textBuilder.append(" ");
+				textBuilder.append(getKey());
+				textBuilder.append(" Ranges");
+				String text = textBuilder.toString();
+
+				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
+
+				Persistor persistor = getTableRanges().getPersistor();
+
+				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
+				model.addColumn(Fields.RANGE_NAME);
+				model.addColumn(Fields.RANGE_MINIMUM);
+				model.addColumn(Fields.RANGE_MAXIMUM);
+				model.addColumn(Fields.RANGE_AVERAGE);
+				model.addColumn(Fields.RANGE_STDDEV);
+				model.addColumn(Fields.RANGE_AVG_STD_10);
+				model.addColumn(Fields.RANGE_AVG_STD_20);
+
+				model.setRecordSet(persistor.select(null));
+
+				TableRecord table = new TableRecord(true);
+				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
+				table.setModel(model);
+				table.setSelectedRow(0);
+
+				TablePane tablePane = new TablePane(table);
+
+				IconGrid iconGrid = new IconGrid();
+				iconGrid.setSize(16, 16);
+				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
+
+				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
+				MLT.getStatusBar().removeProgress(key);
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
 	 * Action to calculate the statistics by a list of tasks.
 	 */
 	class ActionCalculate extends ActionRun {
@@ -214,7 +283,7 @@ public class StatisticsAverages extends Statistics {
 
 			frame.addTasks(new TaskAveragesRaw(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
-//			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
 			frame.show();
 		}
 
@@ -374,9 +443,6 @@ public class StatisticsAverages extends Statistics {
 	/** Map of field lists. */
 	private HashMap<String, List<Field>> mapLists = new HashMap<>();
 
-	/** Range factor to calculate min-max: average +- factor * std_dev. */
-	private double rangeStdDevFactor = 0.5;
-
 	/**
 	 * Constructor.
 	 * 
@@ -500,7 +566,7 @@ public class StatisticsAverages extends Statistics {
 		name = getNameCandle(name, fast, slow, index0, index1, suffix);
 		header = getHeaderCandle(header, fast, slow, index0, index1, suffix);
 		label = getLabelCandle(label, fast, slow, index0, index1, suffix);
-		Field field = Domains.getDouble(name, header, label);
+		Field field = Fields.getDouble(name, header, label);
 		field.setStringConverter(getNumberConverter(scale));
 		return field;
 	}
@@ -552,7 +618,7 @@ public class StatisticsAverages extends Statistics {
 				String name = getNameAverage(i);
 				String header = getHeaderAverage(i);
 				String label = getLabelAverage(i);
-				Field field = Domains.getDouble(name, header, label);
+				Field field = Fields.getDouble(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
@@ -576,35 +642,45 @@ public class StatisticsAverages extends Statistics {
 			int slow = averages.get(i).getPeriod();
 			int count = slow / fast;
 			for (int j = 0; j < count; j++) {
-				// @formatter:off
 
-					/* Open, high, low, close. */
-					fields.add(getCandleField("open", "Open", "Open", fast, slow, j, 4));
-					fields.add(getCandleField("high", "High", "High", fast, slow, j, 4));
-					fields.add(getCandleField("low", "Low", "Low", fast, slow, j, 4));
-					fields.add(getCandleField("close", "Close", "Close", fast, slow, j, 4));
+				/* Time, open, high, low, close. */
+				String timeName = getNameCandle("time", fast, slow, j);
+				String timeHeader = getHeaderCandle("Time", fast, slow, j);
+				fields.add(Fields.getLong(timeName, timeHeader));
+				String timeNameFmt = timeName + "_fmt";
+				String timeHeaderFmt = timeHeader + " fmt";
+				fields.add(Fields.getTimeFmt(getPeriod(), timeName, timeNameFmt, timeHeaderFmt));
+				fields.add(getCandleField("open", "Open", "Open", fast, slow, j, 4));
+				fields.add(getCandleField("high", "High", "High", fast, slow, j, 4));
+				fields.add(getCandleField("low", "Low", "Low", fast, slow, j, 4));
+				fields.add(getCandleField("close", "Close", "Close", fast, slow, j, 4));
 
-					/* Raw values. */
-					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 4, "raw"));
-					fields.add(getCandleField("body_factor", "Body factor", "factor", fast, slow, j, 8, "raw"));
-					fields.add(getCandleField("body_pos", "Body pos", "Body position", fast, slow, j, 8, "raw"));
-					if (j < count - 1) {
-						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "raw"));
-					}
-					fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "raw"));
-					
-					/* Normalized values. */
-					fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 8, "nrm"));
-					fields.add(getCandleField("body_factor", "Body factor", "factor", fast, slow, j, 8, "nrm"));
-					fields.add(getCandleField("body_pos", "Body pos", "Body position", fast, slow, j, 8, "nrm"));
-					if (j < count - 1) {
-						fields.add(getCandleField("center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "nrm"));
-					}
-					
-					/* Sign, continuous from -1 to 1. */
-					fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "nrm"));
-					
-					// @formatter:on
+				/* Raw values. */
+				fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 4, "raw"));
+				fields.add(getCandleField(
+					"body_factor", "Body factor", "factor", fast, slow, j, 8, "raw"));
+				fields.add(getCandleField(
+					"body_pos", "Body pos", "Body position", fast, slow, j, 8, "raw"));
+				if (j < count - 1) {
+					fields.add(getCandleField(
+						"center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "raw"));
+				}
+				fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "raw"));
+
+				/* Normalized values. */
+				fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 8, "nrm"));
+				fields.add(getCandleField(
+					"body_factor", "Body factor", "factor", fast, slow, j, 8, "nrm"));
+				fields.add(getCandleField(
+					"body_pos", "Body pos", "Body position", fast, slow, j, 8, "nrm"));
+				if (j < count - 1) {
+					fields.add(getCandleField(
+						"center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "nrm"));
+				}
+
+				/* Sign, continuous from -1 to 1. */
+				fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "nrm"));
+
 			}
 			mapLists.put(key, fields);
 		}
@@ -628,7 +704,7 @@ public class StatisticsAverages extends Statistics {
 				name = getNameSlope(i, suffix);
 				header = getHeaderSlope(i, suffix);
 				label = getLabelSlope(i, suffix);
-				field = Domains.getDouble(name, header, label);
+				field = Fields.getDouble(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
@@ -655,7 +731,7 @@ public class StatisticsAverages extends Statistics {
 					name = getNameSpread(i, j, suffix);
 					header = getHeaderSpread(i, j, suffix);
 					label = getLabelSpread(i, j, suffix);
-					field = Domains.getDouble(name, header, label);
+					field = Fields.getDouble(name, header, label);
 					field.setStringConverter(getNumberConverter(8));
 					fields.add(field);
 				}
@@ -1006,6 +1082,24 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @return The map of normalizers.
+	 */
+	public HashMap<String, Normalizer> getNormalizers() throws PersistorException {
+		RecordSet rs = getTableRanges().getPersistor().select(null);
+		HashMap<String, Normalizer> map = new HashMap<>();
+		for (Record rc : rs) {
+			String name = rc.getValue(Fields.RANGE_NAME).getString();
+			double average = rc.getValue(Fields.RANGE_AVERAGE).getDouble();
+			double std_dev = rc.getValue(Fields.RANGE_STDDEV).getDouble();
+			double dataHigh = average + (2 * std_dev);
+			double dataLow = average - (2 * std_dev);
+			Normalizer normalizer = new Normalizer(dataHigh, dataLow, 1, -1);
+			map.put(name, normalizer);
+		}
+		return map;
+	}
+
+	/**
 	 * Return the number string converter.
 	 * 
 	 * @param scale The scale
@@ -1040,6 +1134,16 @@ public class StatisticsAverages extends Statistics {
 		optionBrowseStats.setOptionGroup(new Option.Group("BROWSE", 2));
 		optionBrowseStats.setSortIndex(2);
 		options.add(optionBrowseStats);
+
+		/* Browse ranges. */
+		Option optionBrowseRanges = new Option();
+		optionBrowseRanges.setKey("BROWSE-RANGES");
+		optionBrowseRanges.setText("Browse ranges");
+		optionBrowseRanges.setToolTip("Browse range values");
+		optionBrowseRanges.setAction(new ActionBrowseRanges());
+		optionBrowseRanges.setOptionGroup(new Option.Group("BROWSE", 2));
+		optionBrowseRanges.setSortIndex(2);
+		options.add(optionBrowseRanges);
 
 		return options;
 	}
@@ -1132,11 +1236,20 @@ public class StatisticsAverages extends Statistics {
 		tableRanges.setSchema(DB.schema_server());
 		tableRanges.setName(name);
 
-		tableRanges.addField(Domains.getString(Fields.RANGE_NAME, 60, "Name"));
-		tableRanges.addField(Domains.getDouble(Fields.RANGE_MINIMUM, "Minimum"));
-		tableRanges.addField(Domains.getDouble(Fields.RANGE_MAXIMUM, "Maximum"));
-		tableRanges.addField(Domains.getDouble(Fields.RANGE_AVERAGE, "Average"));
-		tableRanges.addField(Domains.getDouble(Fields.RANGE_STDDEV, "Std Dev"));
+		tableRanges.addField(Fields.getString(Fields.RANGE_NAME, 60, "Name"));
+		tableRanges.addField(Fields.getDouble(Fields.RANGE_MINIMUM, "Minimum"));
+		tableRanges.addField(Fields.getDouble(Fields.RANGE_MAXIMUM, "Maximum"));
+		tableRanges.addField(Fields.getDouble(Fields.RANGE_AVERAGE, "Average"));
+		tableRanges.addField(Fields.getDouble(Fields.RANGE_STDDEV, "Std Dev"));
+		tableRanges.addField(Fields.getDouble(Fields.RANGE_AVG_STD_10, "Avg Std 1.0"));
+		tableRanges.addField(Fields.getDouble(Fields.RANGE_AVG_STD_20, "Avg Std 2.0"));
+
+		tableRanges.getField(Fields.RANGE_MINIMUM).setDisplayDecimals(8);
+		tableRanges.getField(Fields.RANGE_MAXIMUM).setDisplayDecimals(8);
+		tableRanges.getField(Fields.RANGE_AVERAGE).setDisplayDecimals(8);
+		tableRanges.getField(Fields.RANGE_STDDEV).setDisplayDecimals(8);
+		tableRanges.getField(Fields.RANGE_AVG_STD_10).setDisplayDecimals(2);
+		tableRanges.getField(Fields.RANGE_AVG_STD_20).setDisplayDecimals(2);
 
 		/* Primary key. */
 		tableRanges.getField(Fields.RANGE_NAME).setPrimaryKey(true);
@@ -1177,15 +1290,15 @@ public class StatisticsAverages extends Statistics {
 		tableStates.setName(name);
 
 		/* Time, open, high, low, close. */
-		tableStates.addField(new FieldTime(Fields.BAR_TIME));
+		tableStates.addField(Fields.getLong(Fields.BAR_TIME, "Time"));
 
-		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_OPEN, "Open", "Open value"));
-		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_HIGH, "High", "High value"));
-		tableStates.addField(new FieldDataInst(instrument, Fields.BAR_LOW, "Low", "Low value"));
-		tableStates
-			.addField(new FieldDataInst(instrument, Fields.BAR_CLOSE, "Close", "Close value"));
+		tableStates.addField(Fields.getData(instrument, Fields.BAR_OPEN, "Open"));
+		tableStates.addField(Fields.getData(instrument, Fields.BAR_HIGH, "High"));
+		tableStates.addField(Fields.getData(instrument, Fields.BAR_LOW, "Low"));
+		tableStates.addField(Fields.getData(instrument, Fields.BAR_CLOSE, "Close"));
 
-		tableStates.addField(new FieldTimeFmt(Fields.BAR_TIME_FMT, period));
+		tableStates.addField(
+			Fields.getTimeFmt(period, Fields.BAR_TIME, Fields.BAR_TIME_FMT, "Time fmt"));
 
 		int ndx = 0;
 		FieldGroup grpData = new FieldGroup(ndx++, "data", "Data");
@@ -1200,8 +1313,8 @@ public class StatisticsAverages extends Statistics {
 		 * Calculated pivot (High=1, None=0, Low=-1) and Label (Long=1, Out=0, Short=-1)
 		 */
 		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
-		tableStates.addField(Domains.getInteger("pivot", "Pivot", "Pivot"));
-		tableStates.addField(Domains.getInteger("label", "Label", "Label"));
+		tableStates.addField(Fields.getInteger("pivot", "Pivot", "Pivot"));
+		tableStates.addField(Fields.getInteger("label", "Label", "Label"));
 		tableStates.getField("pivot").setFieldGroup(grpLabels);
 		tableStates.getField("label").setFieldGroup(grpLabels);
 
@@ -1262,7 +1375,7 @@ public class StatisticsAverages extends Statistics {
 
 		/* Normailzed flag. */
 		FieldGroup grpControls = new FieldGroup(ndx++, "controls", "Controls");
-		Field normalized = Domains.getString(Fields.STATES_NORMALIZED, 1, "Nrm", "Normalized");
+		Field normalized = Fields.getString(Fields.STATES_NORMALIZED, 1, "Nrm", "Normalized");
 		normalized.setFieldGroup(grpControls);
 		tableStates.addField(normalized);
 

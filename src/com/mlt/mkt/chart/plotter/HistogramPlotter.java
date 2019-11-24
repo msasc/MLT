@@ -20,7 +20,7 @@ import com.mlt.desktop.graphic.Line;
 import com.mlt.desktop.graphic.Path;
 import com.mlt.desktop.graphic.Stroke;
 import com.mlt.mkt.chart.DataContext;
-import com.mlt.mkt.data.Data;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.DataList;
 import com.mlt.util.Colors;
 
@@ -43,7 +43,7 @@ public class HistogramPlotter extends DataPlotter {
 	 */
 	public HistogramPlotter() {
 		super();
-		setIndex(Data.VOLUME);
+		setIndex(OHLC.VOLUME);
 	}
 
 	/**

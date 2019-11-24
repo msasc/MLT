@@ -51,7 +51,7 @@ import com.mlt.desktop.layout.Insets;
 import com.mlt.desktop.layout.Orientation;
 import com.mlt.mkt.chart.ChartContainer;
 import com.mlt.mkt.chart.plotter.HistogramPlotter;
-import com.mlt.mkt.data.Data;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.DataListSource;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.IndicatorDataList;
@@ -68,8 +68,8 @@ import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 
 import app.mlt.plaf.DB;
+import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Fields;
 
 /**
  * Packs the tickers actions, starting with the main tickers browse.
@@ -176,22 +176,22 @@ public class ActionTickers extends ActionRun {
 				plotDataPrice.add(price);
 
 				IndicatorDataList wma5 = IndicatorUtils.getSmoothedSimpleMovingAverage(
-					price, Data.CLOSE, Colors.GREEN, 5, 3, 2);
+					price, OHLC.CLOSE, Colors.GREEN, 5, 3, 2);
 				plotDataPrice.add(wma5);
 
 				IndicatorDataList wma50 = IndicatorUtils.getSmoothedSimpleMovingAverage(
-					price, Data.CLOSE, Colors.DARKRED, 50, 5, 5, 5);
+					price, OHLC.CLOSE, Colors.DARKRED, 50, 5, 5, 5);
 				plotDataPrice.add(wma50);
 
 				IndicatorDataList wma200 =
 					IndicatorUtils.getSmoothedSimpleMovingAverage(
-						price, Data.CLOSE, Colors.DARKBLUE, 200, 20, 10, 5);
+						price, OHLC.CLOSE, Colors.DARKBLUE, 200, 20, 10, 5);
 				plotDataPrice.add(wma200);
 				
 				/* Volume plot data. */
 				VolumeInfo infoVolume = new VolumeInfo(instrument, period);
 				DataListSource volume = new DataListSource(infoVolume, persistor);
-				HistogramPlotter volumePlotter = new HistogramPlotter(Data.VOLUME);
+				HistogramPlotter volumePlotter = new HistogramPlotter(OHLC.VOLUME);
 				volumePlotter.setColorBullishEven(Colors.DARKGRAY);
 				volumePlotter.setColorBearishEven(Colors.DARKGRAY);
 				volumePlotter.setColorBullishOdd(Colors.DARKGRAY);

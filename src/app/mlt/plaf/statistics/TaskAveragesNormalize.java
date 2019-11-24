@@ -17,6 +17,7 @@
 
 package app.mlt.plaf.statistics;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -32,7 +33,7 @@ import com.mlt.db.ValueMap;
 import com.mlt.desktop.Option;
 import com.mlt.ml.function.Normalizer;
 
-import app.mlt.plaf.db.Fields;
+import app.mlt.plaf.Fields;
 
 /**
  * Normalize raw values.
@@ -87,10 +88,13 @@ public class TaskAveragesNormalize extends TaskAverages {
 
 		/* List of fields to normalize (raw values) and normalizers. */
 		List<Field> fields = stats.getFieldListToNormalize();
-//		HashMap<String, Normalizer> normalizers = stats.getNormalizers();
-		HashMap<String, Normalizer> normalizers = null;
-		if (normalizers.size() != fields.size()) {
+		HashMap<String, Normalizer> mapNormalizers = stats.getNormalizers();
+		if (mapNormalizers.size() != fields.size()) {
 			throw new IllegalStateException("Bad normalizers");
+		}
+		List<Normalizer> normalizers = new ArrayList<>();
+		for (Field field : fields) {
+			normalizers.add(mapNormalizers.get(field.getName()));
 		}
 
 		/* Iterate states. */
@@ -127,10 +131,11 @@ public class TaskAveragesNormalize extends TaskAverages {
 			}
 
 			/* Fields to normalize. */
-			for (Field field : fields) {
+			for (int i = 0; i < fields.size(); i++) {
+				Field field = fields.get(i);
 				String name_raw = field.getName();
 				String name_nrm = name_raw.substring(0, name_raw.length() - 3) + "nrm";
-				Normalizer normalizer = normalizers.get(name_raw);
+				Normalizer normalizer = normalizers.get(i);
 				double value_raw = rcStates.getValue(name_raw).getDouble();
 				double value_nrm = normalizer.normalize(value_raw);
 				rcStates.setValue(name_nrm, value_nrm);

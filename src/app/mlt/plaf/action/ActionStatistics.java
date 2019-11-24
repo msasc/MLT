@@ -61,8 +61,8 @@ import com.mlt.mkt.data.Period;
 import com.mlt.util.Logs;
 
 import app.mlt.plaf.DB;
+import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Fields;
 import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**

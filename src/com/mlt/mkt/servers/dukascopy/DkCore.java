@@ -30,6 +30,7 @@ import com.dukascopy.api.feed.IBarFeedListener;
 import com.dukascopy.api.system.ClientFactory;
 import com.dukascopy.api.system.IClient;
 import com.dukascopy.api.system.ISystemListener;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.Filter;
 import com.mlt.mkt.data.Instrument;
@@ -65,12 +66,12 @@ public class DkCore {
 		if (dkBar == null) {
 			return null;
 		}
-		Data data = new Data(Data.DATA_PRICE_SIZE);
-		Data.setOpen(data, dkBar.getOpen());
-		Data.setHigh(data, dkBar.getHigh());
-		Data.setLow(data, dkBar.getLow());
-		Data.setClose(data, dkBar.getClose());
-		Data.setVolume(data, dkBar.getVolume());
+		Data data = new Data(OHLC.SIZE);
+		data.setValue(OHLC.OPEN, dkBar.getOpen());
+		data.setValue(OHLC.HIGH, dkBar.getHigh());
+		data.setValue(OHLC.LOW, dkBar.getLow());
+		data.setValue(OHLC.CLOSE, dkBar.getClose());
+		data.setValue(OHLC.VOLUME, dkBar.getVolume());
 		data.setTime(dkBar.getTime());
 		return data;
 	}

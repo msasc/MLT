@@ -17,6 +17,7 @@ import com.mlt.desktop.control.Canvas;
 import com.mlt.desktop.graphic.Path;
 import com.mlt.desktop.graphic.Stroke;
 import com.mlt.mkt.chart.DataContext;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.DataList;
 import com.mlt.util.Colors;
@@ -41,7 +42,7 @@ public class CandlestickPlotter extends DataPlotter {
 	 */
 	public CandlestickPlotter() {
 		super();
-		setIndexes(new int[] { Data.OPEN, Data.HIGH, Data.LOW, Data.CLOSE });
+		setIndexes(new int[] { OHLC.OPEN, OHLC.HIGH, OHLC.LOW, OHLC.CLOSE });
 	}
 
 	/**
@@ -55,11 +56,11 @@ public class CandlestickPlotter extends DataPlotter {
 
 		/* Data and context. */
 		Data data = dataList.get(index);
-		double open = Data.getOpen(data);
-		double high = Data.getHigh(data);
-		double low = Data.getLow(data);
-		double close = Data.getClose(data);
-		boolean bullish = Data.isBullish(data);
+		double open = data.getValue(OHLC.OPEN);
+		double high = data.getValue(OHLC.HIGH);
+		double low = data.getValue(OHLC.LOW);
+		double close = data.getValue(OHLC.CLOSE);
+		boolean bullish = OHLC.isBullish(data);
 		DataContext dc = getContext();
 
 		double periodX = dc.getCoordinateX(index);

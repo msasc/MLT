@@ -19,18 +19,21 @@ package app.mlt.plaf.statistics;
 
 import java.util.List;
 
+import com.mlt.db.Condition;
+import com.mlt.db.Criteria;
 import com.mlt.db.Field;
+import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
+import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 
 import app.mlt.plaf.DB;
+import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.db.Domains;
-import app.mlt.plaf.db.Fields;
 
 /**
  * Calculate min-max values for all raw values that must be normalized.
@@ -62,6 +65,29 @@ public class TaskAveragesRanges extends TaskAverages {
 	}
 
 	/**
+	 * @return The total number of states records to consider.
+	 */
+	private long countStates() throws Throwable {
+		return stats.getTableStates().getPersistor().count(null);
+	}
+
+	/**
+	 * @param name    The field name.
+	 * @param minimum Minimum value.
+	 * @param maximum Maximum value.
+	 * @return The number of records with the field GE minimum and LE maximum.
+	 */
+	private long countStates(String name, double minimum, double maximum) throws Throwable {
+		Persistor persistor = stats.getTableStates().getPersistor();
+		Field field = persistor.getField(name);
+		Criteria criteria = new Criteria();
+		criteria.add(Condition.fieldGE(field, new Value(minimum)));
+		criteria.add(Condition.fieldLE(field, new Value(maximum)));
+		long count = persistor.count(criteria);
+		return count;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -76,6 +102,7 @@ public class TaskAveragesRanges extends TaskAverages {
 
 		/* Count. */
 		calculateTotalWork();
+		double countStates = countStates();
 
 		/* Do iterate fields to normalize. */
 		List<Field> fields = stats.getFieldListToNormalize();
@@ -88,7 +115,7 @@ public class TaskAveragesRanges extends TaskAverages {
 				setCancelled();
 				break;
 			}
-			
+
 			/* Retrieve values. */
 			String name = fields.get(i).getName();
 			workDone = i + 1;
@@ -98,12 +125,26 @@ public class TaskAveragesRanges extends TaskAverages {
 			double maximum = rcView.getValue(Fields.RANGE_MAXIMUM).getDouble();
 			double average = rcView.getValue(Fields.RANGE_AVERAGE).getDouble();
 			double std_dev = rcView.getValue(Fields.RANGE_STDDEV).getDouble();
+			
+			double minimum_10 = average - (1 * std_dev);
+			double maximum_10 = average + (1 * std_dev);
+			double count_10 = countStates(name, minimum_10, maximum_10);
+			double avg_std_10 = 100 * count_10 / countStates;
+			
+			double minimum_20 = average - (2 * std_dev);
+			double maximum_20 = average + (2 * std_dev);
+			double count_20 = countStates(name, minimum_20, maximum_20);
+			double avg_std_20 = 100 * count_20 / countStates;
+			
 			Record record = ranges.getDefaultRecord();
 			record.setValue(Fields.RANGE_NAME, name);
 			record.setValue(Fields.RANGE_MINIMUM, minimum);
 			record.setValue(Fields.RANGE_MAXIMUM, maximum);
 			record.setValue(Fields.RANGE_AVERAGE, average);
 			record.setValue(Fields.RANGE_STDDEV, std_dev);
+			record.setValue(Fields.RANGE_AVG_STD_10, avg_std_10);
+			record.setValue(Fields.RANGE_AVG_STD_20, avg_std_20);
+			
 			ranges.getPersistor().insert(record);
 		}
 	}
@@ -113,31 +154,31 @@ public class TaskAveragesRanges extends TaskAverages {
 	 * 
 	 * @param name The field name.
 	 * @return The view.
-	 * @throws PersistorException 
+	 * @throws PersistorException
 	 */
 	private Record getData(String name) throws PersistorException {
-		
+
 		View view = new View();
 		view.setMasterTable(stats.getTableStates());
-		
-		Field minimum = Domains.getDouble(Fields.RANGE_MINIMUM, "Minimum");
+
+		Field minimum = Fields.getDouble(Fields.RANGE_MINIMUM, "Minimum");
 		minimum.setFunction("min(" + name + ")");
 		view.addField(minimum);
-		
-		Field maximum = Domains.getDouble(Fields.RANGE_MAXIMUM, "Maximum");
+
+		Field maximum = Fields.getDouble(Fields.RANGE_MAXIMUM, "Maximum");
 		maximum.setFunction("max(" + name + ")");
 		view.addField(maximum);
 
-		Field average = Domains.getDouble(Fields.RANGE_AVERAGE, "Average");
+		Field average = Fields.getDouble(Fields.RANGE_AVERAGE, "Average");
 		average.setFunction("avg(" + name + ")");
 		view.addField(average);
 
-		Field std_dev = Domains.getDouble(Fields.RANGE_STDDEV, "Std Dev");
+		Field std_dev = Fields.getDouble(Fields.RANGE_STDDEV, "Std Dev");
 		std_dev.setFunction("stddev(" + name + ")");
 		view.addField(std_dev);
 
 		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
-		
+
 		RecordSet rs = view.getPersistor().select(null);
 		Record rc = rs.get(0);
 		return rc;

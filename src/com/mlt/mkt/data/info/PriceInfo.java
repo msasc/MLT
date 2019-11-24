@@ -13,7 +13,7 @@
  */
 package com.mlt.mkt.data.info;
 
-import com.mlt.mkt.data.Data;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
@@ -36,10 +36,10 @@ public class PriceInfo extends DataInfo {
 		setName(instrument.getId());
 		setDescription(instrument.getDescription());
 		setPeriod(period);
-		addOutput("Open", "O", Data.OPEN, "Open data value");
-		addOutput("High", "H", Data.HIGH, "High data value");
-		addOutput("Low", "L", Data.LOW, "Low data value");
-		addOutput("Close", "C", Data.CLOSE, "Close data value");
-		addOutput("Volume", "V", Data.VOLUME, "Volume data value");
+		addOutput("Open", "O", OHLC.OPEN, "Open data value");
+		addOutput("High", "H", OHLC.HIGH, "High data value");
+		addOutput("Low", "L", OHLC.LOW, "Low data value");
+		addOutput("Close", "C", OHLC.CLOSE, "Close data value");
+		addOutput("Volume", "V", OHLC.VOLUME, "Volume data value");
 	}
 }

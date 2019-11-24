@@ -59,7 +59,6 @@ import app.mlt.plaf.action.ActionExitApplication;
 import app.mlt.plaf.action.ActionInstruments;
 import app.mlt.plaf.action.ActionStatistics;
 import app.mlt.plaf.action.ActionTickers;
-import app.mlt.plaf.db.Fields;
 
 /**
  * MLT platform entry.

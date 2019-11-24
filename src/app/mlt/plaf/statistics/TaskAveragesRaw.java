@@ -27,12 +27,13 @@ import com.mlt.db.Table;
 import com.mlt.desktop.Option;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.Instrument;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Period;
 import com.mlt.util.FixedSizeList;
 import com.mlt.util.Numbers;
 
 import app.mlt.plaf.DB;
-import app.mlt.plaf.db.Fields;
+import app.mlt.plaf.Fields;
 
 /**
  * Calculate all the raw values for the states table of the statistics averages.
@@ -198,35 +199,38 @@ public class TaskAveragesRaw extends TaskAverages {
 
 					Data candle = candles.get(j);
 
+					String time = stats.getNameCandle("time", fast, slow, j);
+					rcStat.setValue(time, candle.getTime());
+
 					String open = stats.getNameCandle("open", fast, slow, j);
-					rcStat.setValue(open, Candles.open(candle));
+					rcStat.setValue(open, OHLC.getOpen(candle));
 
 					String high = stats.getNameCandle("high", fast, slow, j);
-					rcStat.setValue(high, Candles.high(candle));
+					rcStat.setValue(high, OHLC.getHigh(candle));
 
 					String low = stats.getNameCandle("low", fast, slow, j);
-					rcStat.setValue(low, Candles.low(candle));
+					rcStat.setValue(low, OHLC.getLow(candle));
 
 					String close = stats.getNameCandle("close", fast, slow, j);
-					rcStat.setValue(close, Candles.close(candle));
+					rcStat.setValue(close, OHLC.getClose(candle));
 
 					String range = stats.getNameCandle("range", fast, slow, j, "raw");
-					rcStat.setValue(range, Candles.range(candle));
+					rcStat.setValue(range, OHLC.getRange(candle));
 
 					String bodyFactor = stats.getNameCandle("body_factor", fast, slow, j, "raw");
-					rcStat.setValue(bodyFactor, Candles.bodyFactor(candle));
+					rcStat.setValue(bodyFactor, OHLC.getBodyFactor(candle));
 
 					String bodyPos = stats.getNameCandle("body_pos", fast, slow, j, "raw");
-					rcStat.setValue(bodyPos, Candles.bodyPos(candle));
+					rcStat.setValue(bodyPos, OHLC.getBodyPosition(candle));
 
 					String sign = stats.getNameCandle("sign", fast, slow, j, "raw");
-					rcStat.setValue(sign, Candles.sign(candle));
+					rcStat.setValue(sign, OHLC.getSign(candle));
 
 					if (j < candles.size() - 1) {
 						Data previous = candles.get(j + 1);
 						String center =
 							stats.getNameCandle("center_factor", fast, slow, j, j + 1, "raw");
-						rcStat.setValue(center, Candles.centerFactor(candle, previous));
+						rcStat.setValue(center, OHLC.getRelativePositions(candle, previous));
 					}
 				}
 			}
@@ -262,6 +266,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			if (endIndex >= buffer.size()) {
 				endIndex = buffer.size() - 1;
 			}
+			long time = 0;
 			double open = 0;
 			double high = Numbers.MIN_DOUBLE;
 			double low = Numbers.MAX_DOUBLE;
@@ -269,6 +274,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			for (int j = startIndex; j <= endIndex; j++) {
 				Record rc = buffer.getTail(j);
 				if (j == startIndex) {
+					time = rc.getValue(Fields.BAR_TIME).getLong();
 					open = rc.getValue(Fields.BAR_OPEN).getDouble();
 				}
 				double high_rc = rc.getValue(Fields.BAR_HIGH).getDouble();
@@ -283,7 +289,7 @@ public class TaskAveragesRaw extends TaskAverages {
 					close = rc.getValue(Fields.BAR_CLOSE).getDouble();
 				}
 			}
-			candles.add(new Data(0, open, high, low, close));
+			candles.add(new Data(time, open, high, low, close));
 		}
 		return candles;
 	}

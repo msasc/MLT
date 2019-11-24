@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
@@ -365,7 +366,7 @@ public class DataInfo {
 			OutputInfo output = getOutput(i);
 			int index = output.getIndex();
 			boolean addValue = true;
-			if (index == Data.VOLUME) {
+			if (index == OHLC.VOLUME) {
 				addValue = addVolumeValue;
 			}
 			if (addValue) {

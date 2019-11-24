@@ -30,37 +30,6 @@ public class Period implements Comparable<Period> {
 	/** Map for unique period instances. */
 	private static HashMap<String, Period> periods = new HashMap<>();
 
-	/**
-	 * Return the unique reference to the period.
-	 *
-	 * @param unit The unit.
-	 * @param size The number of units.
-	 * @return The period.
-	 */
-	public static Period getPeriod(Unit unit, int size) {
-		String id = getId(unit, size);
-		Period period = periods.get(id);
-		if (period == null) {
-			period = new Period(unit, size);
-			periods.put(id, period);
-		}
-		return period;
-	}
-
-	/**
-	 * Return a suitable id for a unit and size.
-	 *
-	 * @param unit The unit.
-	 * @param size The number of units.
-	 * @return The id.
-	 */
-	private static String getId(Unit unit, int size) {
-		StringBuilder b = new StringBuilder();
-		b.append(unit.getId());
-		b.append(Strings.leftPad(Integer.toString(size), 3, '0'));
-		return b.toString();
-	}
-
 	/** One minute period. */
 	public static final Period ONE_MIN = getPeriod(Unit.MINUTE, 1);
 	/** Three minutes period. */
@@ -83,6 +52,37 @@ public class Period implements Comparable<Period> {
 	public static final Period MONTHLY = getPeriod(Unit.MONTH, 1);
 
 	/**
+	 * Return a suitable id for a unit and size.
+	 *
+	 * @param unit The unit.
+	 * @param size The number of units.
+	 * @return The id.
+	 */
+	private static String getId(Unit unit, int size) {
+		StringBuilder b = new StringBuilder();
+		b.append(unit.getId());
+		b.append(Strings.leftPad(Integer.toString(size), 3, '0'));
+		return b.toString();
+	}
+
+	/**
+	 * Return the unique reference to the period.
+	 *
+	 * @param unit The unit.
+	 * @param size The number of units.
+	 * @return The period.
+	 */
+	public static Period getPeriod(Unit unit, int size) {
+		String id = getId(unit, size);
+		Period period = periods.get(id);
+		if (period == null) {
+			period = new Period(unit, size);
+			periods.put(id, period);
+		}
+		return period;
+	}
+
+	/**
 	 * Returns the list of standard pre-defined periods.
 	 *
 	 * @return The list of standard pre-defined periods.
@@ -101,7 +101,7 @@ public class Period implements Comparable<Period> {
 		periods.add(MONTHLY);
 		return periods;
 	}
-
+	
 	/**
 	 * Parse a period id.
 	 *
@@ -218,6 +218,43 @@ public class Period implements Comparable<Period> {
 		}
 		time *= size;
 		return time;
+	}
+
+	/**
+	 * Return the pattern to correctly display a time.
+	 * @return The pattern
+	 */
+	public String getTimeFmtPattern() {
+		String pattern = null;
+		switch (getUnit()) {
+		case MILLISECOND:
+			pattern = "yyyy-MM-dd HH:mm:ss.SSS";
+			break;
+		case SECOND:
+			pattern = "yyyy-MM-dd HH:mm:ss";
+			break;
+		case MINUTE:
+			pattern = "yyyy-MM-dd HH:mm";
+			break;
+		case HOUR:
+			pattern = "yyyy-MM-dd HH";
+			break;
+		case DAY:
+			pattern = "yyyy-MM-dd";
+			break;
+		case WEEK:
+			pattern = "yyyy-MM-dd";
+			break;
+		case MONTH:
+			pattern = "yyyy-MM";
+			break;
+		case YEAR:
+			pattern = "yyyy";
+			break;
+		default:
+			throw new IllegalArgumentException();
+		}
+		return pattern;
 	}
 
 	/**

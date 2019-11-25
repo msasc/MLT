@@ -33,7 +33,7 @@ import com.mlt.db.ValueMap;
 import com.mlt.desktop.Option;
 import com.mlt.ml.function.Normalizer;
 
-import app.mlt.plaf.Fields;
+import app.mlt.plaf.DB;
 
 /**
  * Normalize raw values.
@@ -41,7 +41,7 @@ import app.mlt.plaf.Fields;
  * @author Miquel Sas
  */
 public class TaskAveragesNormalize extends TaskAverages {
-
+	
 	/**
 	 * Constructor.
 	 * 
@@ -76,13 +76,13 @@ public class TaskAveragesNormalize extends TaskAverages {
 		if (option.equals("START")) {
 			Persistor persistor = stats.getTableStates().getPersistor();
 			ValueMap map = new ValueMap();
-			map.put(Fields.STATES_NORMALIZED, new Value(""));
-			Field field = persistor.getField(Fields.STATES_NORMALIZED);
+			map.put(DB.FIELD_STATES_NORMALIZED, new Value(""));
+			Field field = persistor.getField(DB.FIELD_STATES_NORMALIZED);
 			Criteria criteria = new Criteria();
 			criteria.add(Condition.fieldEQ(field, new Value("Y")));
 			persistor.update(criteria, map);
 		}
-		
+
 		/* Count. */
 		calculateTotalWork();
 
@@ -118,15 +118,15 @@ public class TaskAveragesNormalize extends TaskAverages {
 			workDone++;
 			if (workDone % 10 == 0 || workDone == totalWork) {
 				StringBuilder b = new StringBuilder();
-				b.append(rcStates.toString(Fields.BAR_TIME_FMT));
+				b.append(rcStates.toString(DB.FIELD_BAR_TIME_FMT));
 				b.append(", ");
-				b.append(rcStates.toString(Fields.BAR_OPEN));
+				b.append(rcStates.toString(DB.FIELD_BAR_OPEN));
 				b.append(", ");
-				b.append(rcStates.toString(Fields.BAR_HIGH));
+				b.append(rcStates.toString(DB.FIELD_BAR_HIGH));
 				b.append(", ");
-				b.append(rcStates.toString(Fields.BAR_LOW));
+				b.append(rcStates.toString(DB.FIELD_BAR_LOW));
 				b.append(", ");
-				b.append(rcStates.toString(Fields.BAR_CLOSE));
+				b.append(rcStates.toString(DB.FIELD_BAR_CLOSE));
 				update(b.toString(), workDone, totalWork);
 			}
 
@@ -140,7 +140,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 				double value_nrm = normalizer.normalize(value_raw);
 				rcStates.setValue(name_nrm, value_nrm);
 			}
-			rcStates.setValue(Fields.STATES_NORMALIZED, "Y");
+			rcStates.setValue(DB.FIELD_STATES_NORMALIZED, "Y");
 
 			/* Update. */
 			states.getPersistor().update(rcStates);
@@ -150,7 +150,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 
 	private Criteria getSelectCriteria() {
 		Persistor persistor = stats.getTableStates().getPersistor();
-		Field field = persistor.getField(Fields.STATES_NORMALIZED);
+		Field field = persistor.getField(DB.FIELD_STATES_NORMALIZED);
 		Criteria criteria = new Criteria();
 		criteria.add(Condition.fieldNE(field, new Value("Y")));
 		return criteria;

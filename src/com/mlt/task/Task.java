@@ -18,18 +18,17 @@
  */
 package com.mlt.task;
 
-import com.mlt.util.Formats;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.mlt.util.Formats;
 import com.mlt.util.Numbers;
 import com.mlt.util.Resources;
-
-import java.util.Locale;
 
 /**
  * A <em>Runnable</em> and <em>Callable&#60;Void&#62;</em> task that publishes
@@ -88,17 +87,6 @@ public abstract class Task implements Runnable, Callable<Void> {
 	private long workDone = 0;
 	/** Total work. */
 	private long totalWork = 0;
-
-	/** Estimated speed: work done. */
-	private double speedWork = -1;
-	/** Estimated speed: time. */
-	private double speedTime = -1;
-	/** Estimated speed: work / time. */
-	private double speedEstimated = -1;
-	/** Estimated speed: waiting time (10 seconds) in millis. */
-	private double speedWait = 10000;
-	/** A boolean to control whether to estimate speed. */
-	private boolean estimateSpeed = true;
 
 	/** Progress decimals for the progress message. */
 	private int progressDecimals = 1;
@@ -360,31 +348,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 		b.append(getTimeString(timeElapsed));
 		if (!counting && !indeterminate && totalWork > 0) {
 
-			/* Estimated speed. */
-			if (estimateSpeed) {
-				if (speedWork == -1 && speedTime == -1) {
-					speedWork = workDone;
-					speedTime = currentTime;
-				}
-				if (currentTime - speedTime >= speedWait && workDone > speedWork) {
-					double work = workDone - speedWork;
-					double time = currentTime - speedTime;
-					speedEstimated = work / time;
-					speedWork = -1;
-					speedTime = -1;
-				}
-			}
-
-			if (speedEstimated == -1) {
-				/* No estimated speed, estimate time proportionally. */
-				double progress = (double) workDone / totalWork;
-				timeEstimated = timeElapsed / progress;
-			} else {
-				/* Time pending from last speed estimated. */
-				double workPending = totalWork - workDone;
-				double timePending = workPending / speedEstimated;
-				timeEstimated = timeElapsed + timePending;
-			}
+			double progress = (double) workDone / totalWork;
+			timeEstimated = timeElapsed / progress;
 			timeRemaining = timeEstimated - timeElapsed;
 
 			/* Rest of message. */
@@ -801,13 +766,6 @@ public abstract class Task implements Runnable, Callable<Void> {
 		} else {
 			stopElapsedTimeTask();
 		}
-	}
-
-	/**
-	 * @param estimateSpeed A boolean that indicates whether to estimate speed.
-	 */
-	public void setEstimateSpeed(boolean estimateSpeed) {
-		this.estimateSpeed = estimateSpeed;
 	}
 
 	/**

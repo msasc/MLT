@@ -29,7 +29,6 @@ import com.mlt.desktop.icon.IconChar;
 import com.mlt.util.Logs;
 
 import app.mlt.plaf.DB;
-import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
 
 /**
@@ -67,15 +66,15 @@ public class ActionInstruments {
 				Record masterRecord = persistor.getDefaultRecord();
 
 				TableRecordModel model = new TableRecordModel(masterRecord);
-				model.addColumn(Fields.INSTRUMENT_ID);
-				model.addColumn(Fields.INSTRUMENT_DESC);
-				model.addColumn(Fields.INSTRUMENT_PIP_VALUE);
-				model.addColumn(Fields.INSTRUMENT_PIP_SCALE);
-				model.addColumn(Fields.INSTRUMENT_TICK_VALUE);
-				model.addColumn(Fields.INSTRUMENT_TICK_SCALE);
-				model.addColumn(Fields.INSTRUMENT_VOLUME_SCALE);
-				model.addColumn(Fields.INSTRUMENT_PRIMARY_CURRENCY);
-				model.addColumn(Fields.INSTRUMENT_SECONDARY_CURRENCY);
+				model.addColumn(DB.FIELD_INSTRUMENT_ID);
+				model.addColumn(DB.FIELD_INSTRUMENT_DESC);
+				model.addColumn(DB.FIELD_INSTRUMENT_PIP_VALUE);
+				model.addColumn(DB.FIELD_INSTRUMENT_PIP_SCALE);
+				model.addColumn(DB.FIELD_INSTRUMENT_TICK_VALUE);
+				model.addColumn(DB.FIELD_INSTRUMENT_TICK_SCALE);
+				model.addColumn(DB.FIELD_INSTRUMENT_VOLUME_SCALE);
+				model.addColumn(DB.FIELD_INSTRUMENT_PRIMARY_CURRENCY);
+				model.addColumn(DB.FIELD_INSTRUMENT_SECONDARY_CURRENCY);
 				model.setRecordSet(recordSet);
 
 				TableRecord table = new TableRecord(true);

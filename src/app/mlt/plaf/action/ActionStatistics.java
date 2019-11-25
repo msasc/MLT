@@ -61,7 +61,6 @@ import com.mlt.mkt.data.Period;
 import com.mlt.util.Logs;
 
 import app.mlt.plaf.DB;
-import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
 import app.mlt.plaf.statistics.StatisticsAverages;
 
@@ -89,8 +88,8 @@ public class ActionStatistics extends ActionRun {
 				if (rcTicker == null) {
 					return;
 				}
-				String instrumentId = rcTicker.getValue(Fields.INSTRUMENT_ID).getString();
-				String periodId = rcTicker.getValue(Fields.PERIOD_ID).getString();
+				String instrumentId = rcTicker.getValue(DB.FIELD_INSTRUMENT_ID).getString();
+				String periodId = rcTicker.getValue(DB.FIELD_PERIOD_ID).getString();
 				Instrument instrument = DB.to_instrument(instrumentId);
 				Period period = DB.to_period(periodId);
 
@@ -99,25 +98,25 @@ public class ActionStatistics extends ActionRun {
 
 				/* Statistics record to edit. */
 				Record rc = persistor.getDefaultRecord();
-				rc.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
-				rc.setValue(Fields.INSTRUMENT_ID, new Value(instrument.getId()));
-				rc.setValue(Fields.PERIOD_ID, new Value(period.getId()));
-				rc.setValue(Fields.PERIOD_NAME, new Value(period.toString()));
+				rc.setValue(DB.FIELD_SERVER_ID, new Value(MLT.getServer().getId()));
+				rc.setValue(DB.FIELD_INSTRUMENT_ID, new Value(instrument.getId()));
+				rc.setValue(DB.FIELD_PERIOD_ID, new Value(period.getId()));
+				rc.setValue(DB.FIELD_PERIOD_NAME, new Value(period.toString()));
 
 				/* Form. */
 				FormRecordPane form = new FormRecordPane(rc);
 				form.setLayoutByRows(FieldGroup.EMPTY_FIELD_GROUP);
 
-				form.addField(Fields.SERVER_ID);
-				form.addField(Fields.INSTRUMENT_ID);
-				form.addField(Fields.PERIOD_NAME);
-				form.addField(Fields.STATISTICS_ID);
-				form.addField(Fields.STATISTICS_KEY);
-				form.addField(Fields.STATISTICS_PARAMS);
+				form.addField(DB.FIELD_SERVER_ID);
+				form.addField(DB.FIELD_INSTRUMENT_ID);
+				form.addField(DB.FIELD_PERIOD_NAME);
+				form.addField(DB.FIELD_STATISTICS_ID);
+				form.addField(DB.FIELD_STATISTICS_KEY);
+				form.addField(DB.FIELD_STATISTICS_PARAMS);
 
-				form.getEditContext(Fields.SERVER_ID).getEditField().setEnabled(false);
-				form.getEditContext(Fields.INSTRUMENT_ID).getEditField().setEnabled(false);
-				form.getEditContext(Fields.PERIOD_NAME).getEditField().setEnabled(false);
+				form.getEditContext(DB.FIELD_SERVER_ID).getEditField().setEnabled(false);
+				form.getEditContext(DB.FIELD_INSTRUMENT_ID).getEditField().setEnabled(false);
+				form.getEditContext(DB.FIELD_PERIOD_NAME).getEditField().setEnabled(false);
 
 				form.layout();
 				form.updateEditors();
@@ -279,12 +278,12 @@ public class ActionStatistics extends ActionRun {
 				/* Edited record. */
 				Record rc = form.getRecordEdited();
 				/* Statistics id. */
-				Value vStatId = rc.getValue(Fields.STATISTICS_ID);
+				Value vStatId = rc.getValue(DB.FIELD_STATISTICS_ID);
 				if (vStatId.isEmpty()) {
 					throw new Exception("Statistics id can not be empty");
 				}
 				/* Statistics key. */
-				Value vStatKey = rc.getValue(Fields.STATISTICS_KEY);
+				Value vStatKey = rc.getValue(DB.FIELD_STATISTICS_KEY);
 				if (vStatKey.isEmpty()) {
 					throw new Exception("Statistics key can not be empty");
 				}
@@ -329,11 +328,11 @@ public class ActionStatistics extends ActionRun {
 			Record masterRecord = persistor.getDefaultRecord();
 
 			TableRecordModel model = new TableRecordModel(masterRecord);
-			model.addColumn(Fields.INSTRUMENT_ID);
-			model.addColumn(Fields.PERIOD_NAME);
-			model.addColumn(Fields.STATISTICS_ID);
-			model.addColumn(Fields.STATISTICS_KEY);
-			model.addColumn(Fields.STATISTICS_PARAMS_DESC);
+			model.addColumn(DB.FIELD_INSTRUMENT_ID);
+			model.addColumn(DB.FIELD_PERIOD_NAME);
+			model.addColumn(DB.FIELD_STATISTICS_ID);
+			model.addColumn(DB.FIELD_STATISTICS_KEY);
+			model.addColumn(DB.FIELD_STATISTICS_PARAMS_DESC);
 			model.setRecordSet(recordSet);
 
 			tableStats = new TableRecord();

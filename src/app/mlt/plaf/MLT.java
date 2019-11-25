@@ -307,33 +307,33 @@ public class MLT {
 
 			/* Check for the necessary table Servers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check servers table...");
-			if (!ddl.existsTable(DB.schema_system(), DB.SERVERS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.TABLE_SERVERS)) {
 				ddl.buildTable(DB.table_servers());
 			}
 			synchronizeSupportedServer(DB.persistor_servers());
 
 			/* Check for the necessary table Periods in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check periods table...");
-			if (!ddl.existsTable(DB.schema_system(), DB.PERIODS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.TABLE_PERIODS)) {
 				ddl.buildTable(DB.table_periods());
 			}
 			synchronizeStandardPeriods(DB.persistor_periods());
 
 			/* Check for the necessary table Instruments in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check instruments table...");
-			if (!ddl.existsTable(DB.schema_system(), DB.INSTRUMENTS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.TABLE_INSTRUMENTS)) {
 				ddl.buildTable(DB.table_instruments());
 			}
 
 			/* Check for the necessary table Tickers in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check tickers table...");
-			if (!ddl.existsTable(DB.schema_system(), DB.TICKERS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.TABLE_TICKERS)) {
 				ddl.buildTable(DB.table_tickers());
 			}
 
 			/* Check for the necessary table Statistics in the system schema. */
 			getStatusBar().setLabel("DBCHK", prefix + "check statistics table...");
-			if (!ddl.existsTable(DB.schema_system(), DB.STATISTICS)) {
+			if (!ddl.existsTable(DB.schema_system(), DB.TABLE_STATISTICS)) {
 				ddl.buildTable(DB.table_statistics());
 			}
 
@@ -352,9 +352,9 @@ public class MLT {
 	 */
 	private static void synchronizeSupportedServer(Persistor persistor) throws Exception {
 		Record record = persistor.getDefaultRecord();
-		record.setValue(Fields.SERVER_ID, new Value(getServer().getId()));
-		record.setValue(Fields.SERVER_NAME, new Value(getServer().getName()));
-		record.setValue(Fields.SERVER_TITLE, new Value(getServer().getTitle()));
+		record.setValue(DB.FIELD_SERVER_ID, new Value(getServer().getId()));
+		record.setValue(DB.FIELD_SERVER_NAME, new Value(getServer().getName()));
+		record.setValue(DB.FIELD_SERVER_TITLE, new Value(getServer().getTitle()));
 		persistor.save(record);
 	}
 
@@ -368,10 +368,10 @@ public class MLT {
 		List<Period> periods = Period.getStandardPeriods();
 		for (Period period : periods) {
 			Record record = persistor.getDefaultRecord();
-			record.setValue(Fields.PERIOD_ID, new Value(period.getId()));
-			record.setValue(Fields.PERIOD_NAME, new Value(period.toString()));
-			record.setValue(Fields.PERIOD_SIZE, new Value(period.getSize()));
-			record.setValue(Fields.PERIOD_UNIT_INDEX, new Value(period.getUnit().ordinal()));
+			record.setValue(DB.FIELD_PERIOD_ID, new Value(period.getId()));
+			record.setValue(DB.FIELD_PERIOD_NAME, new Value(period.toString()));
+			record.setValue(DB.FIELD_PERIOD_SIZE, new Value(period.getSize()));
+			record.setValue(DB.FIELD_PERIOD_UNIT_INDEX, new Value(period.getUnit().ordinal()));
 			if (!persistor.exists(record)) {
 				persistor.insert(record);
 			}

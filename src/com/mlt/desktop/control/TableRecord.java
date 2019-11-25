@@ -140,6 +140,7 @@ public class TableRecord extends Table {
 		 */
 
 		TableRecordModel model = (TableRecordModel) tableModel;
+		setSortingEnabled(model.getRecordSet().isSortable());
 		Record masterRecord = model.getMasterRecord();
 		for (int column = 0; column < model.getColumnCount(); column++) {
 

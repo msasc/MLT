@@ -18,6 +18,7 @@
 package app.mlt.plaf;
 
 import java.awt.Font;
+import java.text.SimpleDateFormat;
 import java.util.Currency;
 
 import com.mlt.db.Calculator;
@@ -39,6 +40,8 @@ import com.mlt.db.rdbms.DBPersistorDDL;
 import com.mlt.desktop.EditContext;
 import com.mlt.desktop.LookupRecords;
 import com.mlt.desktop.control.TextArea;
+import com.mlt.desktop.converters.NumberScaleConverter;
+import com.mlt.desktop.converters.TimeFmtConverter;
 import com.mlt.desktop.layout.Dimension;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
@@ -55,13 +58,37 @@ import app.mlt.plaf.statistics.StatisticsAverages;
 public class DB {
 
 	/**
+	 * Calculator to return the value of the named field.
+	 */
+	static class FieldValue implements Calculator {
+
+		private String alias;
+
+		/**
+		 * Consturctor.
+		 * 
+		 * @param alias Field alias.
+		 */
+		public FieldValue(String alias) {
+			super();
+			this.alias = alias;
+		}
+
+		@Override
+		public Value getValue(Record record) {
+			return record.getValue(alias);
+		}
+
+	}
+
+	/**
 	 * Calculator to display the parameters description..
 	 */
 	static class ParamsDesc implements Calculator {
 		@Override
 		public Value getValue(Record record) {
-			String id = record.getValue(Fields.STATISTICS_ID).toString();
-			String params = record.getValue(Fields.STATISTICS_PARAMS).toString();
+			String id = record.getValue(FIELD_STATISTICS_ID).toString();
+			String params = record.getValue(FIELD_STATISTICS_PARAMS).toString();
 			if (id.equals("AVG") && !params.isEmpty()) {
 				try {
 					StatisticsAverages stats = StatisticsAverages.getStatistics(record);
@@ -74,18 +101,79 @@ public class DB {
 		}
 	}
 
-	public static final String INSTRUMENTS = "instruments";
-	public static final String PERIODS = "periods";
-	public static final String SERVERS = "servers";
-	public static final String STATISTICS = "statistics";
-	public static final String TICKERS = "tickers";
+	public static final String FIELD_AVERAGE_TYPE = "avg_type";
+	public static final String FIELD_AVERAGE_PERIOD = "avg_period";
+	public static final String FIELD_AVERAGE_SMOOTHS = "avg_smooths";
+
+	public static final String FIELD_BAR_TIME = "time";
+	public static final String FIELD_BAR_TIME_FMT = "time_fmt";
+	public static final String FIELD_BAR_OPEN = "open";
+	public static final String FIELD_BAR_HIGH = "high";
+	public static final String FIELD_BAR_LOW = "low";
+	public static final String FIELD_BAR_CLOSE = "close";
+	public static final String FIELD_BAR_VOLUME = "volume";
+	public static final String FIELD_BAR_RANGE = "range";
+	public static final String FIELD_BAR_BODY_FACTOR = "body_factor";
+	public static final String FIELD_BAR_BODY_POS = "body_pos";
+	public static final String FIELD_BAR_REL_POS = "relpos_factor";
+	public static final String FIELD_BAR_SIGN = "sign";
+
+	public static final String FIELD_DATA_FILTER = "data_filter";
+
+	public static final String FIELD_INSTRUMENT_ID = "instr_id";
+	public static final String FIELD_INSTRUMENT_DESC = "instr_desc";
+	public static final String FIELD_INSTRUMENT_PIP_VALUE = "instr_pipv";
+	public static final String FIELD_INSTRUMENT_PIP_SCALE = "instr_pips";
+	public static final String FIELD_INSTRUMENT_PRIMARY_CURRENCY = "instr_currp";
+	public static final String FIELD_INSTRUMENT_SECONDARY_CURRENCY = "instr_currs";
+	public static final String FIELD_INSTRUMENT_TICK_VALUE = "instr_tickv";
+	public static final String FIELD_INSTRUMENT_TICK_SCALE = "instr_ticks";
+	public static final String FIELD_INSTRUMENT_VOLUME_SCALE = "instr_vols";
+
+	public static final String FIELD_OFFER_SIDE = "offer_side";
+
+	public static final String FIELD_PERIOD = "period";
+	public static final String FIELD_PERIOD_ID = "period_id";
+	public static final String FIELD_PERIOD_NAME = "period_name";
+	public static final String FIELD_PERIOD_SIZE = "period_size";
+	public static final String FIELD_PERIOD_UNIT_INDEX = "period_unit_index";
+
+	public static final String FIELD_RANGE_NAME = "name";
+	public static final String FIELD_RANGE_PERIOD = "period";
+	public static final String FIELD_RANGE_MINIMUM = "minimum";
+	public static final String FIELD_RANGE_MAXIMUM = "maximum";
+	public static final String FIELD_RANGE_AVERAGE = "average";
+	public static final String FIELD_RANGE_STDDEV = "std_dev";
+	public static final String FIELD_RANGE_AVG_STD_10 = "avg_std_10";
+	public static final String FIELD_RANGE_AVG_STD_20 = "avg_std_20";
+
+	public static final String FIELD_SERVER_ID = "server_id";
+	public static final String FIELD_SERVER_NAME = "server_name";
+	public static final String FIELD_SERVER_TITLE = "server_title";
+
+	public static final String FIELD_STATES_LABEL = "label";
+	public static final String FIELD_STATES_PIVOT = "pivot";
+	public static final String FIELD_STATES_REFV = "refv";
+	public static final String FIELD_STATES_NORMALIZED = "normalized";
+	public static final String FIELD_STATES_PIVOT_SCANNED = "pivot_scanned";
+
+	public static final String FIELD_STATISTICS_ID = "stats_id";
+	public static final String FIELD_STATISTICS_KEY = "stats_key";
+	public static final String FIELD_STATISTICS_PARAMS = "stats_params";
+	public static final String FIELD_STATISTICS_PARAMS_DESC = "stats_params_desc";
+
+	public static final String FIELD_TABLE_NAME = "table_name";
+
+	public static final String TABLE_INSTRUMENTS = "instruments";
+	public static final String TABLE_PERIODS = "periods";
+	public static final String TABLE_SERVERS = "servers";
+	public static final String TABLE_STATISTICS = "statistics";
+	public static final String TABLE_TICKERS = "tickers";
 
 	/** DDL. */
 	private static PersistorDDL ddl;
 
 	/**
-	 * Return the proper persistor DDL.
-	 * 
 	 * @return The persistor DDL.
 	 */
 	public static PersistorDDL ddl() {
@@ -96,6 +184,162 @@ public class DB {
 	}
 
 	/**
+	 * @param instrument The instrument.
+	 * @param name       The field name.
+	 * @param header     The header.
+	 * @return The field to show data (open, high, low, close) for an instrument.
+	 */
+	public static Field field_data(Instrument instrument, String name, String header) {
+		return field_data(instrument, name, header, header);
+	}
+
+	/**
+	 * @param instrument The instrument.
+	 * @param name       The field name.
+	 * @param header     The header.
+	 * @param label      The label.
+	 * @return The field to show data (open, high, low, close) for an instrument..
+	 */
+	public static Field field_data(
+		Instrument instrument,
+		String name,
+		String header,
+		String label) {
+		Field field = field_double(name, header, label);
+		field.setDisplayDecimals(instrument.getPipScale());
+		field.setStringConverter(new NumberScaleConverter(instrument.getPipScale()));
+		return field;
+	}
+
+	/**
+	 * 
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @return The field definition for a double value.
+	 */
+	public static Field field_double(String name, String header) {
+		return field_double(name, header, header);
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @param label  The field label.
+	 * @return The field definition for a double value.
+	 */
+	public static Field field_double(String name, String header, String label) {
+		Field field = new Field();
+		field.setName(name);
+		field.setAlias(name);
+		field.setType(Types.DOUBLE);
+		field.setHeader(header);
+		field.setLabel(label);
+		field.setTitle(label);
+		return field;
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @return The field definition for an integer value.
+	 */
+	public static Field field_integer(String name, String header) {
+		return field_integer(name, header, header);
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @param label  The field label.
+	 * @return The field definition for an integer value.
+	 */
+	public static Field field_integer(String name, String header, String label) {
+		Field field = new Field();
+		field.setName(name);
+		field.setAlias(name);
+		field.setType(Types.INTEGER);
+		field.setHeader(header);
+		field.setLabel(label);
+		field.setTitle(label);
+		return field;
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @return The field definition for an long value.
+	 */
+	public static Field field_long(String name, String header) {
+		return field_long(name, header, header);
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @param label  The label.
+	 * @return The field definition for an long value.
+	 */
+	public static Field field_long(String name, String header, String label) {
+		Field field = new Field();
+		field.setName(name);
+		field.setAlias(name);
+		field.setType(Types.LONG);
+		field.setHeader(header);
+		field.setLabel(label);
+		field.setTitle(label);
+		return field;
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param length Field length.
+	 * @param header The field header.
+	 * @return The field definition for a string value.
+	 */
+	public static Field field_string(String name, int length, String header) {
+		return field_string(name, length, header, header);
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param length Field length.
+	 * @param header The field header.
+	 * @param label  The field label.
+	 * @return The field definition for a string value.
+	 */
+	public static Field field_string(String name, int length, String header, String label) {
+		Field field = new Field();
+		field.setName(name);
+		field.setAlias(name);
+		field.setType(Types.STRING);
+		field.setLength(length);
+		field.setHeader(header);
+		field.setLabel(label);
+		field.setTitle(label);
+		return field;
+	}
+
+	/**
+	 * @param period      The period.
+	 * @param nameTime    The time name.
+	 * @param nameTimeFmt The formatted time name.
+	 * @param header      The header.
+	 * @return The field field definition for the formatted time.
+	 */
+	public static Field field_timeFmt(
+		Period period,
+		String nameTime,
+		String nameTimeFmt,
+		String header) {
+		Field field = field_long(nameTimeFmt, header);
+		field.setPersistent(false);
+		field.setCalculator(new FieldValue(nameTime));
+		String pattern = period.getTimeFmtPattern();
+		field.setStringConverter(new TimeFmtConverter(new SimpleDateFormat(pattern)));
+		return field;
+	}
+
+	/**
 	 * Lookup an instrument.
 	 * 
 	 * @return The selected instrument record.
@@ -103,15 +347,15 @@ public class DB {
 	 */
 	public static Record lookup_instrument() throws PersistorException {
 		LookupRecords lookup = new LookupRecords(persistor_instruments().getDefaultRecord());
-		lookup.addColumn(Fields.INSTRUMENT_ID);
-		lookup.addColumn(Fields.INSTRUMENT_DESC);
-		lookup.addColumn(Fields.INSTRUMENT_PIP_VALUE);
-		lookup.addColumn(Fields.INSTRUMENT_PIP_SCALE);
-		lookup.addColumn(Fields.INSTRUMENT_TICK_VALUE);
-		lookup.addColumn(Fields.INSTRUMENT_TICK_SCALE);
-		lookup.addColumn(Fields.INSTRUMENT_VOLUME_SCALE);
-		lookup.addColumn(Fields.INSTRUMENT_PRIMARY_CURRENCY);
-		lookup.addColumn(Fields.INSTRUMENT_SECONDARY_CURRENCY);
+		lookup.addColumn(FIELD_INSTRUMENT_ID);
+		lookup.addColumn(FIELD_INSTRUMENT_DESC);
+		lookup.addColumn(FIELD_INSTRUMENT_PIP_VALUE);
+		lookup.addColumn(FIELD_INSTRUMENT_PIP_SCALE);
+		lookup.addColumn(FIELD_INSTRUMENT_TICK_VALUE);
+		lookup.addColumn(FIELD_INSTRUMENT_TICK_SCALE);
+		lookup.addColumn(FIELD_INSTRUMENT_VOLUME_SCALE);
+		lookup.addColumn(FIELD_INSTRUMENT_PRIMARY_CURRENCY);
+		lookup.addColumn(FIELD_INSTRUMENT_SECONDARY_CURRENCY);
 		lookup.setRecordSet(recordset_instruments());
 		lookup.setSize(0.5, 0.8);
 		lookup.setTitle("Select the instrument");
@@ -127,9 +371,9 @@ public class DB {
 	 */
 	public static Record lookup_period() throws PersistorException {
 		LookupRecords lookup = new LookupRecords(persistor_periods().getDefaultRecord());
-		lookup.addColumn(Fields.PERIOD_ID);
-		lookup.addColumn(Fields.PERIOD_NAME);
-		lookup.addColumn(Fields.PERIOD_SIZE);
+		lookup.addColumn(FIELD_PERIOD_ID);
+		lookup.addColumn(FIELD_PERIOD_NAME);
+		lookup.addColumn(FIELD_PERIOD_SIZE);
 		lookup.setRecordSet(recordset_periods());
 		lookup.setSize(0.3, 0.4);
 		lookup.setTitle("Select the instrument");
@@ -145,10 +389,10 @@ public class DB {
 	 */
 	public static Record lookup_ticker() throws PersistorException {
 		LookupRecords lookup = new LookupRecords(persistor_tickers().getDefaultRecord());
-		lookup.addColumn(Fields.INSTRUMENT_ID);
-		lookup.addColumn(Fields.PERIOD_ID);
-		lookup.addColumn(Fields.PERIOD_NAME);
-		lookup.addColumn(Fields.PERIOD_SIZE);
+		lookup.addColumn(FIELD_INSTRUMENT_ID);
+		lookup.addColumn(FIELD_PERIOD_ID);
+		lookup.addColumn(FIELD_PERIOD_NAME);
+		lookup.addColumn(FIELD_PERIOD_SIZE);
 		lookup.setRecordSet(recordset_tickers());
 		lookup.setSize(0.3, 0.4);
 		lookup.setTitle("Select the ticker");
@@ -265,16 +509,16 @@ public class DB {
 			new Value(instrument.getSecondaryCurrency().toString());
 
 		Record record = persistor_instruments().getDefaultRecord();
-		record.setValue(Fields.SERVER_ID, vSERVER_ID);
-		record.setValue(Fields.INSTRUMENT_ID, vINSTRUMENT_ID);
-		record.setValue(Fields.INSTRUMENT_DESC, vINSTRUMENT_DESC);
-		record.setValue(Fields.INSTRUMENT_PIP_VALUE, vINSTRUMENT_PIP_VALUE);
-		record.setValue(Fields.INSTRUMENT_PIP_SCALE, vINSTRUMENT_PIP_SCALE);
-		record.setValue(Fields.INSTRUMENT_TICK_VALUE, vINSTRUMENT_TICK_VALUE);
-		record.setValue(Fields.INSTRUMENT_TICK_SCALE, vINSTRUMENT_TICK_SCALE);
-		record.setValue(Fields.INSTRUMENT_VOLUME_SCALE, vINSTRUMENT_VOLUME_SCALE);
-		record.setValue(Fields.INSTRUMENT_PRIMARY_CURRENCY, vINSTRUMENT_PRIMARY_CURRENCY);
-		record.setValue(Fields.INSTRUMENT_SECONDARY_CURRENCY, vINSTRUMENT_SECONDARY_CURRENCY);
+		record.setValue(FIELD_SERVER_ID, vSERVER_ID);
+		record.setValue(FIELD_INSTRUMENT_ID, vINSTRUMENT_ID);
+		record.setValue(FIELD_INSTRUMENT_DESC, vINSTRUMENT_DESC);
+		record.setValue(FIELD_INSTRUMENT_PIP_VALUE, vINSTRUMENT_PIP_VALUE);
+		record.setValue(FIELD_INSTRUMENT_PIP_SCALE, vINSTRUMENT_PIP_SCALE);
+		record.setValue(FIELD_INSTRUMENT_TICK_VALUE, vINSTRUMENT_TICK_VALUE);
+		record.setValue(FIELD_INSTRUMENT_TICK_SCALE, vINSTRUMENT_TICK_SCALE);
+		record.setValue(FIELD_INSTRUMENT_VOLUME_SCALE, vINSTRUMENT_VOLUME_SCALE);
+		record.setValue(FIELD_INSTRUMENT_PRIMARY_CURRENCY, vINSTRUMENT_PRIMARY_CURRENCY);
+		record.setValue(FIELD_INSTRUMENT_SECONDARY_CURRENCY, vINSTRUMENT_SECONDARY_CURRENCY);
 		return record;
 	}
 
@@ -287,8 +531,8 @@ public class DB {
 	public static Record record_instrument(String id) throws PersistorException {
 		Persistor persistor = persistor_instruments();
 		Record record = persistor.getDefaultRecord();
-		record.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
-		record.setValue(Fields.INSTRUMENT_ID, new Value(id));
+		record.setValue(FIELD_SERVER_ID, new Value(MLT.getServer().getId()));
+		record.setValue(FIELD_INSTRUMENT_ID, new Value(id));
 		persistor.refresh(record);
 		return record;
 	}
@@ -302,7 +546,7 @@ public class DB {
 	public static Record record_period(String id) throws PersistorException {
 		Persistor persistor = persistor_periods();
 		Record record = persistor.getDefaultRecord();
-		record.setValue(Fields.PERIOD_ID, new Value(id));
+		record.setValue(FIELD_PERIOD_ID, new Value(id));
 		persistor.refresh(record);
 		return record;
 	}
@@ -316,10 +560,10 @@ public class DB {
 	 */
 	public static Record record_ticker(Instrument instrument, Period period) {
 		Record record = persistor_tickers().getDefaultRecord();
-		record.setValue(Fields.SERVER_ID, new Value(MLT.getServer().getId()));
-		record.setValue(Fields.INSTRUMENT_ID, new Value(instrument.getId()));
-		record.setValue(Fields.PERIOD_ID, new Value(period.getId()));
-		record.setValue(Fields.TABLE_NAME, new Value(name_ticker(instrument, period)));
+		record.setValue(FIELD_SERVER_ID, new Value(MLT.getServer().getId()));
+		record.setValue(FIELD_INSTRUMENT_ID, new Value(instrument.getId()));
+		record.setValue(FIELD_PERIOD_ID, new Value(period.getId()));
+		record.setValue(FIELD_TABLE_NAME, new Value(name_ticker(instrument, period)));
 		return record;
 	}
 
@@ -333,7 +577,7 @@ public class DB {
 
 		Persistor persistor = persistor_instruments();
 		Criteria criteria = new Criteria();
-		Field field = persistor.getField(Fields.SERVER_ID);
+		Field field = persistor.getField(FIELD_SERVER_ID);
 		Value value = new Value(MLT.getServer().getId());
 		criteria.add(Condition.fieldEQ(field, value));
 		RecordSet recordSet = persistor.select(criteria);
@@ -343,13 +587,13 @@ public class DB {
 		int maxTickScale = 0;
 		for (int i = 0; i < recordSet.size(); i++) {
 			Record record = recordSet.get(i);
-			int pipScale = record.getValue(Fields.INSTRUMENT_PIP_SCALE).getInteger();
-			int tickScale = record.getValue(Fields.INSTRUMENT_TICK_SCALE).getInteger();
+			int pipScale = record.getValue(FIELD_INSTRUMENT_PIP_SCALE).getInteger();
+			int tickScale = record.getValue(FIELD_INSTRUMENT_TICK_SCALE).getInteger();
 			maxPipScale = Math.max(maxPipScale, pipScale);
 			maxTickScale = Math.max(maxTickScale, tickScale);
 		}
-		recordSet.getField(Fields.INSTRUMENT_PIP_VALUE).setDisplayDecimals(maxPipScale);
-		recordSet.getField(Fields.INSTRUMENT_TICK_VALUE).setDisplayDecimals(maxTickScale);
+		recordSet.getField(FIELD_INSTRUMENT_PIP_VALUE).setDisplayDecimals(maxPipScale);
+		recordSet.getField(FIELD_INSTRUMENT_TICK_VALUE).setDisplayDecimals(maxTickScale);
 		return recordSet;
 	}
 
@@ -373,7 +617,7 @@ public class DB {
 	 */
 	public static RecordSet recordset_statistics() throws PersistorException {
 		Persistor persistor = persistor_statistics();
-		Field field = persistor.getField(Fields.SERVER_ID);
+		Field field = persistor.getField(FIELD_SERVER_ID);
 		Value value = new Value(MLT.getServer().getId());
 		Criteria criteria = new Criteria();
 		criteria.add(Condition.fieldEQ(field, value));
@@ -389,7 +633,7 @@ public class DB {
 	 */
 	public static RecordSet recordset_tickers() throws PersistorException {
 		Persistor persistor = persistor_tickers();
-		Field field = persistor.getField(Fields.SERVER_ID);
+		Field field = persistor.getField(FIELD_SERVER_ID);
 		Value value = new Value(MLT.getServer().getId());
 		Criteria criteria = new Criteria();
 		criteria.add(Condition.fieldEQ(field, value));
@@ -411,27 +655,24 @@ public class DB {
 	public static Table table_instruments() {
 
 		Table table = new Table();
-		table.setName(DB.INSTRUMENTS);
-		table.setSchema(DB.schema_system());
+		table.setName(TABLE_INSTRUMENTS);
+		table.setSchema(schema_system());
 
-		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
-		table.addField(Fields.getString(Fields.INSTRUMENT_ID, 20, "Instrument"));
-		table.addField(Fields.getString(Fields.INSTRUMENT_DESC, 120, "Instrument description"));
-		table.addField(Fields.getDouble(Fields.INSTRUMENT_PIP_VALUE, "Pip value"));
-		table.addField(Fields.getInteger(Fields.INSTRUMENT_PIP_SCALE, "Pip scale"));
-		table.addField(Fields.getDouble(
-			Fields.INSTRUMENT_TICK_VALUE, "Tick value", "Instrument tick value"));
-		table.addField(Fields.getInteger(
-			Fields.INSTRUMENT_TICK_SCALE, "Tick scale", "Instrument tick scale"));
-		table.addField(Fields.getInteger(
-			Fields.INSTRUMENT_VOLUME_SCALE, "Volume scale", "Instrument volume scale"));
-		table.addField(Fields.getString(
-			Fields.INSTRUMENT_PRIMARY_CURRENCY, 6, "P-Currency", "Primary currency"));
-		table.addField(Fields.getString(
-			Fields.INSTRUMENT_SECONDARY_CURRENCY, 6, "S-Currency", "Secondary currency"));
+		table.addField(field_string(FIELD_SERVER_ID, 20, "Server id"));
+		table.addField(field_string(FIELD_INSTRUMENT_ID, 20, "Instrument"));
+		table.addField(field_string(FIELD_INSTRUMENT_DESC, 120, "Instrument description"));
+		table.addField(field_double(FIELD_INSTRUMENT_PIP_VALUE, "Pip value"));
+		table.addField(field_integer(FIELD_INSTRUMENT_PIP_SCALE, "Pip scale"));
+		table.addField(field_double(FIELD_INSTRUMENT_TICK_VALUE, "Tick value"));
+		table.addField(field_integer(FIELD_INSTRUMENT_TICK_SCALE, "Tick scale"));
+		table.addField(field_integer(FIELD_INSTRUMENT_VOLUME_SCALE, "Volume scale"));
+		table.addField(field_string(
+			FIELD_INSTRUMENT_PRIMARY_CURRENCY, 6, "P-Currency", "Primary currency"));
+		table.addField(field_string(
+			FIELD_INSTRUMENT_SECONDARY_CURRENCY, 6, "S-Currency", "Secondary currency"));
 
-		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
-		table.getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);
+		table.getField(FIELD_SERVER_ID).setPrimaryKey(true);
+		table.getField(FIELD_INSTRUMENT_ID).setPrimaryKey(true);
 
 		table.setPersistor(
 			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
@@ -444,19 +685,19 @@ public class DB {
 	 */
 	public static Table table_periods() {
 		Table table = new Table();
-		table.setName(DB.PERIODS);
-		table.setSchema(DB.schema_system());
+		table.setName(TABLE_PERIODS);
+		table.setSchema(schema_system());
 
-		table.addField(Fields.getString(Fields.PERIOD_ID, 5, "Period id"));
-		table.addField(Fields.getString(Fields.PERIOD_NAME, 15, "Period name"));
-		table.addField(Fields.getInteger(Fields.PERIOD_UNIT_INDEX, "Period unit index"));
-		table.addField(Fields.getInteger(Fields.PERIOD_SIZE, "Period size"));
+		table.addField(field_string(FIELD_PERIOD_ID, 5, "Period id"));
+		table.addField(field_string(FIELD_PERIOD_NAME, 15, "Period name"));
+		table.addField(field_integer(FIELD_PERIOD_UNIT_INDEX, "Period unit index"));
+		table.addField(field_integer(FIELD_PERIOD_SIZE, "Period size"));
 
-		table.getField(Fields.PERIOD_ID).setPrimaryKey(true);
+		table.getField(FIELD_PERIOD_ID).setPrimaryKey(true);
 
 		Order order = new Order();
-		order.add(table.getField(Fields.PERIOD_UNIT_INDEX));
-		order.add(table.getField(Fields.PERIOD_SIZE));
+		order.add(table.getField(FIELD_PERIOD_UNIT_INDEX));
+		order.add(table.getField(FIELD_PERIOD_SIZE));
 
 		table.setPersistor(new DBPersistor(MLT.getDBEngine(), table.getComplexView(order)));
 
@@ -468,14 +709,14 @@ public class DB {
 	 */
 	public static Table table_servers() {
 		Table table = new Table();
-		table.setName(DB.SERVERS);
-		table.setSchema(DB.schema_system());
+		table.setName(TABLE_SERVERS);
+		table.setSchema(schema_system());
 
-		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
-		table.addField(Fields.getString(Fields.SERVER_NAME, 60, "Server name"));
-		table.addField(Fields.getString(Fields.SERVER_TITLE, 120, "Server title"));
+		table.addField(field_string(FIELD_SERVER_ID, 20, "Server id"));
+		table.addField(field_string(FIELD_SERVER_NAME, 60, "Server name"));
+		table.addField(field_string(FIELD_SERVER_TITLE, 120, "Server title"));
 
-		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
+		table.getField(FIELD_SERVER_ID).setPrimaryKey(true);
 
 		table.setPersistor(
 			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
@@ -488,21 +729,21 @@ public class DB {
 	 */
 	public static Table table_statistics() {
 		Table table = new Table();
-		table.setName(DB.STATISTICS);
-		table.setSchema(DB.schema_system());
+		table.setName(TABLE_STATISTICS);
+		table.setSchema(schema_system());
 
-		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
-		table.addField(Fields.getString(Fields.INSTRUMENT_ID, 20, "Instrument"));
-		table.addField(Fields.getString(Fields.PERIOD_ID, 5, "Period id"));
+		table.addField(field_string(FIELD_SERVER_ID, 20, "Server id"));
+		table.addField(field_string(FIELD_INSTRUMENT_ID, 20, "Instrument"));
+		table.addField(field_string(FIELD_PERIOD_ID, 5, "Period id"));
 
-		table.addField(Fields.getString(Fields.STATISTICS_ID, 5, "Id", "Statistics id"));
-		table.getField(Fields.STATISTICS_ID).addPossibleValue("AVG", "Averages");
+		table.addField(field_string(FIELD_STATISTICS_ID, 5, "Id", "Statistics id"));
+		table.getField(FIELD_STATISTICS_ID).addPossibleValue("AVG", "Averages");
 
-		table.addField(Fields.getString(Fields.STATISTICS_KEY, 2, "Key", "Statistics key"));
+		table.addField(field_string(FIELD_STATISTICS_KEY, 2, "Key", "Statistics key"));
 
 		Field params =
-			Fields.getString(
-				Fields.STATISTICS_PARAMS,
+			field_string(
+				FIELD_STATISTICS_PARAMS,
 				Types.FIXED_LENGTH * 10,
 				"Statistics params");
 		TextArea textArea = new TextArea();
@@ -513,26 +754,25 @@ public class DB {
 		table.addField(params);
 
 		Field paramsDesc =
-			Fields.getString(
-				Fields.STATISTICS_PARAMS_DESC,
+			field_string(
+				FIELD_STATISTICS_PARAMS_DESC,
 				1024,
 				"Parameters description");
 		paramsDesc.setPersistent(false);
 		paramsDesc.setCalculator(new ParamsDesc());
 		table.addField(paramsDesc);
 
-		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
-		table.getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);
-		table.getField(Fields.PERIOD_ID).setPrimaryKey(true);
-		table.getField(Fields.STATISTICS_ID).setPrimaryKey(true);
-		table.getField(Fields.STATISTICS_KEY).setPrimaryKey(true);
+		table.getField(FIELD_SERVER_ID).setPrimaryKey(true);
+		table.getField(FIELD_INSTRUMENT_ID).setPrimaryKey(true);
+		table.getField(FIELD_PERIOD_ID).setPrimaryKey(true);
+		table.getField(FIELD_STATISTICS_ID).setPrimaryKey(true);
+		table.getField(FIELD_STATISTICS_KEY).setPrimaryKey(true);
 
-		Table tablePeriods = DB.table_periods();
+		Table tablePeriods = table_periods();
 		ForeignKey fkPeriods = new ForeignKey(false);
 		fkPeriods.setLocalTable(table);
 		fkPeriods.setForeignTable(tablePeriods);
-		fkPeriods.add(table.getField(Fields.PERIOD_ID),
-			tablePeriods.getField(Fields.PERIOD_ID));
+		fkPeriods.add(table.getField(FIELD_PERIOD_ID), tablePeriods.getField(FIELD_PERIOD_ID));
 		table.addForeignKey(fkPeriods);
 
 		table.setPersistor(
@@ -548,20 +788,19 @@ public class DB {
 	 */
 	public static Table table_ticker(Instrument instrument, Period period) {
 		Table table = new Table();
-		table.setName(DB.name_ticker(instrument, period));
-		table.setSchema(DB.schema_server());
+		table.setName(name_ticker(instrument, period));
+		table.setSchema(schema_server());
 
-		table.addField(Fields.getLong(Fields.BAR_TIME, "Time"));
-		table.addField(Fields.getData(instrument, Fields.BAR_OPEN, "Open"));
-		table.addField(Fields.getData(instrument, Fields.BAR_HIGH, "High"));
-		table.addField(Fields.getData(instrument, Fields.BAR_LOW, "Low"));
-		table.addField(Fields.getData(instrument, Fields.BAR_CLOSE, "Close"));
-		table.addField(Fields.getDouble(Fields.BAR_VOLUME, "Volume"));
-		table.getField(Fields.BAR_VOLUME).setDecimals(instrument.getVolumeScale());
-		table.addField(
-			Fields.getTimeFmt(period, Fields.BAR_TIME, Fields.BAR_TIME_FMT, "Time fmt"));
+		table.addField(field_long(FIELD_BAR_TIME, "Time"));
+		table.addField(field_data(instrument, FIELD_BAR_OPEN, "Open"));
+		table.addField(field_data(instrument, FIELD_BAR_HIGH, "High"));
+		table.addField(field_data(instrument, FIELD_BAR_LOW, "Low"));
+		table.addField(field_data(instrument, FIELD_BAR_CLOSE, "Close"));
+		table.addField(field_double(FIELD_BAR_VOLUME, "Volume"));
+		table.getField(FIELD_BAR_VOLUME).setDecimals(instrument.getVolumeScale());
+		table.addField(field_timeFmt(period, FIELD_BAR_TIME, FIELD_BAR_TIME_FMT, "Time fmt"));
 
-		table.getField(Fields.BAR_TIME).setPrimaryKey(true);
+		table.getField(FIELD_BAR_TIME).setPrimaryKey(true);
 		table.setPersistor(
 			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
 
@@ -573,32 +812,30 @@ public class DB {
 	 */
 	public static Table table_tickers() {
 		Table table = new Table();
-		table.setName(DB.TICKERS);
-		table.setSchema(DB.schema_system());
+		table.setName(TABLE_TICKERS);
+		table.setSchema(schema_system());
 
-		table.addField(Fields.getString(Fields.SERVER_ID, 20, "Server id"));
-		table.addField(Fields.getString(Fields.INSTRUMENT_ID, 20, "Instrument"));
-		table.addField(Fields.getString(Fields.PERIOD_ID, 5, "Period id"));
-		table.addField(Fields.getString(Fields.TABLE_NAME, 30, "Table name"));
+		table.addField(field_string(FIELD_SERVER_ID, 20, "Server id"));
+		table.addField(field_string(FIELD_INSTRUMENT_ID, 20, "Instrument"));
+		table.addField(field_string(FIELD_PERIOD_ID, 5, "Period id"));
+		table.addField(field_string(FIELD_TABLE_NAME, 30, "Table name"));
 
-		table.getField(Fields.SERVER_ID).setPrimaryKey(true);
-		table.getField(Fields.INSTRUMENT_ID).setPrimaryKey(true);
-		table.getField(Fields.PERIOD_ID).setPrimaryKey(true);
+		table.getField(FIELD_SERVER_ID).setPrimaryKey(true);
+		table.getField(FIELD_INSTRUMENT_ID).setPrimaryKey(true);
+		table.getField(FIELD_PERIOD_ID).setPrimaryKey(true);
 
-		Table tablePeriods = DB.table_periods();
+		Table tablePeriods = table_periods();
 		ForeignKey fkPeriods = new ForeignKey(false);
 		fkPeriods.setLocalTable(table);
 		fkPeriods.setForeignTable(tablePeriods);
-		fkPeriods.add(
-			table.getField(Fields.PERIOD_ID),
-			tablePeriods.getField(Fields.PERIOD_ID));
+		fkPeriods.add(table.getField(FIELD_PERIOD_ID), tablePeriods.getField(FIELD_PERIOD_ID));
 		table.addForeignKey(fkPeriods);
 
 		Order order = new Order();
-		order.add(table.getField(Fields.SERVER_ID));
-		order.add(table.getField(Fields.INSTRUMENT_ID));
-		order.add(tablePeriods.getField(Fields.PERIOD_UNIT_INDEX));
-		order.add(tablePeriods.getField(Fields.PERIOD_SIZE));
+		order.add(table.getField(FIELD_SERVER_ID));
+		order.add(table.getField(FIELD_INSTRUMENT_ID));
+		order.add(tablePeriods.getField(FIELD_PERIOD_UNIT_INDEX));
+		order.add(tablePeriods.getField(FIELD_PERIOD_SIZE));
 
 		table.setPersistor(new DBPersistor(MLT.getDBEngine(), table.getComplexView(order)));
 		return table;
@@ -612,17 +849,16 @@ public class DB {
 	 */
 	public static Instrument to_instrument(Record record) {
 		Instrument instrument = new Instrument();
-		instrument.setId(record.getValue(Fields.INSTRUMENT_ID).getString());
-		instrument.setDescription(record.getValue(Fields.INSTRUMENT_DESC).getString());
-		instrument.setPipValue(record.getValue(Fields.INSTRUMENT_PIP_VALUE).getDouble());
-		instrument.setPipScale(record.getValue(Fields.INSTRUMENT_PIP_SCALE).getInteger());
-		instrument.setTickValue(record.getValue(Fields.INSTRUMENT_TICK_VALUE).getDouble());
-		instrument.setTickScale(record.getValue(Fields.INSTRUMENT_TICK_SCALE).getInteger());
-		instrument.setVolumeScale(record.getValue(Fields.INSTRUMENT_VOLUME_SCALE).getInteger());
-		String primaryCurrency = record.getValue(Fields.INSTRUMENT_PRIMARY_CURRENCY).getString();
+		instrument.setId(record.getValue(FIELD_INSTRUMENT_ID).getString());
+		instrument.setDescription(record.getValue(FIELD_INSTRUMENT_DESC).getString());
+		instrument.setPipValue(record.getValue(FIELD_INSTRUMENT_PIP_VALUE).getDouble());
+		instrument.setPipScale(record.getValue(FIELD_INSTRUMENT_PIP_SCALE).getInteger());
+		instrument.setTickValue(record.getValue(FIELD_INSTRUMENT_TICK_VALUE).getDouble());
+		instrument.setTickScale(record.getValue(FIELD_INSTRUMENT_TICK_SCALE).getInteger());
+		instrument.setVolumeScale(record.getValue(FIELD_INSTRUMENT_VOLUME_SCALE).getInteger());
+		String primaryCurrency = record.getValue(FIELD_INSTRUMENT_PRIMARY_CURRENCY).getString();
 		instrument.setPrimaryCurrency(Currency.getInstance(primaryCurrency));
-		String secondaryCurrency =
-			record.getValue(Fields.INSTRUMENT_SECONDARY_CURRENCY).getString();
+		String secondaryCurrency = record.getValue(FIELD_INSTRUMENT_SECONDARY_CURRENCY).getString();
 		instrument.setSecondaryCurrency(Currency.getInstance(secondaryCurrency));
 		return instrument;
 	}
@@ -645,7 +881,7 @@ public class DB {
 	 * @return The period.
 	 */
 	public static Period to_period(Record record) {
-		String id = record.getValue(Fields.PERIOD_ID).getString();
+		String id = record.getValue(FIELD_PERIOD_ID).getString();
 		return Period.parseId(id);
 	}
 

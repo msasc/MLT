@@ -65,7 +65,6 @@ import com.mlt.util.xml.XMLAttribute;
 import com.mlt.util.xml.XMLWriter;
 
 import app.mlt.plaf.DB;
-import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
 
 /**
@@ -127,11 +126,11 @@ public class StatisticsAverages extends Statistics {
 				persistor.setPageSize(100);
 
 				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
-				model.addColumn(Fields.BAR_TIME_FMT);
-				model.addColumn(Fields.BAR_OPEN);
-				model.addColumn(Fields.BAR_HIGH);
-				model.addColumn(Fields.BAR_LOW);
-				model.addColumn(Fields.BAR_CLOSE);
+				model.addColumn(DB.FIELD_BAR_TIME_FMT);
+				model.addColumn(DB.FIELD_BAR_OPEN);
+				model.addColumn(DB.FIELD_BAR_HIGH);
+				model.addColumn(DB.FIELD_BAR_LOW);
+				model.addColumn(DB.FIELD_BAR_CLOSE);
 
 				List<Field> fields = null;
 
@@ -231,13 +230,13 @@ public class StatisticsAverages extends Statistics {
 				Persistor persistor = getTableRanges().getPersistor();
 
 				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
-				model.addColumn(Fields.RANGE_NAME);
-				model.addColumn(Fields.RANGE_MINIMUM);
-				model.addColumn(Fields.RANGE_MAXIMUM);
-				model.addColumn(Fields.RANGE_AVERAGE);
-				model.addColumn(Fields.RANGE_STDDEV);
-				model.addColumn(Fields.RANGE_AVG_STD_10);
-				model.addColumn(Fields.RANGE_AVG_STD_20);
+				model.addColumn(DB.FIELD_RANGE_NAME);
+				model.addColumn(DB.FIELD_RANGE_MINIMUM);
+				model.addColumn(DB.FIELD_RANGE_MAXIMUM);
+				model.addColumn(DB.FIELD_RANGE_AVERAGE);
+				model.addColumn(DB.FIELD_RANGE_STDDEV);
+				model.addColumn(DB.FIELD_RANGE_AVG_STD_10);
+				model.addColumn(DB.FIELD_RANGE_AVG_STD_20);
 
 				model.setRecordSet(persistor.select(null));
 
@@ -284,6 +283,7 @@ public class StatisticsAverages extends Statistics {
 			frame.addTasks(new TaskAveragesRaw(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesZigZag(StatisticsAverages.this));
 			frame.show();
 		}
 
@@ -420,14 +420,14 @@ public class StatisticsAverages extends Statistics {
 	public static StatisticsAverages getStatistics(Record rc) throws Exception {
 
 		/* Instrument and period. */
-		Instrument instrument = DB.to_instrument(rc.getValue(Fields.INSTRUMENT_ID).getString());
-		Period period = DB.to_period(rc.getValue(Fields.PERIOD_ID).getString());
+		Instrument instrument = DB.to_instrument(rc.getValue(DB.FIELD_INSTRUMENT_ID).getString());
+		Period period = DB.to_period(rc.getValue(DB.FIELD_PERIOD_ID).getString());
 
 		/* Statistics averages. */
 		StatisticsAverages stats = new StatisticsAverages(instrument, period);
-		stats.setId(rc.getValue(Fields.STATISTICS_ID).getString());
-		stats.setKey(rc.getValue(Fields.STATISTICS_KEY).getString());
-		stats.setParameters(rc.getValue(Fields.STATISTICS_PARAMS).getString());
+		stats.setId(rc.getValue(DB.FIELD_STATISTICS_ID).getString());
+		stats.setKey(rc.getValue(DB.FIELD_STATISTICS_KEY).getString());
+		stats.setParameters(rc.getValue(DB.FIELD_STATISTICS_PARAMS).getString());
 
 		return stats;
 
@@ -566,7 +566,7 @@ public class StatisticsAverages extends Statistics {
 		name = getNameCandle(name, fast, slow, index0, index1, suffix);
 		header = getHeaderCandle(header, fast, slow, index0, index1, suffix);
 		label = getLabelCandle(label, fast, slow, index0, index1, suffix);
-		Field field = Fields.getDouble(name, header, label);
+		Field field = DB.field_double(name, header, label);
 		field.setStringConverter(getNumberConverter(scale));
 		return field;
 	}
@@ -618,7 +618,7 @@ public class StatisticsAverages extends Statistics {
 				String name = getNameAverage(i);
 				String header = getHeaderAverage(i);
 				String label = getLabelAverage(i);
-				Field field = Fields.getDouble(name, header, label);
+				Field field = DB.field_double(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
@@ -646,40 +646,40 @@ public class StatisticsAverages extends Statistics {
 				/* Time, open, high, low, close. */
 				String timeName = getNameCandle("time", fast, slow, j);
 				String timeHeader = getHeaderCandle("Time", fast, slow, j);
-				fields.add(Fields.getLong(timeName, timeHeader));
+				fields.add(DB.field_long(timeName, timeHeader));
 				String timeNameFmt = timeName + "_fmt";
 				String timeHeaderFmt = timeHeader + " fmt";
-				fields.add(Fields.getTimeFmt(getPeriod(), timeName, timeNameFmt, timeHeaderFmt));
-				fields.add(getCandleField("open", "Open", "Open", fast, slow, j, 4));
-				fields.add(getCandleField("high", "High", "High", fast, slow, j, 4));
-				fields.add(getCandleField("low", "Low", "Low", fast, slow, j, 4));
-				fields.add(getCandleField("close", "Close", "Close", fast, slow, j, 4));
+				fields.add(DB.field_timeFmt(getPeriod(), timeName, timeNameFmt, timeHeaderFmt));
+				fields.add(getCandleField(DB.FIELD_BAR_OPEN, "Open", "Open", fast, slow, j, 4));
+				fields.add(getCandleField(DB.FIELD_BAR_HIGH, "High", "High", fast, slow, j, 4));
+				fields.add(getCandleField(DB.FIELD_BAR_LOW, "Low", "Low", fast, slow, j, 4));
+				fields.add(getCandleField(DB.FIELD_BAR_CLOSE, "Close", "Close", fast, slow, j, 4));
 
 				/* Raw values. */
-				fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 4, "raw"));
+				fields.add(getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 4, "raw"));
 				fields.add(getCandleField(
-					"body_factor", "Body factor", "factor", fast, slow, j, 8, "raw"));
+					DB.FIELD_BAR_BODY_FACTOR, "Body factor", "factor", fast, slow, j, 8, "raw"));
 				fields.add(getCandleField(
-					"body_pos", "Body pos", "Body position", fast, slow, j, 8, "raw"));
+					DB.FIELD_BAR_BODY_POS, "Body pos", "Body position", fast, slow, j, 8, "raw"));
 				if (j < count - 1) {
 					fields.add(getCandleField(
-						"center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "raw"));
+						DB.FIELD_BAR_REL_POS, "Rel pos", "Relative position", fast, slow, j, j + 1, 8, "raw"));
 				}
-				fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "raw"));
+				fields.add(getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "raw"));
 
 				/* Normalized values. */
-				fields.add(getCandleField("range", "Range", "Range", fast, slow, j, 8, "nrm"));
+				fields.add(getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 8, "nrm"));
 				fields.add(getCandleField(
-					"body_factor", "Body factor", "factor", fast, slow, j, 8, "nrm"));
+					DB.FIELD_BAR_BODY_FACTOR, "Body factor", "factor", fast, slow, j, 8, "nrm"));
 				fields.add(getCandleField(
-					"body_pos", "Body pos", "Body position", fast, slow, j, 8, "nrm"));
+					DB.FIELD_BAR_BODY_POS, "Body pos", "Body position", fast, slow, j, 8, "nrm"));
 				if (j < count - 1) {
 					fields.add(getCandleField(
-						"center_factor", "Center factor", "Sign", fast, slow, j, j + 1, 8, "nrm"));
+						DB.FIELD_BAR_REL_POS, "Relative pos", "Relative position", fast, slow, j, j + 1, 8, "nrm"));
 				}
 
 				/* Sign, continuous from -1 to 1. */
-				fields.add(getCandleField("sign", "Sign", "Sign", fast, slow, j, 8, "nrm"));
+				fields.add(getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "nrm"));
 
 			}
 			mapLists.put(key, fields);
@@ -704,7 +704,7 @@ public class StatisticsAverages extends Statistics {
 				name = getNameSlope(i, suffix);
 				header = getHeaderSlope(i, suffix);
 				label = getLabelSlope(i, suffix);
-				field = Fields.getDouble(name, header, label);
+				field = DB.field_double(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
@@ -731,7 +731,7 @@ public class StatisticsAverages extends Statistics {
 					name = getNameSpread(i, j, suffix);
 					header = getHeaderSpread(i, j, suffix);
 					label = getLabelSpread(i, j, suffix);
-					field = Fields.getDouble(name, header, label);
+					field = DB.field_double(name, header, label);
 					field.setStringConverter(getNumberConverter(8));
 					fields.add(field);
 				}
@@ -1088,9 +1088,9 @@ public class StatisticsAverages extends Statistics {
 		RecordSet rs = getTableRanges().getPersistor().select(null);
 		HashMap<String, Normalizer> map = new HashMap<>();
 		for (Record rc : rs) {
-			String name = rc.getValue(Fields.RANGE_NAME).getString();
-			double average = rc.getValue(Fields.RANGE_AVERAGE).getDouble();
-			double std_dev = rc.getValue(Fields.RANGE_STDDEV).getDouble();
+			String name = rc.getValue(DB.FIELD_RANGE_NAME).getString();
+			double average = rc.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
+			double std_dev = rc.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
 			double dataHigh = average + (2 * std_dev);
 			double dataLow = average - (2 * std_dev);
 			Normalizer normalizer = new Normalizer(dataHigh, dataLow, 1, -1);
@@ -1236,23 +1236,23 @@ public class StatisticsAverages extends Statistics {
 		tableRanges.setSchema(DB.schema_server());
 		tableRanges.setName(name);
 
-		tableRanges.addField(Fields.getString(Fields.RANGE_NAME, 60, "Name"));
-		tableRanges.addField(Fields.getDouble(Fields.RANGE_MINIMUM, "Minimum"));
-		tableRanges.addField(Fields.getDouble(Fields.RANGE_MAXIMUM, "Maximum"));
-		tableRanges.addField(Fields.getDouble(Fields.RANGE_AVERAGE, "Average"));
-		tableRanges.addField(Fields.getDouble(Fields.RANGE_STDDEV, "Std Dev"));
-		tableRanges.addField(Fields.getDouble(Fields.RANGE_AVG_STD_10, "Avg Std 1.0"));
-		tableRanges.addField(Fields.getDouble(Fields.RANGE_AVG_STD_20, "Avg Std 2.0"));
+		tableRanges.addField(DB.field_string(DB.FIELD_RANGE_NAME, 60, "Name"));
+		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum"));
+		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum"));
+		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average"));
+		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev"));
+		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_AVG_STD_10, "Avg Std 1.0"));
+		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_AVG_STD_20, "Avg Std 2.0"));
 
-		tableRanges.getField(Fields.RANGE_MINIMUM).setDisplayDecimals(8);
-		tableRanges.getField(Fields.RANGE_MAXIMUM).setDisplayDecimals(8);
-		tableRanges.getField(Fields.RANGE_AVERAGE).setDisplayDecimals(8);
-		tableRanges.getField(Fields.RANGE_STDDEV).setDisplayDecimals(8);
-		tableRanges.getField(Fields.RANGE_AVG_STD_10).setDisplayDecimals(2);
-		tableRanges.getField(Fields.RANGE_AVG_STD_20).setDisplayDecimals(2);
+		tableRanges.getField(DB.FIELD_RANGE_MINIMUM).setDisplayDecimals(8);
+		tableRanges.getField(DB.FIELD_RANGE_MAXIMUM).setDisplayDecimals(8);
+		tableRanges.getField(DB.FIELD_RANGE_AVERAGE).setDisplayDecimals(8);
+		tableRanges.getField(DB.FIELD_RANGE_STDDEV).setDisplayDecimals(8);
+		tableRanges.getField(DB.FIELD_RANGE_AVG_STD_10).setDisplayDecimals(2);
+		tableRanges.getField(DB.FIELD_RANGE_AVG_STD_20).setDisplayDecimals(2);
 
 		/* Primary key. */
-		tableRanges.getField(Fields.RANGE_NAME).setPrimaryKey(true);
+		tableRanges.getField(DB.FIELD_RANGE_NAME).setPrimaryKey(true);
 
 		View view = tableRanges.getComplexView(tableRanges.getPrimaryKey());
 		tableRanges.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
@@ -1290,33 +1290,35 @@ public class StatisticsAverages extends Statistics {
 		tableStates.setName(name);
 
 		/* Time, open, high, low, close. */
-		tableStates.addField(Fields.getLong(Fields.BAR_TIME, "Time"));
+		tableStates.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
 
-		tableStates.addField(Fields.getData(instrument, Fields.BAR_OPEN, "Open"));
-		tableStates.addField(Fields.getData(instrument, Fields.BAR_HIGH, "High"));
-		tableStates.addField(Fields.getData(instrument, Fields.BAR_LOW, "Low"));
-		tableStates.addField(Fields.getData(instrument, Fields.BAR_CLOSE, "Close"));
+		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_OPEN, "Open"));
+		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_HIGH, "High"));
+		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_LOW, "Low"));
+		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_CLOSE, "Close"));
 
 		tableStates.addField(
-			Fields.getTimeFmt(period, Fields.BAR_TIME, Fields.BAR_TIME_FMT, "Time fmt"));
+			DB.field_timeFmt(period, DB.FIELD_BAR_TIME, DB.FIELD_BAR_TIME_FMT, "Time fmt"));
 
 		int ndx = 0;
 		FieldGroup grpData = new FieldGroup(ndx++, "data", "Data");
-		tableStates.getField(Fields.BAR_TIME).setFieldGroup(grpData);
-		tableStates.getField(Fields.BAR_OPEN).setFieldGroup(grpData);
-		tableStates.getField(Fields.BAR_HIGH).setFieldGroup(grpData);
-		tableStates.getField(Fields.BAR_LOW).setFieldGroup(grpData);
-		tableStates.getField(Fields.BAR_CLOSE).setFieldGroup(grpData);
-		tableStates.getField(Fields.BAR_TIME_FMT).setFieldGroup(grpData);
+		tableStates.getField(DB.FIELD_BAR_TIME).setFieldGroup(grpData);
+		tableStates.getField(DB.FIELD_BAR_OPEN).setFieldGroup(grpData);
+		tableStates.getField(DB.FIELD_BAR_HIGH).setFieldGroup(grpData);
+		tableStates.getField(DB.FIELD_BAR_LOW).setFieldGroup(grpData);
+		tableStates.getField(DB.FIELD_BAR_CLOSE).setFieldGroup(grpData);
+		tableStates.getField(DB.FIELD_BAR_TIME_FMT).setFieldGroup(grpData);
 
 		/*
 		 * Calculated pivot (High=1, None=0, Low=-1) and Label (Long=1, Out=0, Short=-1)
 		 */
 		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
-		tableStates.addField(Fields.getInteger("pivot", "Pivot", "Pivot"));
-		tableStates.addField(Fields.getInteger("label", "Label", "Label"));
-		tableStates.getField("pivot").setFieldGroup(grpLabels);
-		tableStates.getField("label").setFieldGroup(grpLabels);
+		tableStates.addField(DB.field_integer(DB.FIELD_STATES_PIVOT, "Pivot", "Pivot mark"));
+		tableStates.addField(DB.field_data(instrument, DB.FIELD_STATES_REFV, "Ref value", "Pivot reference value"));
+		tableStates.addField(DB.field_integer(DB.FIELD_STATES_LABEL, "Label", "Training label"));
+		tableStates.getField(DB.FIELD_STATES_PIVOT).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_REFV).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_LABEL).setFieldGroup(grpLabels);
 
 		/* Lists of fields. */
 		List<Field> fields;
@@ -1373,17 +1375,16 @@ public class StatisticsAverages extends Statistics {
 			}
 		}
 
-		/* Normailzed flag. */
+		/* Control flags. */
 		FieldGroup grpControls = new FieldGroup(ndx++, "controls", "Controls");
-		Field normalized = Fields.getString(Fields.STATES_NORMALIZED, 1, "Nrm", "Normalized");
+		Field normalized = DB.field_string(DB.FIELD_STATES_NORMALIZED, 1, "Nrm", "Normalized");
 		normalized.setFieldGroup(grpControls);
 		tableStates.addField(normalized);
+		Field pivotScanned = DB.field_string(DB.FIELD_STATES_PIVOT_SCANNED, 1, "Scn", "Pivot scanned");
+		pivotScanned.setFieldGroup(grpControls);
+		tableStates.addField(pivotScanned);
 
-		tableStates.getField(Fields.BAR_TIME).setPrimaryKey(true);
-
-		Index index = new Index();
-		index.add(tableStates.getField(Fields.STATES_NORMALIZED));
-		tableStates.addIndex(index);
+		tableStates.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
 
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
 		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));

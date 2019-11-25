@@ -68,7 +68,6 @@ import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 
 import app.mlt.plaf.DB;
-import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
 
 /**
@@ -94,9 +93,9 @@ public class ActionTickers extends ActionRun {
 				}
 				Record selected = tableTickers.getSelectedRecord();
 
-				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
+				String instrumentId = selected.getValue(DB.FIELD_INSTRUMENT_ID).getString();
 				Instrument instrument = DB.to_instrument(DB.record_instrument(instrumentId));
-				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
+				String periodId = selected.getValue(DB.FIELD_PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
 				String key = "BROWSE-TICKER" + instrumentId + "-" + periodId;
@@ -109,12 +108,12 @@ public class ActionTickers extends ActionRun {
 				persistor.setPageSize(100);
 
 				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
-				model.addColumn(Fields.BAR_TIME_FMT);
-				model.addColumn(Fields.BAR_OPEN);
-				model.addColumn(Fields.BAR_HIGH);
-				model.addColumn(Fields.BAR_LOW);
-				model.addColumn(Fields.BAR_CLOSE);
-				model.addColumn(Fields.BAR_VOLUME);
+				model.addColumn(DB.FIELD_BAR_TIME_FMT);
+				model.addColumn(DB.FIELD_BAR_OPEN);
+				model.addColumn(DB.FIELD_BAR_HIGH);
+				model.addColumn(DB.FIELD_BAR_LOW);
+				model.addColumn(DB.FIELD_BAR_CLOSE);
+				model.addColumn(DB.FIELD_BAR_VOLUME);
 				model.setRecordSet(new DataRecordSet(persistor));
 
 				TableRecord table = new TableRecord(true);
@@ -153,9 +152,9 @@ public class ActionTickers extends ActionRun {
 				}
 				Record selected = tableTickers.getSelectedRecord();
 
-				String instrumentId = selected.getValue(Fields.INSTRUMENT_ID).getString();
+				String instrumentId = selected.getValue(DB.FIELD_INSTRUMENT_ID).getString();
 				Instrument instrument = DB.to_instrument(DB.record_instrument(instrumentId));
-				String periodId = selected.getValue(Fields.PERIOD_ID).getString();
+				String periodId = selected.getValue(DB.FIELD_PERIOD_ID).getString();
 				Period period = Period.parseId(periodId);
 
 				String key = "CHART-" + instrumentId + "-" + periodId;
@@ -249,14 +248,14 @@ public class ActionTickers extends ActionRun {
 				Value vPeriodId = new Value(period.getId());
 				Value vTableName = new Value(DB.name_ticker(instrument, period));
 				Record rcTicker = DB.record_ticker(instrument, period);
-				rcTicker.setValue(Fields.SERVER_ID, vServerId);
-				rcTicker.setValue(Fields.INSTRUMENT_ID, vInstrumentId);
-				rcTicker.setValue(Fields.PERIOD_ID, vPeriodId);
-				rcTicker.setValue(Fields.TABLE_NAME, vTableName);
-				rcTicker.setValue(Fields.PERIOD_NAME, rcPeriod.getValue(Fields.PERIOD_NAME));
-				rcTicker.setValue(Fields.PERIOD_UNIT_INDEX,
-					rcPeriod.getValue(Fields.PERIOD_UNIT_INDEX));
-				rcTicker.setValue(Fields.PERIOD_SIZE, rcPeriod.getValue(Fields.PERIOD_SIZE));
+				rcTicker.setValue(DB.FIELD_SERVER_ID, vServerId);
+				rcTicker.setValue(DB.FIELD_INSTRUMENT_ID, vInstrumentId);
+				rcTicker.setValue(DB.FIELD_PERIOD_ID, vPeriodId);
+				rcTicker.setValue(DB.FIELD_TABLE_NAME, vTableName);
+				rcTicker.setValue(DB.FIELD_PERIOD_NAME, rcPeriod.getValue(DB.FIELD_PERIOD_NAME));
+				rcTicker.setValue(DB.FIELD_PERIOD_UNIT_INDEX,
+					rcPeriod.getValue(DB.FIELD_PERIOD_UNIT_INDEX));
+				rcTicker.setValue(DB.FIELD_PERIOD_SIZE, rcPeriod.getValue(DB.FIELD_PERIOD_SIZE));
 
 				/* Check already exists. */
 				if (DB.persistor_tickers().exists(rcTicker)) {
@@ -304,9 +303,9 @@ public class ActionTickers extends ActionRun {
 				msg.print("Delete the current ticker?", "color: red;");
 				msg.endTag("h2");
 				msg.startTag("h3");
-				msg.print(rcTicker.getValue(Fields.INSTRUMENT_ID).toString());
+				msg.print(rcTicker.getValue(DB.FIELD_INSTRUMENT_ID).toString());
 				msg.print(", ");
-				msg.print(rcTicker.getValue(Fields.PERIOD_NAME).toString());
+				msg.print(rcTicker.getValue(DB.FIELD_PERIOD_NAME).toString());
 				msg.endTag("h3");
 				Option option = Alert.confirm(msg.toString());
 				if (!Option.isOk(option)) {
@@ -314,7 +313,7 @@ public class ActionTickers extends ActionRun {
 				}
 
 				/* Instrument. */
-				String instrumentId = rcTicker.getValue(Fields.INSTRUMENT_ID).toString();
+				String instrumentId = rcTicker.getValue(DB.FIELD_INSTRUMENT_ID).toString();
 				Record rcInstrument = DB.record_instrument(instrumentId);
 				if (rcInstrument == null) {
 					return;
@@ -322,7 +321,7 @@ public class ActionTickers extends ActionRun {
 				Instrument instrument = DB.to_instrument(rcInstrument);
 
 				/* Period. */
-				String periodId = rcTicker.getValue(Fields.PERIOD_ID).toString();
+				String periodId = rcTicker.getValue(DB.FIELD_PERIOD_ID).toString();
 				Record rcPeriod = DB.record_period(periodId);
 				if (rcPeriod == null) {
 					return;
@@ -368,9 +367,9 @@ public class ActionTickers extends ActionRun {
 			Record masterRecord = persistor.getDefaultRecord();
 
 			TableRecordModel model = new TableRecordModel(masterRecord);
-			model.addColumn(Fields.INSTRUMENT_ID);
-			model.addColumn(Fields.PERIOD_NAME);
-			model.addColumn(Fields.TABLE_NAME);
+			model.addColumn(DB.FIELD_INSTRUMENT_ID);
+			model.addColumn(DB.FIELD_PERIOD_NAME);
+			model.addColumn(DB.FIELD_TABLE_NAME);
 			model.setRecordSet(recordSet);
 
 			tableTickers = new TableRecord();

@@ -33,7 +33,6 @@ import com.mlt.util.FixedSizeList;
 import com.mlt.util.Numbers;
 
 import app.mlt.plaf.DB;
-import app.mlt.plaf.Fields;
 
 /**
  * Calculate all the raw values for the states table of the statistics averages.
@@ -121,22 +120,22 @@ public class TaskAveragesRaw extends TaskAverages {
 
 			/* Retrieve record. */
 			Record rcTick = iter.next();
-			avgBuffer.add(rcTick.getValue(Fields.BAR_CLOSE).getDouble());
+			avgBuffer.add(rcTick.getValue(DB.FIELD_BAR_CLOSE).getDouble());
 			rcBuffer.add(rcTick);
 
 			/* Notify work. */
 			workDone++;
 			if (workDone % modulus == 0 || workDone == totalWork) {
 				StringBuilder b = new StringBuilder();
-				b.append(rcTick.toString(Fields.BAR_TIME_FMT));
+				b.append(rcTick.toString(DB.FIELD_BAR_TIME_FMT));
 				b.append(", ");
-				b.append(rcTick.toString(Fields.BAR_OPEN));
+				b.append(rcTick.toString(DB.FIELD_BAR_OPEN));
 				b.append(", ");
-				b.append(rcTick.toString(Fields.BAR_HIGH));
+				b.append(rcTick.toString(DB.FIELD_BAR_HIGH));
 				b.append(", ");
-				b.append(rcTick.toString(Fields.BAR_LOW));
+				b.append(rcTick.toString(DB.FIELD_BAR_LOW));
 				b.append(", ");
-				b.append(rcTick.toString(Fields.BAR_CLOSE));
+				b.append(rcTick.toString(DB.FIELD_BAR_CLOSE));
 				update(b.toString(), workDone, totalWork);
 			}
 
@@ -147,11 +146,11 @@ public class TaskAveragesRaw extends TaskAverages {
 
 			/* Statistics record. */
 			Record rcStat = states.getDefaultRecord();
-			rcStat.setValue(Fields.BAR_TIME, rcTick.getValue(Fields.BAR_TIME));
-			rcStat.setValue(Fields.BAR_OPEN, rcTick.getValue(Fields.BAR_OPEN));
-			rcStat.setValue(Fields.BAR_HIGH, rcTick.getValue(Fields.BAR_HIGH));
-			rcStat.setValue(Fields.BAR_LOW, rcTick.getValue(Fields.BAR_LOW));
-			rcStat.setValue(Fields.BAR_CLOSE, rcTick.getValue(Fields.BAR_CLOSE));
+			rcStat.setValue(DB.FIELD_BAR_TIME, rcTick.getValue(DB.FIELD_BAR_TIME));
+			rcStat.setValue(DB.FIELD_BAR_OPEN, rcTick.getValue(DB.FIELD_BAR_OPEN));
+			rcStat.setValue(DB.FIELD_BAR_HIGH, rcTick.getValue(DB.FIELD_BAR_HIGH));
+			rcStat.setValue(DB.FIELD_BAR_LOW, rcTick.getValue(DB.FIELD_BAR_LOW));
+			rcStat.setValue(DB.FIELD_BAR_CLOSE, rcTick.getValue(DB.FIELD_BAR_CLOSE));
 
 			/* Calculate averages. */
 			for (int i = 0; i < averages.size(); i++) {
@@ -199,37 +198,39 @@ public class TaskAveragesRaw extends TaskAverages {
 
 					Data candle = candles.get(j);
 
-					String time = stats.getNameCandle("time", fast, slow, j);
+					String time = stats.getNameCandle(DB.FIELD_BAR_TIME, fast, slow, j);
 					rcStat.setValue(time, candle.getTime());
 
-					String open = stats.getNameCandle("open", fast, slow, j);
+					String open = stats.getNameCandle(DB.FIELD_BAR_OPEN, fast, slow, j);
 					rcStat.setValue(open, OHLC.getOpen(candle));
 
-					String high = stats.getNameCandle("high", fast, slow, j);
+					String high = stats.getNameCandle(DB.FIELD_BAR_HIGH, fast, slow, j);
 					rcStat.setValue(high, OHLC.getHigh(candle));
 
-					String low = stats.getNameCandle("low", fast, slow, j);
+					String low = stats.getNameCandle(DB.FIELD_BAR_LOW, fast, slow, j);
 					rcStat.setValue(low, OHLC.getLow(candle));
 
-					String close = stats.getNameCandle("close", fast, slow, j);
+					String close = stats.getNameCandle(DB.FIELD_BAR_CLOSE, fast, slow, j);
 					rcStat.setValue(close, OHLC.getClose(candle));
 
-					String range = stats.getNameCandle("range", fast, slow, j, "raw");
+					String range = stats.getNameCandle(DB.FIELD_BAR_RANGE, fast, slow, j, "raw");
 					rcStat.setValue(range, OHLC.getRange(candle));
 
-					String bodyFactor = stats.getNameCandle("body_factor", fast, slow, j, "raw");
+					String bodyFactor =
+						stats.getNameCandle(DB.FIELD_BAR_BODY_FACTOR, fast, slow, j, "raw");
 					rcStat.setValue(bodyFactor, OHLC.getBodyFactor(candle));
 
-					String bodyPos = stats.getNameCandle("body_pos", fast, slow, j, "raw");
+					String bodyPos =
+						stats.getNameCandle(DB.FIELD_BAR_BODY_POS, fast, slow, j, "raw");
 					rcStat.setValue(bodyPos, OHLC.getBodyPosition(candle));
 
-					String sign = stats.getNameCandle("sign", fast, slow, j, "raw");
+					String sign = stats.getNameCandle(DB.FIELD_BAR_SIGN, fast, slow, j, "raw");
 					rcStat.setValue(sign, OHLC.getSign(candle));
 
 					if (j < candles.size() - 1) {
 						Data previous = candles.get(j + 1);
 						String center =
-							stats.getNameCandle("center_factor", fast, slow, j, j + 1, "raw");
+							stats.getNameCandle(DB.FIELD_BAR_REL_POS, fast, slow, j, j + 1, "raw");
 						rcStat.setValue(center, OHLC.getRelativePositions(candle, previous));
 					}
 				}
@@ -274,19 +275,19 @@ public class TaskAveragesRaw extends TaskAverages {
 			for (int j = startIndex; j <= endIndex; j++) {
 				Record rc = buffer.getTail(j);
 				if (j == startIndex) {
-					time = rc.getValue(Fields.BAR_TIME).getLong();
-					open = rc.getValue(Fields.BAR_OPEN).getDouble();
+					time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
+					open = rc.getValue(DB.FIELD_BAR_OPEN).getDouble();
 				}
-				double high_rc = rc.getValue(Fields.BAR_HIGH).getDouble();
+				double high_rc = rc.getValue(DB.FIELD_BAR_HIGH).getDouble();
 				if (high_rc > high) {
 					high = high_rc;
 				}
-				double low_rc = rc.getValue(Fields.BAR_LOW).getDouble();
+				double low_rc = rc.getValue(DB.FIELD_BAR_LOW).getDouble();
 				if (low_rc < low) {
 					low = low_rc;
 				}
 				if (j == endIndex) {
-					close = rc.getValue(Fields.BAR_CLOSE).getDouble();
+					close = rc.getValue(DB.FIELD_BAR_CLOSE).getDouble();
 				}
 			}
 			candles.add(new Data(time, open, high, low, close));

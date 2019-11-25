@@ -32,7 +32,6 @@ import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 
 import app.mlt.plaf.DB;
-import app.mlt.plaf.Fields;
 import app.mlt.plaf.MLT;
 
 /**
@@ -51,7 +50,6 @@ public class TaskAveragesRanges extends TaskAverages {
 		super(stats);
 		setId("averages-ranges");
 		setTitle(stats.getLabel() + " - Calculate min-max raw values");
-		setEstimateSpeed(false);
 	}
 
 	/**
@@ -121,10 +119,10 @@ public class TaskAveragesRanges extends TaskAverages {
 			workDone = i + 1;
 			update(name, workDone, totalWork);
 			Record rcView = getData(name);
-			double minimum = rcView.getValue(Fields.RANGE_MINIMUM).getDouble();
-			double maximum = rcView.getValue(Fields.RANGE_MAXIMUM).getDouble();
-			double average = rcView.getValue(Fields.RANGE_AVERAGE).getDouble();
-			double std_dev = rcView.getValue(Fields.RANGE_STDDEV).getDouble();
+			double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
+			double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
+			double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
+			double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
 			
 			double minimum_10 = average - (1 * std_dev);
 			double maximum_10 = average + (1 * std_dev);
@@ -137,13 +135,13 @@ public class TaskAveragesRanges extends TaskAverages {
 			double avg_std_20 = 100 * count_20 / countStates;
 			
 			Record record = ranges.getDefaultRecord();
-			record.setValue(Fields.RANGE_NAME, name);
-			record.setValue(Fields.RANGE_MINIMUM, minimum);
-			record.setValue(Fields.RANGE_MAXIMUM, maximum);
-			record.setValue(Fields.RANGE_AVERAGE, average);
-			record.setValue(Fields.RANGE_STDDEV, std_dev);
-			record.setValue(Fields.RANGE_AVG_STD_10, avg_std_10);
-			record.setValue(Fields.RANGE_AVG_STD_20, avg_std_20);
+			record.setValue(DB.FIELD_RANGE_NAME, name);
+			record.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
+			record.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
+			record.setValue(DB.FIELD_RANGE_AVERAGE, average);
+			record.setValue(DB.FIELD_RANGE_STDDEV, std_dev);
+			record.setValue(DB.FIELD_RANGE_AVG_STD_10, avg_std_10);
+			record.setValue(DB.FIELD_RANGE_AVG_STD_20, avg_std_20);
 			
 			ranges.getPersistor().insert(record);
 		}
@@ -161,19 +159,19 @@ public class TaskAveragesRanges extends TaskAverages {
 		View view = new View();
 		view.setMasterTable(stats.getTableStates());
 
-		Field minimum = Fields.getDouble(Fields.RANGE_MINIMUM, "Minimum");
+		Field minimum = DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum");
 		minimum.setFunction("min(" + name + ")");
 		view.addField(minimum);
 
-		Field maximum = Fields.getDouble(Fields.RANGE_MAXIMUM, "Maximum");
+		Field maximum = DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum");
 		maximum.setFunction("max(" + name + ")");
 		view.addField(maximum);
 
-		Field average = Fields.getDouble(Fields.RANGE_AVERAGE, "Average");
+		Field average = DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average");
 		average.setFunction("avg(" + name + ")");
 		view.addField(average);
 
-		Field std_dev = Fields.getDouble(Fields.RANGE_STDDEV, "Std Dev");
+		Field std_dev = DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev");
 		std_dev.setFunction("stddev(" + name + ")");
 		view.addField(std_dev);
 

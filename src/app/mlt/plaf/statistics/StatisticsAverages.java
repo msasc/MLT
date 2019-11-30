@@ -17,6 +17,7 @@
 
 package app.mlt.plaf.statistics;
 
+import java.awt.Color;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -24,12 +25,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.swing.Icon;
+
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
 import com.mlt.db.Field;
 import com.mlt.db.FieldGroup;
-import com.mlt.db.Index;
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
@@ -39,6 +41,7 @@ import com.mlt.db.Table;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.desktop.Option;
+import com.mlt.desktop.Option.Group;
 import com.mlt.desktop.TaskFrame;
 import com.mlt.desktop.action.ActionRun;
 import com.mlt.desktop.control.Control;
@@ -50,11 +53,21 @@ import com.mlt.desktop.control.TableRecordModel;
 import com.mlt.desktop.control.table.SelectionMode;
 import com.mlt.desktop.converters.NumberScaleConverter;
 import com.mlt.desktop.icon.IconGrid;
+import com.mlt.desktop.icon.Icons;
+import com.mlt.mkt.chart.ChartContainer;
+import com.mlt.mkt.chart.plotter.CandlestickPlotter;
+import com.mlt.mkt.chart.plotter.LinePlotter;
+import com.mlt.mkt.data.DataConverter;
+import com.mlt.mkt.data.DataListSource;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Period;
+import com.mlt.mkt.data.PlotData;
+import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.ml.function.Normalizer;
 import com.mlt.util.HTML;
+import com.mlt.util.Lists;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
 import com.mlt.util.StringConverter;
@@ -84,6 +97,39 @@ import app.mlt.plaf.MLT;
 public class StatisticsAverages extends Statistics {
 
 	/**
+	 * Chart the ticker.
+	 */
+	class ActionChartStates extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+
+				String key = getTabKey("STATS-CHART");
+				String text = getTabText("Chart");
+				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
+
+				ChartContainer chart = new ChartContainer();
+				chart.setPopupMenuProvider(new MenuChart());
+				chart.addPlotData(getPlotDataPriceAndAverages());
+				chart.addPlotData(getPlotDataSlopes());
+				chart.addPlotData(getPlotDataSpreads());
+
+				Icon icon = Icons.getIcon(Icons.APP_16x16_CHART);
+				MLT.getTabbedPane().addTab(key, icon, text, text, chart);
+
+				MLT.getStatusBar().removeProgress(key);
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
 	 * Browse the statistics.
 	 */
 	class ActionBrowseStats extends ActionRun {
@@ -94,30 +140,8 @@ public class StatisticsAverages extends Statistics {
 		@Override
 		public void run() {
 			try {
-				Instrument instrument = getInstrument();
-				Period period = getPeriod();
-
-				StringBuilder keyBuilder = new StringBuilder();
-				keyBuilder.append("BROWSE-STATS-");
-				keyBuilder.append(instrument.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(period.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getKey());
-				String key = keyBuilder.toString();
-
-				StringBuilder textBuilder = new StringBuilder();
-				textBuilder.append(instrument.getDescription());
-				textBuilder.append(" ");
-				textBuilder.append(period);
-				textBuilder.append(" ");
-				textBuilder.append(getId());
-				textBuilder.append(" ");
-				textBuilder.append(getKey());
-				textBuilder.append(" States");
-				String text = textBuilder.toString();
+				String key = getTabKey("STATS-BROWSE");
+				String text = getTabText("States");
 
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
@@ -200,32 +224,8 @@ public class StatisticsAverages extends Statistics {
 		@Override
 		public void run() {
 			try {
-				Instrument instrument = getInstrument();
-				Period period = getPeriod();
-
-				StringBuilder keyBuilder = new StringBuilder();
-				keyBuilder.append("BROWSE-RANGES-");
-				keyBuilder.append(instrument.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(period.getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getId());
-				keyBuilder.append("-");
-				keyBuilder.append(getKey());
-				String key = keyBuilder.toString();
-
-				StringBuilder textBuilder = new StringBuilder();
-				textBuilder.append(instrument.getDescription());
-				textBuilder.append(" ");
-				textBuilder.append(period);
-				textBuilder.append(" ");
-				textBuilder.append(getId());
-				textBuilder.append(" ");
-				textBuilder.append(getKey());
-				textBuilder.append(" Ranges");
-				String text = textBuilder.toString();
-
-				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
+				String key = getTabKey("STATS-RANGES");
+				String text = getTabText("Ranges");
 
 				Persistor persistor = getTableRanges().getPersistor();
 
@@ -287,6 +287,55 @@ public class StatisticsAverages extends Statistics {
 			frame.show();
 		}
 
+	}
+
+	/**
+	 * Popup menu for the chart.
+	 */
+	class MenuChart implements PopupMenuProvider {
+		@Override
+		public PopupMenu getPopupMenu(Control control) {
+			if (control instanceof ChartContainer) {
+				PopupMenu popup = new PopupMenu();
+				ChartContainer container = (ChartContainer) control;
+				if (!container.containsPlotData("price_and_averages")) {
+					Option option = new Option();
+					option.setKey("price_and_averages");
+					option.setText("Prices and averages");
+					option.setToolTip("Prices and averages");
+					option.setOptionGroup(Group.CONFIGURE);
+					option.setDefaultClose(false);
+					option.setCloseWindow(false);
+					option.setAction(
+						l -> container.addPlotData(getPlotDataPriceAndAverages(), true));
+					popup.add(option.getMenuItem());
+				}
+				if (!container.containsPlotData("slopes")) {
+					Option option = new Option();
+					option.setKey("slopes");
+					option.setText("Slopes of averages");
+					option.setToolTip("Slopes of averages");
+					option.setOptionGroup(Group.CONFIGURE);
+					option.setDefaultClose(false);
+					option.setCloseWindow(false);
+					option.setAction(l -> container.addPlotData(getPlotDataSlopes(), true));
+					popup.add(option.getMenuItem());
+				}
+				if (!container.containsPlotData("spreads")) {
+					Option option = new Option();
+					option.setKey("spreads");
+					option.setText("Spreads between averages");
+					option.setToolTip("Spreads between averages");
+					option.setOptionGroup(Group.CONFIGURE);
+					option.setDefaultClose(false);
+					option.setCloseWindow(false);
+					option.setAction(l -> container.addPlotData(getPlotDataSpreads(), true));
+					popup.add(option.getMenuItem());
+				}
+				return popup;
+			}
+			return null;
+		}
 	}
 
 	/**
@@ -443,6 +492,11 @@ public class StatisticsAverages extends Statistics {
 	/** Map of field lists. */
 	private HashMap<String, List<Field>> mapLists = new HashMap<>();
 
+	/** States data converter. */
+	private DataConverter statesDataConverter;
+	/** States list persistor. */
+	private ListPersistor statesListPersistor;
+
 	/**
 	 * Constructor.
 	 * 
@@ -522,31 +576,6 @@ public class StatisticsAverages extends Statistics {
 	 * @param label  Field label.
 	 * @param fast   Fast period.
 	 * @param slow   Slow period.
-	 * @param index  Field index.
-	 * @param scale  Format scale.
-	 * @param suffix Optional suffix.
-	 * @return The field.
-	 */
-	private Field getCandleField(
-		String name,
-		String header,
-		String label,
-		int fast,
-		int slow,
-		int index,
-		int scale,
-		String suffix) {
-		return getCandleField(name, header, label, fast, slow, index, -1, scale, suffix);
-	}
-
-	/**
-	 * Return the candle field.
-	 * 
-	 * @param name   Field name.
-	 * @param header Field header.
-	 * @param label  Field label.
-	 * @param fast   Fast period.
-	 * @param slow   Slow period.
 	 * @param index0 Field first index.
 	 * @param index1 Field second index.
 	 * @param scale  Format scale.
@@ -569,6 +598,31 @@ public class StatisticsAverages extends Statistics {
 		Field field = DB.field_double(name, header, label);
 		field.setStringConverter(getNumberConverter(scale));
 		return field;
+	}
+
+	/**
+	 * Return the candle field.
+	 * 
+	 * @param name   Field name.
+	 * @param header Field header.
+	 * @param label  Field label.
+	 * @param fast   Fast period.
+	 * @param slow   Slow period.
+	 * @param index  Field index.
+	 * @param scale  Format scale.
+	 * @param suffix Optional suffix.
+	 * @return The field.
+	 */
+	private Field getCandleField(
+		String name,
+		String header,
+		String label,
+		int fast,
+		int slow,
+		int index,
+		int scale,
+		String suffix) {
+		return getCandleField(name, header, label, fast, slow, index, -1, scale, suffix);
 	}
 
 	/**
@@ -656,30 +710,36 @@ public class StatisticsAverages extends Statistics {
 				fields.add(getCandleField(DB.FIELD_BAR_CLOSE, "Close", "Close", fast, slow, j, 4));
 
 				/* Raw values. */
-				fields.add(getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 4, "raw"));
+				fields.add(
+					getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 4, "raw"));
 				fields.add(getCandleField(
 					DB.FIELD_BAR_BODY_FACTOR, "Body factor", "factor", fast, slow, j, 8, "raw"));
 				fields.add(getCandleField(
 					DB.FIELD_BAR_BODY_POS, "Body pos", "Body position", fast, slow, j, 8, "raw"));
 				if (j < count - 1) {
 					fields.add(getCandleField(
-						DB.FIELD_BAR_REL_POS, "Rel pos", "Relative position", fast, slow, j, j + 1, 8, "raw"));
+						DB.FIELD_BAR_REL_POS, "Rel pos", "Relative position", fast, slow, j, j + 1,
+						8, "raw"));
 				}
-				fields.add(getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "raw"));
+				fields.add(
+					getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "raw"));
 
 				/* Normalized values. */
-				fields.add(getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 8, "nrm"));
+				fields.add(
+					getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 8, "nrm"));
 				fields.add(getCandleField(
 					DB.FIELD_BAR_BODY_FACTOR, "Body factor", "factor", fast, slow, j, 8, "nrm"));
 				fields.add(getCandleField(
 					DB.FIELD_BAR_BODY_POS, "Body pos", "Body position", fast, slow, j, 8, "nrm"));
 				if (j < count - 1) {
 					fields.add(getCandleField(
-						DB.FIELD_BAR_REL_POS, "Relative pos", "Relative position", fast, slow, j, j + 1, 8, "nrm"));
+						DB.FIELD_BAR_REL_POS, "Relative pos", "Relative position", fast, slow, j,
+						j + 1, 8, "nrm"));
 				}
 
 				/* Sign, continuous from -1 to 1. */
-				fields.add(getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "nrm"));
+				fields.add(
+					getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "nrm"));
 
 			}
 			mapLists.put(key, fields);
@@ -783,21 +843,6 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Return the header of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param header The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param index  The index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getHeaderCandle(String header, int fast, int slow, int index, String suffix) {
-		return getLabelCandle(header, fast, slow, index, suffix);
-	}
-
-	/**
 	 * Return the label of an Open/High/Low/Close... candle that relates the fast
 	 * and slow periods.
 	 * 
@@ -817,6 +862,21 @@ public class StatisticsAverages extends Statistics {
 		int index1,
 		String suffix) {
 		return getLabelCandle(label, fast, slow, index0, index1, suffix);
+	}
+
+	/**
+	 * Return the header of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param header The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getHeaderCandle(String header, int fast, int slow, int index, String suffix) {
+		return getLabelCandle(header, fast, slow, index, suffix);
 	}
 
 	/**
@@ -893,21 +953,6 @@ public class StatisticsAverages extends Statistics {
 	 * @param label  The name (open/high/low/close)
 	 * @param fast   The fast period.
 	 * @param slow   The slow period.
-	 * @param index  The index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getLabelCandle(String label, int fast, int slow, int index, String suffix) {
-		return getLabelCandle(label, fast, slow, index, -1, suffix);
-	}
-
-	/**
-	 * Return the label of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param label  The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
 	 * @param index0 The first index.
 	 * @param index1 The second index.
 	 * @param suffix The suffix.
@@ -939,6 +984,21 @@ public class StatisticsAverages extends Statistics {
 			b.append(suffix);
 		}
 		return b.toString();
+	}
+
+	/**
+	 * Return the label of an Open/High/Low/Close... candle that relates the fast
+	 * and slow periods.
+	 * 
+	 * @param label  The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getLabelCandle(String label, int fast, int slow, int index, String suffix) {
+		return getLabelCandle(label, fast, slow, index, -1, suffix);
 	}
 
 	/**
@@ -1012,21 +1072,6 @@ public class StatisticsAverages extends Statistics {
 	 * @param suffix The suffix.
 	 * @return The name of the candle.
 	 */
-	public String getNameCandle(String name, int fast, int slow, int index, String suffix) {
-		return getNameCandle(name, fast, slow, index, -1, suffix);
-	}
-
-	/**
-	 * Return the name of an open/high/low/close... candle that relates the fast and
-	 * slow periods.
-	 * 
-	 * @param name   The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param index  The index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
 	public String getNameCandle(
 		String name,
 		int fast,
@@ -1053,6 +1098,21 @@ public class StatisticsAverages extends Statistics {
 			b.append(suffix);
 		}
 		return b.toString();
+	}
+
+	/**
+	 * Return the name of an open/high/low/close... candle that relates the fast and
+	 * slow periods.
+	 * 
+	 * @param name   The name (open/high/low/close)
+	 * @param fast   The fast period.
+	 * @param slow   The slow period.
+	 * @param index  The index.
+	 * @param suffix The suffix.
+	 * @return The name of the candle.
+	 */
+	public String getNameCandle(String name, int fast, int slow, int index, String suffix) {
+		return getNameCandle(name, fast, slow, index, -1, suffix);
 	}
 
 	/**
@@ -1123,6 +1183,7 @@ public class StatisticsAverages extends Statistics {
 		optionCalculate.setToolTip("Calculate all statistics values");
 		optionCalculate.setAction(new ActionCalculate());
 		optionCalculate.setOptionGroup(new Option.Group("CALCULATE", 1));
+		optionCalculate.setSortIndex(1);
 		options.add(optionCalculate);
 
 		/* Browse statictics. */
@@ -1132,7 +1193,7 @@ public class StatisticsAverages extends Statistics {
 		optionBrowseStats.setToolTip("Browse state values");
 		optionBrowseStats.setAction(new ActionBrowseStats());
 		optionBrowseStats.setOptionGroup(new Option.Group("BROWSE", 2));
-		optionBrowseStats.setSortIndex(2);
+		optionBrowseStats.setSortIndex(1);
 		options.add(optionBrowseStats);
 
 		/* Browse ranges. */
@@ -1144,6 +1205,16 @@ public class StatisticsAverages extends Statistics {
 		optionBrowseRanges.setOptionGroup(new Option.Group("BROWSE", 2));
 		optionBrowseRanges.setSortIndex(2);
 		options.add(optionBrowseRanges);
+
+		/* Chart states. */
+		Option optionCharStates = new Option();
+		optionCharStates.setKey("CHART-STATES");
+		optionCharStates.setText("Chart states");
+		optionCharStates.setToolTip("Chart on states data");
+		optionCharStates.setAction(new ActionChartStates());
+		optionCharStates.setOptionGroup(new Option.Group("CHART", 3));
+		optionCharStates.setSortIndex(1);
+		options.add(optionCharStates);
 
 		return options;
 	}
@@ -1200,6 +1271,173 @@ public class StatisticsAverages extends Statistics {
 			}
 			b.append(averages.get(i).toString());
 		}
+		return b.toString();
+	}
+
+	/**
+	 * @return The plot data for states prices and averages.
+	 */
+	private PlotData getPlotDataPriceAndAverages() {
+
+		/* Data info and data list. */
+		DataInfo info = new DataInfo();
+		info.setInstrument(getInstrument());
+		info.setName("prices-averages");
+		info.setDescription("States prices and averages");
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getStatesListPersistor(), getStatesDataConverter());
+
+		/* Prices and plotter. */
+		info.addOutput("Open", "O", OHLC.OPEN, "Open data value");
+		info.addOutput("High", "H", OHLC.HIGH, "High data value");
+		info.addOutput("Low", "L", OHLC.LOW, "Low data value");
+		info.addOutput("Close", "C", OHLC.CLOSE, "Close data value");
+		dataList.addPlotter(new CandlestickPlotter());
+
+		/* Averages. */
+		for (int i = 0; i < averages.size(); i++) {
+			String name = averages.get(i).toString();
+			Field field = getFieldListAverages().get(i);
+			String label = field.getLabel();
+			int index = getStatesDataConverter().getIndex(field.getAlias());
+			info.addOutput(name, name, index, label);
+			dataList.addPlotter(new LinePlotter(index));
+		}
+
+		PlotData plotData = new PlotData("price_and_averages");
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
+	 * @return The plot data for states slopes.
+	 */
+	private PlotData getPlotDataSlopes() {
+
+		DataInfo info = new DataInfo();
+		info.setInstrument(getInstrument());
+		info.setName("slopes");
+		info.setDescription("Averages slopes");
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getStatesListPersistor(), getStatesDataConverter());
+
+		for (Field field : getFieldListSlopes("nrm")) {
+			String name = field.getHeader();
+			String label = field.getLabel();
+			int index = getStatesDataConverter().getIndex(field.getAlias());
+			info.addOutput(name, name, index, label);
+			LinePlotter plotter = new LinePlotter(index);
+			plotter.setColor(Color.BLACK);
+			dataList.addPlotter(plotter);
+		}
+
+		PlotData plotData = new PlotData("slopes");
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
+	 * @return The plot data for states spreads.
+	 */
+	private PlotData getPlotDataSpreads() {
+
+		DataInfo info = new DataInfo();
+		info.setInstrument(getInstrument());
+		info.setName("spreads");
+		info.setDescription("Averages spreads");
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getStatesListPersistor(), getStatesDataConverter());
+
+		for (Field field : getFieldListSpreads("nrm")) {
+			String name = field.getHeader();
+			String label = field.getLabel();
+			int index = getStatesDataConverter().getIndex(field.getAlias());
+			info.addOutput(name, name, index, label);
+			LinePlotter plotter = new LinePlotter(index);
+			plotter.setColor(Color.BLACK);
+			dataList.addPlotter(plotter);
+		}
+
+		PlotData plotData = new PlotData("spreads");
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
+	 * @return The states converter to data structure.
+	 */
+	private DataConverter getStatesDataConverter() {
+		if (statesDataConverter == null) {
+
+			Table table = getTableStates();
+			List<Integer> list = new ArrayList<>();
+
+			/* Open, high, low, close. */
+			list.add(table.getFieldIndex(DB.FIELD_BAR_OPEN));
+			list.add(table.getFieldIndex(DB.FIELD_BAR_HIGH));
+			list.add(table.getFieldIndex(DB.FIELD_BAR_LOW));
+			list.add(table.getFieldIndex(DB.FIELD_BAR_CLOSE));
+
+			List<Field> fields;
+
+			/* Averages. */
+			fields = getFieldListAverages();
+			for (Field field : fields) {
+				int index = table.getFieldIndex(field);
+				list.add(index);
+			}
+
+			/* Slopes normalized. */
+			fields = getFieldListSlopes("nrm");
+			for (Field field : fields) {
+				int index = table.getFieldIndex(field);
+				list.add(index);
+			}
+
+			/* Spreads normalized. */
+			fields = getFieldListSpreads("nrm");
+			for (Field field : fields) {
+				int index = table.getFieldIndex(field);
+				list.add(index);
+			}
+
+			int[] indexes = Lists.toIntegerArray(list);
+			Record masterRecord = getTableStates().getDefaultRecord();
+			statesDataConverter = new DataConverter(masterRecord, indexes);
+		}
+		return statesDataConverter;
+	}
+
+	/**
+	 * @return The states list persistor.
+	 */
+	private ListPersistor getStatesListPersistor() {
+		if (statesListPersistor == null) {
+			statesListPersistor = new ListPersistor(getTableStates().getPersistor());
+		}
+		return statesListPersistor;
+	}
+
+	/**
+	 * @param prefix The tab prefix.
+	 * @return A proper tab key.
+	 */
+	private String getTabKey(String prefix) {
+		StringBuilder b = new StringBuilder();
+		b.append("-");
+		b.append(getInstrument().getId());
+		b.append("-");
+		b.append(getPeriod().getId());
+		b.append("-");
+		b.append(getId());
+		b.append("-");
+		b.append(getKey());
 		return b.toString();
 	}
 
@@ -1314,7 +1552,8 @@ public class StatisticsAverages extends Statistics {
 		 */
 		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
 		tableStates.addField(DB.field_integer(DB.FIELD_STATES_PIVOT, "Pivot", "Pivot mark"));
-		tableStates.addField(DB.field_data(instrument, DB.FIELD_STATES_REFV, "Ref value", "Pivot reference value"));
+		tableStates.addField(
+			DB.field_data(instrument, DB.FIELD_STATES_REFV, "Ref value", "Pivot reference value"));
 		tableStates.addField(DB.field_integer(DB.FIELD_STATES_LABEL, "Label", "Training label"));
 		tableStates.getField(DB.FIELD_STATES_PIVOT).setFieldGroup(grpLabels);
 		tableStates.getField(DB.FIELD_STATES_REFV).setFieldGroup(grpLabels);
@@ -1380,7 +1619,8 @@ public class StatisticsAverages extends Statistics {
 		Field normalized = DB.field_string(DB.FIELD_STATES_NORMALIZED, 1, "Nrm", "Normalized");
 		normalized.setFieldGroup(grpControls);
 		tableStates.addField(normalized);
-		Field pivotScanned = DB.field_string(DB.FIELD_STATES_PIVOT_SCANNED, 1, "Scn", "Pivot scanned");
+		Field pivotScanned =
+			DB.field_string(DB.FIELD_STATES_PIVOT_SCANNED, 1, "Scn", "Pivot scanned");
 		pivotScanned.setFieldGroup(grpControls);
 		tableStates.addField(pivotScanned);
 
@@ -1390,6 +1630,24 @@ public class StatisticsAverages extends Statistics {
 		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
 		return tableStates;
+	}
+
+	/**
+	 * @param suffix The tab suffix.
+	 * @return A proper tab text.
+	 */
+	private String getTabText(String suffix) {
+		StringBuilder b = new StringBuilder();
+		b.append(getInstrument().getDescription());
+		b.append(" ");
+		b.append(getPeriod());
+		b.append(" ");
+		b.append(getId());
+		b.append(" ");
+		b.append(getKey());
+		b.append(" ");
+		b.append(suffix);
+		return b.toString();
 	}
 
 	/**

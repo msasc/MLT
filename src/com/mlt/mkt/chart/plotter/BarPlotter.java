@@ -37,8 +37,19 @@ public class BarPlotter extends DataPlotter {
 	 * Constructor.
 	 */
 	public BarPlotter() {
-		super();
-		setIndexes(new int[] { OHLC.OPEN, OHLC.HIGH, OHLC.LOW, OHLC.CLOSE });
+		this(OHLC.OPEN, OHLC.HIGH, OHLC.LOW, OHLC.CLOSE);
+	}
+
+	/**
+	 * Constructor indicating the indexes of the open, high, low and close values.
+	 * 
+	 * @param open  Open index.
+	 * @param high  High index.
+	 * @param low   Low index.
+	 * @param close Close index.
+	 */
+	public BarPlotter(int open, int high, int low, int close) {
+		setIndexes(new int[] { open, high, low, close });
 	}
 
 	/**

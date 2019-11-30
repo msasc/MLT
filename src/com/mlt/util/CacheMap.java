@@ -42,7 +42,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	/** Last time key. */
 	private long time = Long.MIN_VALUE;
 	/** Cache size. Less equal than zero, no cache. */
-	private int cacheSize = 10000;
+	private int cacheSize = 50000;
 	/** Cache factor: 0.5, removes half of the cache. */
 	private double cacheFactor = 0.5;
 

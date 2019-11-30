@@ -36,6 +36,9 @@ import com.mlt.util.Numbers;
  */
 public class PlotData implements Iterable<DataList> {
 
+	/** Identifier (optional) */
+	private String id;
+
 	/**
 	 * The number of bars to show at start when start and end indexes are not
 	 * defined.
@@ -81,10 +84,14 @@ public class PlotData implements Iterable<DataList> {
 	private boolean zeroAsMinimum = false;
 
 	/**
-	 * Default constructor.
+	 * Constructor.
+	 * 
+	 * @param id The identifier.
 	 */
-	public PlotData() {
+	public PlotData(String id) {
 		super();
+		if (id == null) throw new NullPointerException();
+		this.id = id;
 	}
 
 	/**
@@ -355,6 +362,18 @@ public class PlotData implements Iterable<DataList> {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof PlotData) {
+			PlotData plotData = (PlotData) obj;
+			return getId().equals(plotData.getId());
+		}
+		return false;
+	}
+
+	/**
 	 * Returns the data list in the argument index.
 	 *
 	 * @param index The index.
@@ -368,13 +387,17 @@ public class PlotData implements Iterable<DataList> {
 	 * Returns a suitable number of bars to scroll or zoom depending on the number
 	 * of bars visible.
 	 *
+	 * @param factor Factor of visible bars to scroll or zoom.
 	 * @return The number of bars to scroll or zoom.
 	 */
-	public int getBarsToScrollOrZoom() {
+	public int getBarsToScrollOrZoom(double factor) {
+		if (factor <= 0 || factor >= 0.2) {
+			throw new IllegalArgumentException("Invalid factor " + factor);
+		}
 		int startIndex = getStartIndex();
 		int endIndex = getEndIndex();
 		int barsVisible = endIndex - startIndex + 1;
-		int barsToScrollOrZoom = (int) (barsVisible * 0.1);
+		int barsToScrollOrZoom = (int) (barsVisible * factor);
 		if (barsToScrollOrZoom < 1) {
 			barsToScrollOrZoom = 1;
 		}
@@ -427,6 +450,13 @@ public class PlotData implements Iterable<DataList> {
 	 */
 	public int getEndIndex() {
 		return endIndex;
+	}
+
+	/**
+	 * @return The plot data identifier.
+	 */
+	public String getId() {
+		return id;
 	}
 
 	/**
@@ -672,6 +702,14 @@ public class PlotData implements Iterable<DataList> {
 			return volumeScale;
 		}
 		throw new UnsupportedOperationException("Volume scale can not be resolved");
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int hashCode() {
+		return getId().hashCode();
 	}
 
 	/**

@@ -188,7 +188,7 @@ public abstract class DataPlotter extends Plotter {
 	 * 
 	 * @param indexes The indexes within the data element used by the plotter.
 	 */
-	public final void setIndexes(int[] indexes) {
+	public final void setIndexes(int... indexes) {
 		this.indexes = indexes;
 	}
 

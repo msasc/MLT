@@ -135,21 +135,10 @@ public class Control {
 	 * Mouse listener to launch the possible popup menu.
 	 */
 	class PopupHandler extends MouseHandler {
-
 		@Override
 		public void mouseClicked(MouseEvent e) {
 			if (e.getClickCount() == 1 && e.getButton() == MouseEvent.BUTTON3) {
-				if (getPopupMenuProvider() != null) {
-					/*
-					 * Recalculate mouse relative location vs component, because with scroll panes
-					 * it is not correct.
-					 */
-					Point mp = e.getLocationOnScreen();
-					Point cp = getComponent().getLocationOnScreen();
-					Point p = new Point(mp.x - cp.x, mp.y - cp.y);
-					PopupMenu popupMenu = getPopupMenuProvider().getPopupMenu(Control.this);
-					popupMenu.getComponent().show(getComponent(), p.x, p.y);
-				}
+				triggerPopupMenu(e);
 			}
 		}
 	}
@@ -396,6 +385,30 @@ public class Control {
 	 */
 	public String getToolTipText() {
 		return getComponent().getToolTipText();
+	}
+
+	/**
+	 * Trigger the popup menu if a popup menu provider is installed.
+	 * 
+	 * @param e The mouse event.
+	 * @return A boolean.
+	 */
+	protected boolean triggerPopupMenu(MouseEvent e) {
+		if (getPopupMenuProvider() != null) {
+			/*
+			 * Recalculate mouse relative location vs component, because with scroll panes
+			 * it is not correct.
+			 */
+			Point mp = e.getLocationOnScreen();
+			Point cp = getComponent().getLocationOnScreen();
+			Point p = new Point(mp.x - cp.x, mp.y - cp.y);
+			PopupMenu popupMenu = getPopupMenuProvider().getPopupMenu(Control.this);
+			if (popupMenu != null) {
+				popupMenu.getComponent().show(getComponent(), p.x, p.y);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

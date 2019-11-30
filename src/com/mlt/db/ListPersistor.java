@@ -348,7 +348,7 @@ public class ListPersistor implements Persistor {
 	/** Last record in the source. */
 	private Record lastRecord;
 	/** A map to cache records. */
-	private CacheMap<Integer, Record> mapRecords = new CacheMap<>(10000);
+	private CacheMap<Integer, Record> mapRecords = new CacheMap<>();
 	/** The page size, used to read and cache a page of records. */
 	private int pageSize = 100;
 	/** An global criteria. */

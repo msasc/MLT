@@ -41,49 +41,24 @@ public class DataListSource extends DataList {
 	 * Constructor.
 	 * 
 	 * @param dataInfo The data info.
-	 * @param persistor The list persistor.
+	 * @param persistor The persistor.
 	 */
 	public DataListSource(DataInfo dataInfo, ListPersistor persistor) {
 		super(dataInfo);
 		this.persistor = persistor;
-		this.converter = new DefaultDataConverter(persistor);
+		this.converter = new DataConverter(persistor.getDefaultRecord());
 	}
 
 	/**
 	 * Constructor.
 	 * 
 	 * @param dataInfo The data info.
-	 * @param persistor The list persistor.
+	 * @param persistor The persistor.
 	 * @param converter The data converter.
 	 */
 	public DataListSource(DataInfo dataInfo, ListPersistor persistor, DataConverter converter) {
 		super(dataInfo);
 		this.persistor = persistor;
-		this.converter = converter;
-	}
-
-	/**
-	 * Constructor.
-	 * 
-	 * @param dataInfo The data info.
-	 * @param persistor The persistor.
-	 */
-	public DataListSource(DataInfo dataInfo, Persistor persistor) {
-		super(dataInfo);
-		this.persistor = new ListPersistor(persistor);
-		this.converter = new DefaultDataConverter(persistor);
-	}
-
-	/**
-	 * Constructor.
-	 * 
-	 * @param dataInfo The data info.
-	 * @param persistor The persistor.
-	 * @param converter The data converter.
-	 */
-	public DataListSource(DataInfo dataInfo, Persistor persistor, DataConverter converter) {
-		super(dataInfo);
-		this.persistor = new ListPersistor(persistor);
 		this.converter = converter;
 	}
 

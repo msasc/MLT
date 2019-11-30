@@ -163,30 +163,29 @@ public class ActionTickers extends ActionRun {
 
 				ListPersistor persistor =
 					new ListPersistor(DB.persistor_ticker(instrument, period));
-				persistor.setCacheSize(10000);
-//				persistor.setCacheFactor(0.0);
-				persistor.setPageSize(100);
 
 				/* Build the plot data. */
 				DataInfo infoPrice = new PriceInfo(instrument, period);
 				DataListSource price = new DataListSource(infoPrice, persistor);
 				price.setPlotType(PlotType.CANDLESTICK);
-				PlotData plotDataPrice = new PlotData();
+				PlotData plotDataPrice = new PlotData("price");
 				plotDataPrice.add(price);
 
-				IndicatorDataList wma5 = IndicatorUtils.getSmoothedSimpleMovingAverage(
-					price, OHLC.CLOSE, Colors.GREEN, 5, 3, 2);
+				IndicatorDataList wma5 =
+					IndicatorUtils.getSmoothedSimpleMovingAverage(
+						price, OHLC.CLOSE, Colors.GREEN, 5, 3, 2);
 				plotDataPrice.add(wma5);
 
-				IndicatorDataList wma50 = IndicatorUtils.getSmoothedSimpleMovingAverage(
-					price, OHLC.CLOSE, Colors.DARKRED, 50, 5, 5, 5);
+				IndicatorDataList wma50 =
+					IndicatorUtils.getSmoothedSimpleMovingAverage(
+						price, OHLC.CLOSE, Colors.DARKRED, 50, 5, 5, 5);
 				plotDataPrice.add(wma50);
 
 				IndicatorDataList wma200 =
 					IndicatorUtils.getSmoothedSimpleMovingAverage(
 						price, OHLC.CLOSE, Colors.DARKBLUE, 200, 20, 10, 5);
 				plotDataPrice.add(wma200);
-				
+
 				/* Volume plot data. */
 				VolumeInfo infoVolume = new VolumeInfo(instrument, period);
 				DataListSource volume = new DataListSource(infoVolume, persistor);
@@ -198,10 +197,9 @@ public class ActionTickers extends ActionRun {
 				volumePlotter.setDataWidthFactor(0.5);
 				volumePlotter.setPaintBorder(false);
 				volume.addPlotter(volumePlotter);
-//				volume.setPlotType(PlotType.HISTOGRAM);
-				PlotData plotDataVolume = new PlotData();
+				PlotData plotDataVolume = new PlotData("volume");
 				plotDataVolume.setZeroAsMinimum(true);
-				plotDataVolume.add(volume);
+//				plotDataVolume.add(volume);
 
 				ChartContainer chart = new ChartContainer();
 				chart.addPlotData(plotDataPrice);

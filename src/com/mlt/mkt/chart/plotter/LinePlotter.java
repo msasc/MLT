@@ -1,20 +1,24 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.chart.plotter;
 
 import java.awt.Color;
-import java.awt.Paint;
 import java.awt.RenderingHints;
 
 import com.mlt.desktop.control.Canvas;
@@ -23,7 +27,6 @@ import com.mlt.desktop.graphic.Stroke;
 import com.mlt.mkt.chart.DataContext;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.DataList;
-import com.mlt.util.Colors;
 import com.mlt.util.Numbers;
 
 /**
@@ -35,8 +38,6 @@ public class LinePlotter extends DataPlotter {
 
 	/** The line stroke. */
 	private Stroke stroke = new Stroke(0.5);
-	/** The line color. */
-	private Paint linePaint = Colors.BLACK;
 
 	/**
 	 * Constructor with the zero index.
@@ -65,7 +66,6 @@ public class LinePlotter extends DataPlotter {
 		DataContext dc = getContext();
 		Path path = new Path();
 		path.setStroke(stroke);
-		path.setDrawPaint(linePaint);
 		path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
 		double lastX = Numbers.MIN_DOUBLE;
@@ -121,4 +121,15 @@ public class LinePlotter extends DataPlotter {
 		gc.draw(path);
 	}
 
+	/**
+	 * Set an unique color.
+	 * 
+	 * @param color The color.
+	 */
+	public void setColor(Color color) {
+		setColorBearishEven(color);
+		setColorBearishOdd(color);
+		setColorBullishEven(color);
+		setColorBullishOdd(color);
+	}
 }

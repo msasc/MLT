@@ -11,7 +11,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
-package com.mlt.mkt.chart.plotter;
+package com.mlt.mkt.chart.plotter.data;
 
 import java.awt.Color;
 
@@ -20,6 +20,7 @@ import com.mlt.desktop.graphic.Line;
 import com.mlt.desktop.graphic.Path;
 import com.mlt.desktop.graphic.Stroke;
 import com.mlt.mkt.chart.DataContext;
+import com.mlt.mkt.chart.plotter.DataPlotter;
 import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.DataList;
 import com.mlt.util.Colors;

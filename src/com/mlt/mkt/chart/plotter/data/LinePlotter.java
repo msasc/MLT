@@ -16,7 +16,7 @@
  * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
-package com.mlt.mkt.chart.plotter;
+package com.mlt.mkt.chart.plotter.data;
 
 import java.awt.Color;
 import java.awt.RenderingHints;
@@ -25,6 +25,7 @@ import com.mlt.desktop.control.Canvas;
 import com.mlt.desktop.graphic.Path;
 import com.mlt.desktop.graphic.Stroke;
 import com.mlt.mkt.chart.DataContext;
+import com.mlt.mkt.chart.plotter.DataPlotter;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.DataList;
 import com.mlt.util.Numbers;

@@ -50,7 +50,7 @@ import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.desktop.layout.Orientation;
 import com.mlt.mkt.chart.ChartContainer;
-import com.mlt.mkt.chart.plotter.HistogramPlotter;
+import com.mlt.mkt.chart.plotter.data.HistogramPlotter;
 import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.DataListSource;
 import com.mlt.mkt.data.DataRecordSet;

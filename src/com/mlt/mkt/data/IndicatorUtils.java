@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mlt.db.Value;
-import com.mlt.mkt.chart.plotter.LinePlotter;
+import com.mlt.mkt.chart.plotter.data.LinePlotter;
 import com.mlt.mkt.data.indicators.ExponentialMovingAverage;
 import com.mlt.mkt.data.indicators.PeriodIndicator;
 import com.mlt.mkt.data.indicators.SimpleMovingAverage;

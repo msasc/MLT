@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.graphic;
@@ -18,9 +23,11 @@ import java.util.List;
 
 import com.mlt.desktop.control.Canvas;
 import com.mlt.util.Lists;
+import com.mlt.util.Numbers;
 
 /**
- * A render manages a list of drawings that have to be saved, restored or rendered in a given order.
+ * A render manages a list of drawings that have to be saved, restored or
+ * rendered in a given order.
  *
  * @author Miquel Sas
  */
@@ -236,7 +243,8 @@ public class Render {
 	}
 
 	/**
-	 * Clear this composition. This removes previous drawings but not the previously saved area.
+	 * Clear this composition. This removes previous drawings but not the previously
+	 * saved area.
 	 *
 	 * @param index The composition index.
 	 */
@@ -245,12 +253,48 @@ public class Render {
 	}
 
 	/**
-	 * Clear this composition. This removes previous drawings but not the previously saved area.
+	 * Clear this composition. This removes previous drawings but not the previously
+	 * saved area.
 	 *
 	 * @param id The composition id.
 	 */
 	public void clear(String id) {
 		get(id).clear();
+	}
+
+	/**
+	 * Return the strict bounds that encloses all the compositions.
+	 * 
+	 * @return The bounds of the render.
+	 */
+	public Rectangle getBounds() {
+
+		double startX = Numbers.MAX_DOUBLE;
+		double startY = Numbers.MAX_DOUBLE;
+		double endX = Numbers.MIN_DOUBLE;
+		double endY = Numbers.MIN_DOUBLE;
+
+		for (Composition composition : compositions) {
+			Rectangle r = composition.getBounds();
+			double x = r.getX();
+			double y = r.getY();
+			double w = r.getWidth();
+			double h = r.getHeight();
+			if (x < startX) {
+				startX = x;
+			}
+			if (y < startY) {
+				startY = y;
+			}
+			if (x + w > endX) {
+				endX = x + w;
+			}
+			if (y + h > endY) {
+				endY = y + h;
+			}
+		}
+
+		return new Rectangle(startX, startY, endX - startX, endY - startY);
 	}
 
 	/**

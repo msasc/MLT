@@ -285,7 +285,7 @@ public class PlotterPane extends BorderPane {
 				}
 			}
 
-			/* Do plot. */
+			/* Do plot data plotters. */
 			for (PlotterList plotterList : plotterLists) {
 				DataPlotter plotter = plotterList.plotter;
 				DataList dataList = plotterList.dataList;

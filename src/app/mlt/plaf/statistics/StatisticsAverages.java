@@ -18,6 +18,7 @@
 package app.mlt.plaf.statistics;
 
 import java.awt.Color;
+import java.awt.RenderingHints;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import com.mlt.desktop.Option;
 import com.mlt.desktop.Option.Group;
 import com.mlt.desktop.TaskFrame;
 import com.mlt.desktop.action.ActionRun;
+import com.mlt.desktop.control.Canvas.Context;
 import com.mlt.desktop.control.Control;
 import com.mlt.desktop.control.PopupMenu;
 import com.mlt.desktop.control.PopupMenuProvider;
@@ -52,12 +54,18 @@ import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.control.TableRecordModel;
 import com.mlt.desktop.control.table.SelectionMode;
 import com.mlt.desktop.converters.NumberScaleConverter;
+import com.mlt.desktop.graphic.Path;
+import com.mlt.desktop.graphic.Stroke;
 import com.mlt.desktop.icon.IconGrid;
 import com.mlt.desktop.icon.Icons;
 import com.mlt.mkt.chart.ChartContainer;
+import com.mlt.mkt.chart.DataContext;
+import com.mlt.mkt.chart.plotter.DataPlotter;
 import com.mlt.mkt.chart.plotter.data.CandlestickPlotter;
 import com.mlt.mkt.chart.plotter.data.LinePlotter;
+import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.DataConverter;
+import com.mlt.mkt.data.DataList;
 import com.mlt.mkt.data.DataListSource;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
@@ -457,6 +465,76 @@ public class StatisticsAverages extends Statistics {
 		 */
 		public List<Average> getAverages() {
 			return averages;
+		}
+	}
+
+	/**
+	 * Zig-zag data plotter for the states data list.
+	 */
+	class ZigZagPlotter extends DataPlotter {
+
+		int indexPivot;
+		int indexData;
+
+		ZigZagPlotter() {
+			indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT);
+			indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV);
+			setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
+		}
+
+		@Override
+		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
+			
+			/*
+			 * Check if there is any pivot calculated, and if not do nothing.
+			 */
+			boolean anyPivot = false;
+			for (int index = startIndex; index <= endIndex; index++) {
+				if (index < 0 || index >= dataList.size()) {
+					continue;
+				}
+				if (dataList.get(index).getValue(indexPivot) != 0) {
+					anyPivot = true;
+					break;
+				}
+			}
+			if (!anyPivot) {
+				return;
+			}
+			
+			/*
+			 * Draw a line from the begining up to each pivot or the end. 
+			 */
+			DataContext dc = getContext();
+			Path path = new Path();
+			path.setStroke(new Stroke(0.5));
+			path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			path.setDrawPaint(Color.BLACK);
+			double x, y;
+			for (int index = startIndex; index <= endIndex; index++) {
+				if (index < 0 || index > dataList.size()) {
+					continue;
+				}
+				Data data = dataList.get(index);
+				double pivot = data.getValue(indexPivot);
+				double value = data.getValue(indexData);
+				if (index == 0 || index == startIndex) {
+					x = dc.getCoordinateX(index);
+					y = dc.getCoordinateY(value);
+					path.moveTo(x, y);
+				} else if (index < endIndex) {
+					if (pivot != 0) {
+						x = dc.getCoordinateX(index);
+						y = dc.getCoordinateY(value);
+						path.lineTo(x, y);
+					}
+				} else if (index == endIndex){
+					x = dc.getCoordinateX(index);
+					y = dc.getCoordinateY(value);
+					path.lineTo(x, y);
+				}
+			}
+			ctx.draw(path);
 		}
 	}
 
@@ -1304,6 +1382,9 @@ public class StatisticsAverages extends Statistics {
 			info.addOutput(name, name, index, label);
 			dataList.addPlotter(new LinePlotter(index));
 		}
+		
+		/* Pivot. */
+		dataList.addPlotter(new ZigZagPlotter());
 
 		PlotData plotData = new PlotData("price_and_averages");
 		plotData.add(dataList);
@@ -1385,6 +1466,10 @@ public class StatisticsAverages extends Statistics {
 			list.add(table.getFieldIndex(DB.FIELD_BAR_CLOSE));
 
 			List<Field> fields;
+
+			/* Pivot and reference value. */
+			list.add(table.getFieldIndex(DB.FIELD_STATES_PIVOT));
+			list.add(table.getFieldIndex(DB.FIELD_STATES_REFV));
 
 			/* Averages. */
 			fields = getFieldListAverages();

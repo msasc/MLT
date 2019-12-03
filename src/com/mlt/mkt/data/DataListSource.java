@@ -19,7 +19,6 @@
 package com.mlt.mkt.data;
 
 import com.mlt.db.ListPersistor;
-import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.mkt.data.info.DataInfo;

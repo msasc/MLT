@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.graphic;
@@ -107,7 +112,8 @@ public class Composition {
 	}
 
 	/**
-	 * Clear this composition. This removes previous drawings but not the previously saved area.
+	 * Clear this composition. This removes previous drawings but not the previously
+	 * saved area.
 	 */
 	public void clear() {
 		if (!enabled) return;
@@ -119,7 +125,43 @@ public class Composition {
 	}
 
 	/**
-	 * Returns an rectangle that completely encloses all the pixels of the composition.
+	 * Return the strict bounds that encloses all the drawings.
+	 * 
+	 * @return The bounds of the composition.
+	 */
+	public Rectangle getBounds() {
+
+		double startX = Numbers.MAX_DOUBLE;
+		double startY = Numbers.MAX_DOUBLE;
+		double endX = Numbers.MIN_DOUBLE;
+		double endY = Numbers.MIN_DOUBLE;
+
+		for (Segment segment : segments) {
+			Rectangle r = segment.drawing.getBounds();
+			double x = r.getX();
+			double y = r.getY();
+			double w = r.getWidth();
+			double h = r.getHeight();
+			if (x < startX) {
+				startX = x;
+			}
+			if (y < startY) {
+				startY = y;
+			}
+			if (x + w > endX) {
+				endX = x + w;
+			}
+			if (y + h > endY) {
+				endY = y + h;
+			}
+		}
+
+		return new Rectangle(startX, startY, endX - startX, endY - startY);
+	}
+
+	/**
+	 * Returns a rectangle that completely encloses all the pixels of the
+	 * composition in order to save enough painted area.
 	 *
 	 * @param gc The graphics context.
 	 * @return The bounds.
@@ -289,11 +331,11 @@ public class Composition {
 
 		int startX = (int) rect.getX();
 		int startY = (int) rect.getY();
-		
+
 		int width = (int) (rect.getWidth());
 		int height = (int) rect.getHeight();
 		if (width < 0 || height < 0) return;
-		
+
 		int endX = startX + width - 1;
 		int endY = startY + height - 1;
 

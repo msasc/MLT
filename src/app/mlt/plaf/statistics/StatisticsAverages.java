@@ -507,7 +507,7 @@ public class StatisticsAverages extends Statistics {
 			 */
 			DataContext dc = getContext();
 			Path path = new Path();
-			path.setStroke(new Stroke(0.5));
+			path.setStroke(new Stroke(1.0));
 			path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			path.setDrawPaint(Color.BLACK);
 			double x, y;

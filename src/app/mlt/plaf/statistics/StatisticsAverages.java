@@ -484,33 +484,37 @@ public class StatisticsAverages extends Statistics {
 
 		@Override
 		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
-			
+
 			/*
-			 * Check if there is any pivot calculated, and if not do nothing.
+			 * Check if there is there are at least two pivots calculated, and if not do
+			 * nothing.
 			 */
-			boolean anyPivot = false;
+			int countPivots = 0;
 			for (int index = startIndex; index <= endIndex; index++) {
 				if (index < 0 || index >= dataList.size()) {
 					continue;
 				}
 				if (dataList.get(index).getValue(indexPivot) != 0) {
-					anyPivot = true;
+					countPivots++;
+				}
+				if (countPivots >= 2) {
 					break;
 				}
 			}
-			if (!anyPivot) {
+			if (countPivots < 2) {
 				return;
 			}
-			
+
 			/*
-			 * Draw a line from the begining up to each pivot or the end. 
+			 * Draw a line from pivot to pivot.
 			 */
 			DataContext dc = getContext();
 			Path path = new Path();
-			path.setStroke(new Stroke(1.0));
+			path.setStroke(new Stroke(2.0));
 			path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			path.setDrawPaint(Color.BLACK);
 			double x, y;
+			countPivots = 0;
 			for (int index = startIndex; index <= endIndex; index++) {
 				if (index < 0 || index > dataList.size()) {
 					continue;
@@ -518,20 +522,15 @@ public class StatisticsAverages extends Statistics {
 				Data data = dataList.get(index);
 				double pivot = data.getValue(indexPivot);
 				double value = data.getValue(indexData);
-				if (index == 0 || index == startIndex) {
-					x = dc.getCoordinateX(index);
+				if (pivot != 0) {
+					x = dc.getCenterCoordinateX(dc.getCoordinateX(index));
 					y = dc.getCoordinateY(value);
-					path.moveTo(x, y);
-				} else if (index < endIndex) {
-					if (pivot != 0) {
-						x = dc.getCoordinateX(index);
-						y = dc.getCoordinateY(value);
+					countPivots++;
+					if (countPivots == 1) {
+						path.moveTo(x, y);
+					} else {
 						path.lineTo(x, y);
 					}
-				} else if (index == endIndex){
-					x = dc.getCoordinateX(index);
-					y = dc.getCoordinateY(value);
-					path.lineTo(x, y);
 				}
 			}
 			ctx.draw(path);
@@ -1382,7 +1381,7 @@ public class StatisticsAverages extends Statistics {
 			info.addOutput(name, name, index, label);
 			dataList.addPlotter(new LinePlotter(index));
 		}
-		
+
 		/* Pivot. */
 		dataList.addPlotter(new ZigZagPlotter());
 

@@ -17,9 +17,13 @@
 
 package app.mlt.plaf.statistics;
 
+import com.mlt.db.Criteria;
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Persistor;
 import com.mlt.db.Record;
+import com.mlt.db.Value;
+import com.mlt.db.ValueMap;
+import com.mlt.desktop.Option;
 
 import app.mlt.plaf.DB;
 
@@ -35,7 +39,7 @@ public class TaskAveragesZigZag extends TaskAverages {
 	/** List persistor on table states. */
 	private ListPersistor listPersistor;
 	/** Number of bars ahead, backward or forward. */
-	private int barsAhead = 10;
+	private int barsAhead = 100;
 	/** Alias to eval zigzag. */
 	private String alias = DB.FIELD_BAR_CLOSE;
 
@@ -67,10 +71,25 @@ public class TaskAveragesZigZag extends TaskAverages {
 	 */
 	@Override
 	protected void compute() throws Throwable {
-
+		
+		/* Query option. */
+		Option option = queryOption();
+		if (option.equals("CANCEL")) {
+			throw new Exception("Calculation cancelled by user.");
+		}
+		if (option.equals("START")) {
+			ValueMap map = new ValueMap();
+			map.put(DB.FIELD_STATES_PIVOT, new Value(0));
+			map.put(DB.FIELD_STATES_REFV, new Value(0.0));
+			persistor.update(new Criteria(), map);
+		}
+		
 		/* Count. */
 		calculateTotalWork();
 
+		/* Last pivot tracked and its index. */
+		int lastPivot = 0;
+		int lastIndex = -1;
 		/* Iterate states. */
 		for (int i = 0; i < listPersistor.size(); i++) {
 
@@ -96,11 +115,11 @@ public class TaskAveragesZigZag extends TaskAverages {
 			b.append(rcStates.toString(DB.FIELD_BAR_CLOSE));
 			update(b.toString(), (i + 1), listPersistor.size());
 
-			/* Current value to caompare with. */
+			/* Current value to compare with. */
 			double value = rcStates.getValue(alias).getDouble();
 			rcStates.setValue(DB.FIELD_STATES_REFV, value);
 
-			/* Move backward. */
+			/* Move backward up to bars ahead or last pivot index. */
 			boolean topBackward = true;
 			boolean bottomBackward = true;
 			int backwardIndex = Math.max(0, i - barsAhead);
@@ -109,12 +128,15 @@ public class TaskAveragesZigZag extends TaskAverages {
 				if (check >= value) {
 					topBackward = false;
 				}
-				if (check <= value) {
+				if (check < value) {
 					bottomBackward = false;
+				}
+				if (lastIndex >= 0 && j == lastIndex) {
+					break;
 				}
 			}
 
-			/* Move forward. */
+			/* Move forward up to bars ahead. */
 			boolean topForward = true;
 			boolean bottomForward = true;
 			int forwardIndex = Math.min(listPersistor.size() - 1, i + barsAhead);
@@ -123,25 +145,45 @@ public class TaskAveragesZigZag extends TaskAverages {
 				if (check >= value) {
 					topForward = false;
 				}
-				if (check <= value) {
+				if (check < value) {
 					bottomForward = false;
 				}
 			}
 
+			/* Check state. */
+			if (topBackward && topForward && bottomBackward && bottomForward) {
+				throw new IllegalStateException("Illegal state: both top and bottom");
+			}
+
 			/* Set zigzag pivot. */
-			rcStates.setValue(DB.FIELD_STATES_PIVOT, 0);
+			int pivot = 0;
+			/* Track pivot only if at least there are bars ahead on both sides. */
 			if (i >= barsAhead && listPersistor.size() - i > barsAhead) {
 				if (topBackward && topForward) {
-					rcStates.setValue(DB.FIELD_STATES_PIVOT, 1);
-				} else if (bottomBackward && bottomForward) {
-					rcStates.setValue(DB.FIELD_STATES_PIVOT, -1);
-				} else {
-					rcStates.setValue(DB.FIELD_STATES_PIVOT, 0);
+					pivot = 1;
+				}
+				if (bottomBackward && bottomForward) {
+					pivot = -1;
+				}
+			}
+			
+			/* Check that pivot, if set, is the inverse of last one. */
+			if (pivot != 0 && lastPivot != 0) {
+				if (pivot == lastPivot) {
+//					throw new IllegalStateException("Illegal state: pivot repeated");
+					pivot = 0;
 				}
 			}
 
 			/* Update. */
+			rcStates.setValue(DB.FIELD_STATES_PIVOT, pivot);
 			persistor.update(rcStates);
+			
+			/* Register last pivot. */
+			if (pivot != 0) {
+				lastPivot = pivot;
+				lastIndex = i;
+			}
 		}
 	}
 

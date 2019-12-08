@@ -80,10 +80,10 @@ import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
 import com.mlt.util.StringConverter;
 import com.mlt.util.Strings;
-import com.mlt.util.xml.Parser;
-import com.mlt.util.xml.ParserHandler;
-import com.mlt.util.xml.XMLAttribute;
-import com.mlt.util.xml.XMLWriter;
+import com.mlt.util.xml.parser.Parser;
+import com.mlt.util.xml.parser.ParserHandler;
+import com.mlt.util.xml.writer.XMLAttribute;
+import com.mlt.util.xml.writer.XMLWriter;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
@@ -260,7 +260,6 @@ public class StatisticsAverages extends Statistics {
 				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
 
 				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
-				MLT.getStatusBar().removeProgress(key);
 
 			} catch (Exception exc) {
 				Logs.catching(exc);
@@ -369,14 +368,23 @@ public class StatisticsAverages extends Statistics {
 	 * Parameters handler.
 	 */
 	public static class ParametersHandler extends ParserHandler {
+		
 		/** List of averages. */
 		private List<Average> averages = new ArrayList<>();
+		/** Bars ahead. */
+		private int barsAhead;
 
 		/**
 		 * Constructor.
 		 */
 		public ParametersHandler() {
 			super();
+			
+			/* Setup valid paths. */
+			set("statistics");
+			set("statistics/averages");
+			set("statistics/averages/average");
+			set("statistics/zig-zag");
 		}
 
 		/**
@@ -389,11 +397,10 @@ public class StatisticsAverages extends Statistics {
 			String path,
 			Attributes attributes) throws SAXException {
 
+			System.out.println(path);
 			try {
 				/* Validate the path. */
-				if (!path.equals("averages") && !path.equals("averages/average")) {
-					throw new Exception("Invalid path: " + path);
-				}
+				validatePath(path);
 
 				/* Validate that the average path has no attributes. */
 				if (path.equals("averages")) {
@@ -453,6 +460,20 @@ public class StatisticsAverages extends Statistics {
 					/* Add the average. */
 					averages.add(new Average(type, period, smooths));
 				}
+				
+				/* Validate and retrieve bars ahead parameter. */
+				if (path.equals("zig-zag")) {
+					String sbars = attributes.getValue("bars-ahead");
+					try {
+						barsAhead = Integer.parseInt(sbars);
+					} catch (NumberFormatException exc) {
+						throw new Exception("Invalid bars-ahead " + sbars, exc);
+					}
+					if (barsAhead <= 0) {
+						throw new Exception("Invalid bars-ahead " + barsAhead);
+					}
+				}
+				
 			} catch (Exception exc) {
 				throw new SAXException(exc.getMessage(), exc);
 			}
@@ -465,6 +486,13 @@ public class StatisticsAverages extends Statistics {
 		 */
 		public List<Average> getAverages() {
 			return averages;
+		}
+		
+		/**
+		 * @return The number of bars ahead.
+		 */
+		public int getBarsAhead() {
+			return barsAhead;
 		}
 	}
 
@@ -519,6 +547,27 @@ public class StatisticsAverages extends Statistics {
 				if (index < 0 || index > dataList.size()) {
 					continue;
 				}
+				/*
+				 * If index == startIndex, check if there is another pivot before.
+				 */
+				if (index == startIndex) {
+					for (int scan = index; scan >= 0; scan--) {
+						Data dataScan = dataList.get(scan);
+						double pivotScan = dataScan.getValue(indexPivot);
+						double valueScan = dataScan.getValue(indexData);
+						if (pivotScan != 0) {
+							x = dc.getCenterCoordinateX(dc.getCoordinateX(scan));
+							y = dc.getCoordinateY(valueScan);
+							countPivots++;
+							if (countPivots == 1) {
+								path.moveTo(x, y);
+							} else {
+								path.lineTo(x, y);
+							}
+							break;
+						}
+					}
+				}
 				Data data = dataList.get(index);
 				double pivot = data.getValue(indexPivot);
 				double value = data.getValue(indexData);
@@ -530,6 +579,26 @@ public class StatisticsAverages extends Statistics {
 						path.moveTo(x, y);
 					} else {
 						path.lineTo(x, y);
+					}
+				} else {
+					/*
+					 * If pivot == 0 and endIndex, check if there is another pivot after.
+					 */
+					if (index == endIndex) {
+						for (int scan = index; scan < dataList.size(); scan++) {
+							Data dataScan = dataList.get(scan);
+							double pivotScan = dataScan.getValue(indexPivot);
+							double valueScan = dataScan.getValue(indexData);
+							if (pivotScan != 0) {
+								x = dc.getCenterCoordinateX(dc.getCoordinateX(scan));
+								y = dc.getCoordinateY(valueScan);
+								countPivots++;
+								if (countPivots > 1) {
+									path.lineTo(x, y);
+								}
+								break;
+							}
+						}
 					}
 				}
 			}
@@ -561,6 +630,9 @@ public class StatisticsAverages extends Statistics {
 
 	/** List of averages. */
 	private List<Average> averages = new ArrayList<>();
+	/** Bars ahead to calculate zig-zag operator. */
+	private int barsAhead = 100;
+	
 	/** States table. */
 	private Table tableStates;
 	/** Ranges table. */
@@ -643,6 +715,15 @@ public class StatisticsAverages extends Statistics {
 		int index,
 		int scale) {
 		return getCandleField(name, header, label, fast, slow, index, scale, null);
+	}
+	
+	
+
+	/**
+	 * @return The number of bars ahead for zig-zag calculation.
+	 */
+	public int getBarsAhead() {
+		return barsAhead;
 	}
 
 	/**
@@ -1744,6 +1825,7 @@ public class StatisticsAverages extends Statistics {
 		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
 		averages.clear();
 		averages.addAll(handler.getAverages());
+		barsAhead = handler.getBarsAhead();
 	}
 
 	/**
@@ -1769,6 +1851,10 @@ public class StatisticsAverages extends Statistics {
 						"Average " + avgCurr + " must be a multiple of " + avgPrev);
 				}
 			}
+		}
+		/* Must have positive bars ahead. */
+		if (barsAhead <= 0) {
+			throw new IllegalArgumentException("Invalid bars ahead for zig-zag " + barsAhead);
 		}
 	}
 }

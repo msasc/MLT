@@ -229,6 +229,78 @@ public class ActionStatistics extends ActionRun {
 	}
 
 	/**
+	 * Modify the selected statistics.
+	 */
+	class ActionModify extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				/* Selected record. */
+				Record rc = tableStats.getSelectedRecord();
+				if (rc == null) {
+					return;
+				}
+				
+				/* Form. */
+				FormRecordPane form = new FormRecordPane(rc);
+				form.setLayoutByRows(FieldGroup.EMPTY_FIELD_GROUP);
+
+				form.addField(DB.FIELD_SERVER_ID);
+				form.addField(DB.FIELD_INSTRUMENT_ID);
+				form.addField(DB.FIELD_PERIOD_NAME);
+				form.addField(DB.FIELD_STATISTICS_ID);
+				form.addField(DB.FIELD_STATISTICS_KEY);
+				form.addField(DB.FIELD_STATISTICS_PARAMS);
+
+				form.getEditContext(DB.FIELD_SERVER_ID).getEditField().setEnabled(false);
+				form.getEditContext(DB.FIELD_INSTRUMENT_ID).getEditField().setEnabled(false);
+				form.getEditContext(DB.FIELD_PERIOD_NAME).getEditField().setEnabled(false);
+				form.getEditContext(DB.FIELD_STATISTICS_ID).getEditField().setEnabled(false);
+				form.getEditContext(DB.FIELD_STATISTICS_KEY).getEditField().setEnabled(false);
+
+				form.layout();
+				form.updateEditors();
+				
+				OptionWindow wnd = new OptionWindow(new Dialog(null, new GridBagPane()));
+				wnd.setTitle("Modify statistics parameters");
+				wnd.setOptionsBottom();
+
+				wnd.setCenter(form.getPane());
+
+				ValidatorStats validator = new ValidatorStats();
+				validator.form = form;
+
+				Option accept =
+					Option.option_ACCEPT(
+						KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK));
+				accept.setCloseWindow(true);
+				accept.setAction(validator);
+				wnd.getOptionPane().add(accept);
+
+				Option cancel = Option.option_CANCEL();
+				wnd.getOptionPane().add(cancel);
+				wnd.getOptionPane().setMnemonics();
+
+				wnd.pack();
+				wnd.centerOnScreen();
+				wnd.show();
+
+				Option option = wnd.getOptionExecuted();
+				if (Option.isCancel(option)) {
+					return;
+				}
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
 	 * Popup menu provider.
 	 */
 	class MenuProvider implements PopupMenuProvider {
@@ -293,7 +365,6 @@ public class ActionStatistics extends ActionRun {
 				/* Everything ok, apply controls to record. */
 				form.updateRecord();
 			} catch (Exception exc) {
-				Alert.error(exc.getMessage());
 				getProperties().setBoolean(CAN_CONTINUE, false);
 			}
 		}
@@ -348,6 +419,12 @@ public class ActionStatistics extends ActionRun {
 			create.setOptionGroup(Group.EDIT);
 			create.setAction(new ActionCreate());
 
+			Option modify = new Option();
+			modify.setText("Modify");
+			modify.setToolTip("Modify the selected statistics parameters");
+			modify.setOptionGroup(Group.EDIT);
+			modify.setAction(new ActionModify());
+
 			Option delete = new Option();
 			delete.setText("Delete");
 			delete.setToolTip("Delete the selected statistics");
@@ -355,7 +432,7 @@ public class ActionStatistics extends ActionRun {
 			delete.setAction(new ActionDelete());
 
 			optionPane = new OptionPane(Orientation.HORIZONTAL);
-			optionPane.add(create, delete);
+			optionPane.add(create, modify, delete);
 
 			tableStats.setPopupMenuProvider(new MenuProvider());
 

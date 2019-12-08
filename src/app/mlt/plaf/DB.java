@@ -775,8 +775,16 @@ public class DB {
 		fkPeriods.add(table.getField(FIELD_PERIOD_ID), tablePeriods.getField(FIELD_PERIOD_ID));
 		table.addForeignKey(fkPeriods);
 
+		Order order = new Order();
+		order.add(table.getField(FIELD_SERVER_ID));
+		order.add(table.getField(FIELD_INSTRUMENT_ID));
+		order.add(tablePeriods.getField(FIELD_PERIOD_UNIT_INDEX));
+		order.add(tablePeriods.getField(FIELD_PERIOD_SIZE));
+		order.add(table.getField(FIELD_STATISTICS_ID));
+		order.add(table.getField(FIELD_STATISTICS_KEY));
+
 		table.setPersistor(
-			new DBPersistor(MLT.getDBEngine(), table.getComplexView(table.getPrimaryKey())));
+			new DBPersistor(MLT.getDBEngine(), table.getComplexView(order)));
 
 		return table;
 	}

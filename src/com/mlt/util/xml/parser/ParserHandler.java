@@ -14,10 +14,13 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package com.mlt.util.xml;
+package com.mlt.util.xml.parser;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -32,6 +35,10 @@ public class ParserHandler {
 	 * The deque with the different objects.
 	 */
 	private Deque<Object> deque = new ArrayDeque<>();
+	/**
+	 * Configuration of valid paths and attributes.
+	 */
+	private HashMap<String, List<Attribute>> paths = new HashMap<>();
 
 	/**
 	 * Default constructor.
@@ -41,12 +48,54 @@ public class ParserHandler {
 	}
 
 	/**
-	 * Returns the deque used to push, peek and pop objects.
+	 * Set a path with no attributes to be later validated.
 	 * 
-	 * @return The deque.
+	 * @param path The valid path.
 	 */
-	public Deque<Object> getDeque() {
-		return deque;
+	public void set(String path) {
+		paths.put(path, new ArrayList<>());
+	}
+	
+	/**
+	 * Set a path if not already set, and the attribute.
+	 * 
+	 * @param path     The path.
+	 * @param name     The attribute name.
+	 * @param type     The attribute type.
+	 */
+	public void set(String path, String name, String type) {
+		set(path, name, type, true);
+	}
+
+	/**
+	 * Set a path if not already set, and the attribute.
+	 * 
+	 * @param path     The path.
+	 * @param name     The attribute name.
+	 * @param type     The attribute type.
+	 * @param required A boolean.
+	 */
+	public void set(String path, String name, String type, boolean required) {
+		if (!paths.keySet().contains(path)) {
+			paths.put(path, new ArrayList<>());
+		}
+		Attribute attribute = new Attribute(name, type, required);
+		List<Attribute> attributes = paths.get(path);
+		if (!attributes.contains(attribute)) {
+			attributes.add(attribute);
+		}
+	}
+
+	/**
+	 * Validate that the path exists in the list of valid paths.
+	 * 
+	 * @param path The path to validate.
+	 * @throws SAXException If the path is not valid.
+	 */
+	public void validatePath(String path) throws SAXException {
+		if (!paths.keySet().contains(path)) {
+			throw new SAXException("Invalid path: " + path);
+		}
 	}
 
 	/**
@@ -73,7 +122,11 @@ public class ParserHandler {
 	 *                    attributes, they are empty.
 	 * @throws SAXException Any SAX exception, possibly wrapping another exception.
 	 */
-	public void elementStart(String namespace, String elementName, String path, Attributes attributes) throws SAXException {}
+	public void elementStart(
+		String namespace,
+		String elementName,
+		String path,
+		Attributes attributes) throws SAXException {}
 
 	/**
 	 * Receive notification about the body text of an element.
@@ -84,7 +137,11 @@ public class ParserHandler {
 	 * @param text        The text in the body.
 	 * @throws SAXException Any SAX exception, possibly wrapping another exception.
 	 */
-	public void elementBody(String namespace, String elementName, String path, String text) throws SAXException {}
+	public void elementBody(
+		String namespace,
+		String elementName,
+		String path,
+		String text) throws SAXException {}
 
 	/**
 	 * Receive notification about the end of an element.
@@ -97,17 +154,13 @@ public class ParserHandler {
 	public void elementEnd(String namespace, String elementName, String path) throws SAXException {}
 
 	/**
-	 * Receive notification of a parser warning.
-	 * <p>
-	 * The default implementation does nothing. Application writers may override
-	 * this method in a subclass to take specific actions for each warning, such as
-	 * inserting the message in a log file or printing it to the console.
-	 * </p>
-	 *
-	 * @param e The warning information encoded as an exception.
-	 * @throws SAXException Any SAX exception, possibly wrapping another exception.
+	 * Returns the deque used to push, peek and pop objects.
+	 * 
+	 * @return The deque.
 	 */
-	public void warning(SAXParseException e) throws SAXException {}
+	public Deque<Object> getDeque() {
+		return deque;
+	}
 
 	/**
 	 * Receive notification of a recoverable parser error.
@@ -139,4 +192,17 @@ public class ParserHandler {
 	public void fatalError(SAXParseException e) throws SAXException {
 		throw e;
 	}
+
+	/**
+	 * Receive notification of a parser warning.
+	 * <p>
+	 * The default implementation does nothing. Application writers may override
+	 * this method in a subclass to take specific actions for each warning, such as
+	 * inserting the message in a log file or printing it to the console.
+	 * </p>
+	 *
+	 * @param e The warning information encoded as an exception.
+	 * @throws SAXException Any SAX exception, possibly wrapping another exception.
+	 */
+	public void warning(SAXParseException e) throws SAXException {}
 }

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package com.mlt.util.xml;
+package com.mlt.util.xml.parser;
 
 import java.io.File;
 import java.io.FileInputStream;

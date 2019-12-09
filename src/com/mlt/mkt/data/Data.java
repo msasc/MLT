@@ -14,6 +14,7 @@
 package com.mlt.mkt.data;
 
 import com.mlt.util.Formats;
+import com.mlt.util.Properties;
 
 /**
  * Base class of timed data. An arbitrary number of double values with the starting time. It can be a data (open, high,
@@ -55,6 +56,10 @@ public class Data {
 	 * the list of data has the same number of elements that the origin instrument list.
 	 */
 	private boolean valid = true;
+	/**
+	 * Optional additional properties.
+	 */
+	private Properties properties;
 
 	/**
 	 * Default constructor.
@@ -110,6 +115,16 @@ public class Data {
 	 */
 	public double[] getData() {
 		return data;
+	}
+	
+	/**
+	 * @return The optional properties.
+	 */
+	public Properties getProperties() {
+		if (properties == null) {
+			properties = new Properties();
+		}
+		return properties;
 	}
 
 	/**

@@ -27,8 +27,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * Internal SAX parser handler that is installed in the parser to handle events
- * and dispatch them to the more convenient
- * <i>ParserHandler</i> class.
+ * and dispatch them to the more convenient <i>ParserHandler</i> class.
  * 
  * @author Miquel Sas
  */
@@ -40,8 +39,7 @@ public class InternalParserHandler extends DefaultHandler {
 	private ParserHandler handler;
 	/**
 	 * A stack to manage element names, allowing to know the current element being
-	 * processed and also get a complete
-	 * path to it.
+	 * processed and also get a complete path to it.
 	 */
 	private Deque<String> elementStack = new ArrayDeque<>();
 
@@ -75,7 +73,11 @@ public class InternalParserHandler extends DefaultHandler {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+	public void startElement(
+		String uri,
+		String localName,
+		String qName,
+		Attributes attributes) throws SAXException {
 		String element = qName;
 		elementStack.push(element);
 		handler.elementStart(getElementPrefix(element), getElementName(element), getCurrentPath(),

@@ -368,7 +368,7 @@ public class StatisticsAverages extends Statistics {
 	 * Parameters handler.
 	 */
 	public static class ParametersHandler extends ParserHandler {
-		
+
 		/** List of averages. */
 		private List<Average> averages = new ArrayList<>();
 		/** Bars ahead. */
@@ -379,12 +379,14 @@ public class StatisticsAverages extends Statistics {
 		 */
 		public ParametersHandler() {
 			super();
-			
+
 			/* Setup valid paths. */
 			set("statistics");
 			set("statistics/averages");
-			set("statistics/averages/average");
-			set("statistics/zig-zag");
+			set("statistics/averages/average", "type", "string");
+			set("statistics/averages/average", "period", "integer");
+			set("statistics/averages/average", "smooths", "integer-array", false);
+			set("statistics/zig-zag", "bars-ahead", "integer");
 		}
 
 		/**
@@ -397,83 +399,38 @@ public class StatisticsAverages extends Statistics {
 			String path,
 			Attributes attributes) throws SAXException {
 
-			System.out.println(path);
 			try {
 				/* Validate the path. */
-				validatePath(path);
-
-				/* Validate that the average path has no attributes. */
-				if (path.equals("averages")) {
-					if (attributes.getLength() > 0) {
-						throw new Exception("Path \"" + averages + "\" can not have attributes");
-					}
-				}
+				validate(path, attributes);
 
 				/* Validate and retrieve attributes of averages/average path. */
-				if (path.equals("averages/average")) {
-
-					/*
-					 * Attributes must be type, period, optionally smooths. Any attribute that is
-					 * not one of these is not valid. At least type and period must be set.
-					 */
-					boolean attrTypeSet = false;
-					boolean attrPeriodSet = false;
-					for (int i = 0; i < attributes.getLength(); i++) {
-						String name = attributes.getQName(i);
-						if (!Strings.in(name, "type", "period", "smooths")) {
-							throw new Exception("Invalid attribute " + name + " in path " + path);
-						}
-						if (name.equals("type")) attrTypeSet = true;
-						if (name.equals("period")) attrPeriodSet = true;
-					}
-					if (!attrTypeSet) {
-						throw new Exception("The attribute \"type\" must be set.");
-					}
-					if (!attrPeriodSet) {
-						throw new Exception("The attribute \"period\" must be set.");
-					}
+				if (path.equals("statistics/averages/average")) {
 
 					/* Type. */
-					String attrType = attributes.getValue("type");
+					String attrType = getString(attributes, "type");
 					Average.Type type = Average.Type.valueOf(attrType);
 
 					/* Period. */
-					String attrPeriod = attributes.getValue("period");
-					int period = 0;
-					try {
-						period = Integer.parseInt(attrPeriod);
-					} catch (NumberFormatException exc) {
-						throw new Exception("Invalid period " + attrPeriod, exc);
+					int period = getInteger(attributes, "period");
+					if (period <= 0) {
+						throw new Exception("Invalid period " + period);
 					}
 
 					/* Smooths. */
-					String attrSmooths = attributes.getValue("smooths");
-					int[] smooths = null;
-					if (attrSmooths != null && !attrSmooths.isEmpty()) {
-						String[] s_smooths = Strings.parse(attrSmooths, ",");
-						smooths = new int[s_smooths.length];
-						for (int i = 0; i < s_smooths.length; i++) {
-							smooths[i] = Integer.parseInt(s_smooths[i]);
-						}
-					}
+					int[] smooths = getIntegerArray(attributes, "smooths");
 
 					/* Add the average. */
 					averages.add(new Average(type, period, smooths));
 				}
-				
+
 				/* Validate and retrieve bars ahead parameter. */
-				if (path.equals("zig-zag")) {
-					String sbars = attributes.getValue("bars-ahead");
-					try {
-						barsAhead = Integer.parseInt(sbars);
-					} catch (NumberFormatException exc) {
-						throw new Exception("Invalid bars-ahead " + sbars, exc);
-					}
+				if (path.equals("statistics/zig-zag")) {
+					barsAhead = getInteger(attributes, "bars-ahead");
 					if (barsAhead <= 0) {
 						throw new Exception("Invalid bars-ahead " + barsAhead);
 					}
 				}
-				
+
 			} catch (Exception exc) {
 				throw new SAXException(exc.getMessage(), exc);
 			}
@@ -487,7 +444,7 @@ public class StatisticsAverages extends Statistics {
 		public List<Average> getAverages() {
 			return averages;
 		}
-		
+
 		/**
 		 * @return The number of bars ahead.
 		 */
@@ -497,14 +454,33 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Candle plotter for the states data list. This plotter will plot the first
+	 * candle of the iter-averages candles, that is, for instance, 5 periods candle,
+	 * 20 periods candle, etc.
+	 */
+
+	/**
 	 * Zig-zag data plotter for the states data list.
 	 */
-	class ZigZagPlotter extends DataPlotter {
+	class PlotterZigZag extends DataPlotter {
+
+		class Pivot {
+			double pivot;
+			double value;
+			int index;
+
+			Pivot(double pivot, double value, int index) {
+				this.pivot = pivot;
+				this.value = value;
+				this.index = index;
+			}
+
+		}
 
 		int indexPivot;
 		int indexData;
 
-		ZigZagPlotter() {
+		PlotterZigZag() {
 			indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT);
 			indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV);
 			setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
@@ -514,27 +490,105 @@ public class StatisticsAverages extends Statistics {
 		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
 
 			/*
-			 * Check if there is there are at least two pivots calculated, and if not do
-			 * nothing.
+			 * Build the first list of pivots visible.
 			 */
-			int countPivots = 0;
+			List<Pivot> pivots = new ArrayList<>();
 			for (int index = startIndex; index <= endIndex; index++) {
-				if (index < 0 || index >= dataList.size()) {
+				if (index < 0 || index > dataList.size()) {
 					continue;
 				}
-				if (dataList.get(index).getValue(indexPivot) != 0) {
-					countPivots++;
+				Data data = dataList.get(index);
+				double pivot = data.getValue(indexPivot);
+				if (pivot != 0) {
+					double value = data.getValue(indexData);
+					pivots.add(new Pivot(pivot, value, index));
 				}
-				if (countPivots >= 2) {
+			}
+			/*
+			 * Scan from first pivot backward and analyze if there is any other pivot before
+			 * to insert it as the first element of the list. I there is none, then scan up
+			 * to the begining tracking minimum and maximum values and indexes and create
+			 * the appropriate initial pivot.
+			 */
+			boolean anyPivotBefore = false;
+			int firstIndex = (!pivots.isEmpty() ? pivots.get(0).index : startIndex);
+			for (int index = firstIndex - 1; index >= 0; index--) {
+				Data data = dataList.get(index);
+				double pivot = data.getValue(indexPivot);
+				if (pivot != 0) {
+					double value = data.getValue(indexData);
+					pivots.add(0, new Pivot(pivot, value, index));
+					anyPivotBefore = true;
 					break;
 				}
 			}
-			if (countPivots < 2) {
-				return;
+			if (!anyPivotBefore) {
+				double minValue = Numbers.MAX_DOUBLE;
+				double maxValue = Numbers.MIN_DOUBLE;
+				int minIndex = -1;
+				int maxIndex = -1;
+				for (int index = firstIndex - 1; index >= 0; index--) {
+					Data data = dataList.get(index);
+					double value = data.getValue(indexData);
+					if (value < minValue) {
+						minValue = value;
+						minIndex = index;
+					}
+					if (value > maxValue) {
+						maxValue = value;
+						maxIndex = index;
+					}
+				}
+				if (pivots.get(0).pivot == 1) {
+					pivots.add(0, new Pivot(-1, minValue, minIndex));
+				} else {
+					pivots.add(0, new Pivot(1, maxValue, maxIndex));
+				}
+			}
+			/*
+			 * Scan from last pivot forward and analyze if there is any other pivot after to
+			 * add it as the last element of the list. I there is none, then scan up to the
+			 * end tracking minimum and maximum values and indexes and create the
+			 * appropriate final pivot.
+			 */
+			boolean anyPivotAfter = false;
+			int lastIndex = (!pivots.isEmpty() ? pivots.get(pivots.size() - 1).index : endIndex);
+			for (int index = lastIndex + 1; index < dataList.size(); index++) {
+				Data data = dataList.get(index);
+				double pivot = data.getValue(indexPivot);
+				if (pivot != 0) {
+					double value = data.getValue(indexData);
+					pivots.add(new Pivot(pivot, value, index));
+					anyPivotAfter = true;
+					break;
+				}
+			}
+			if (!anyPivotAfter) {
+				double minValue = Numbers.MAX_DOUBLE;
+				double maxValue = Numbers.MIN_DOUBLE;
+				int minIndex = -1;
+				int maxIndex = -1;
+				for (int index = lastIndex + 1; index < dataList.size(); index++) {
+					Data data = dataList.get(index);
+					double value = data.getValue(indexData);
+					if (value < minValue) {
+						minValue = value;
+						minIndex = index;
+					}
+					if (value > maxValue) {
+						maxValue = value;
+						maxIndex = index;
+					}
+				}
+				if (pivots.get(pivots.size() - 1).pivot == 1) {
+					pivots.add(new Pivot(-1, minValue, minIndex));
+				} else {
+					pivots.add(new Pivot(1, maxValue, maxIndex));
+				}
 			}
 
 			/*
-			 * Draw a line from pivot to pivot.
+			 * Do plot.
 			 */
 			DataContext dc = getContext();
 			Path path = new Path();
@@ -542,64 +596,14 @@ public class StatisticsAverages extends Statistics {
 			path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			path.setDrawPaint(Color.BLACK);
 			double x, y;
-			countPivots = 0;
-			for (int index = startIndex; index <= endIndex; index++) {
-				if (index < 0 || index > dataList.size()) {
-					continue;
-				}
-				/*
-				 * If index == startIndex, check if there is another pivot before.
-				 */
-				if (index == startIndex) {
-					for (int scan = index; scan >= 0; scan--) {
-						Data dataScan = dataList.get(scan);
-						double pivotScan = dataScan.getValue(indexPivot);
-						double valueScan = dataScan.getValue(indexData);
-						if (pivotScan != 0) {
-							x = dc.getCenterCoordinateX(dc.getCoordinateX(scan));
-							y = dc.getCoordinateY(valueScan);
-							countPivots++;
-							if (countPivots == 1) {
-								path.moveTo(x, y);
-							} else {
-								path.lineTo(x, y);
-							}
-							break;
-						}
-					}
-				}
-				Data data = dataList.get(index);
-				double pivot = data.getValue(indexPivot);
-				double value = data.getValue(indexData);
-				if (pivot != 0) {
-					x = dc.getCenterCoordinateX(dc.getCoordinateX(index));
-					y = dc.getCoordinateY(value);
-					countPivots++;
-					if (countPivots == 1) {
-						path.moveTo(x, y);
-					} else {
-						path.lineTo(x, y);
-					}
+			for (int i = 0; i < pivots.size(); i++) {
+				Pivot pivot = pivots.get(i);
+				x = dc.getCenterCoordinateX(dc.getCoordinateX(pivot.index));
+				y = dc.getCoordinateY(pivot.value);
+				if (i == 0) {
+					path.moveTo(x, y);
 				} else {
-					/*
-					 * If pivot == 0 and endIndex, check if there is another pivot after.
-					 */
-					if (index == endIndex) {
-						for (int scan = index; scan < dataList.size(); scan++) {
-							Data dataScan = dataList.get(scan);
-							double pivotScan = dataScan.getValue(indexPivot);
-							double valueScan = dataScan.getValue(indexData);
-							if (pivotScan != 0) {
-								x = dc.getCenterCoordinateX(dc.getCoordinateX(scan));
-								y = dc.getCoordinateY(valueScan);
-								countPivots++;
-								if (countPivots > 1) {
-									path.lineTo(x, y);
-								}
-								break;
-							}
-						}
-					}
+					path.lineTo(x, y);
 				}
 			}
 			ctx.draw(path);
@@ -632,7 +636,7 @@ public class StatisticsAverages extends Statistics {
 	private List<Average> averages = new ArrayList<>();
 	/** Bars ahead to calculate zig-zag operator. */
 	private int barsAhead = 100;
-	
+
 	/** States table. */
 	private Table tableStates;
 	/** Ranges table. */
@@ -716,8 +720,6 @@ public class StatisticsAverages extends Statistics {
 		int scale) {
 		return getCandleField(name, header, label, fast, slow, index, scale, null);
 	}
-	
-	
 
 	/**
 	 * @return The number of bars ahead for zig-zag calculation.
@@ -853,15 +855,22 @@ public class StatisticsAverages extends Statistics {
 			int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
 			int slow = averages.get(i).getPeriod();
 			int count = slow / fast;
+			String name, header;
 			for (int j = 0; j < count; j++) {
 
-				/* Time, open, high, low, close. */
-				String timeName = getNameCandle("time", fast, slow, j);
-				String timeHeader = getHeaderCandle("Time", fast, slow, j);
-				fields.add(DB.field_long(timeName, timeHeader));
-				String timeNameFmt = timeName + "_fmt";
-				String timeHeaderFmt = timeHeader + " fmt";
-				fields.add(DB.field_timeFmt(getPeriod(), timeName, timeNameFmt, timeHeaderFmt));
+				/* Time start, raw and fmt. */
+				name = getNameCandle(DB.FIELD_BAR_TIME_START, fast, slow, j);
+				header = getHeaderCandle("Time start", fast, slow, j);
+				fields.add(DB.field_long(name, header));
+				fields.add(DB.field_timeFmt(getPeriod(), name, name + "_fmt", header + " fmt"));
+
+				/* Time end. */
+				name = getNameCandle(DB.FIELD_BAR_TIME_END, fast, slow, j);
+				header = getHeaderCandle("Time end", fast, slow, j);
+				fields.add(DB.field_long(name, header));
+				fields.add(DB.field_timeFmt(getPeriod(), name, name + "_fmt", header + " fmt"));
+
+				/* Open, high, low, close. */
 				fields.add(getCandleField(DB.FIELD_BAR_OPEN, "Open", "Open", fast, slow, j, 4));
 				fields.add(getCandleField(DB.FIELD_BAR_HIGH, "High", "High", fast, slow, j, 4));
 				fields.add(getCandleField(DB.FIELD_BAR_LOW, "Low", "Low", fast, slow, j, 4));
@@ -1464,7 +1473,7 @@ public class StatisticsAverages extends Statistics {
 		}
 
 		/* Pivot. */
-		dataList.addPlotter(new ZigZagPlotter());
+		dataList.addPlotter(new PlotterZigZag());
 
 		PlotData plotData = new PlotData("price_and_averages");
 		plotData.add(dataList);

@@ -198,8 +198,11 @@ public class TaskAveragesRaw extends TaskAverages {
 
 					Data candle = candles.get(j);
 
-					String time = stats.getNameCandle(DB.FIELD_BAR_TIME, fast, slow, j);
-					rcStat.setValue(time, candle.getTime());
+					String timeStart = stats.getNameCandle(DB.FIELD_BAR_TIME_START, fast, slow, j);
+					rcStat.setValue(timeStart, candle.getTime());
+					
+					String timeEnd = stats.getNameCandle(DB.FIELD_BAR_TIME_END, fast, slow, j);
+					rcStat.setValue(timeEnd, candle.getProperties().getLong("TIME_END"));
 
 					String open = stats.getNameCandle(DB.FIELD_BAR_OPEN, fast, slow, j);
 					rcStat.setValue(open, OHLC.getOpen(candle));
@@ -259,23 +262,24 @@ public class TaskAveragesRaw extends TaskAverages {
 		List<Data> candles = new ArrayList<>();
 		int countCandles = slowPeriod / fastPeriod;
 		for (int i = 0; i < countCandles; i++) {
-			int startIndex = fastPeriod * i;
-			int endIndex = startIndex + fastPeriod - 1;
-			if (startIndex >= buffer.size()) {
-				startIndex = buffer.size() - 1;
+			int startIndex = buffer.size() - (fastPeriod * (i + 1));
+			if (startIndex < 0) {
+				startIndex = 0;
 			}
+			int endIndex = startIndex + fastPeriod - 1;
 			if (endIndex >= buffer.size()) {
 				endIndex = buffer.size() - 1;
 			}
-			long time = 0;
+			long timeStart = 0;
+			long timeEnd = 0;
 			double open = 0;
 			double high = Numbers.MIN_DOUBLE;
 			double low = Numbers.MAX_DOUBLE;
 			double close = 0;
 			for (int j = startIndex; j <= endIndex; j++) {
-				Record rc = buffer.getTail(j);
+				Record rc = buffer.getHead(j);
 				if (j == startIndex) {
-					time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
+					timeStart = rc.getValue(DB.FIELD_BAR_TIME).getLong();
 					open = rc.getValue(DB.FIELD_BAR_OPEN).getDouble();
 				}
 				double high_rc = rc.getValue(DB.FIELD_BAR_HIGH).getDouble();
@@ -288,9 +292,12 @@ public class TaskAveragesRaw extends TaskAverages {
 				}
 				if (j == endIndex) {
 					close = rc.getValue(DB.FIELD_BAR_CLOSE).getDouble();
+					timeEnd = rc.getValue(DB.FIELD_BAR_TIME).getLong();
 				}
 			}
-			candles.add(new Data(time, open, high, low, close));
+			Data data = new Data(timeStart, open, high, low, close);
+			data.getProperties().setLong("TIME_END", timeEnd);
+			candles.add(data);
 		}
 		return candles;
 	}

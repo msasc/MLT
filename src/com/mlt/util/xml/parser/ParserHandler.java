@@ -26,10 +26,30 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 
+import com.mlt.util.Strings;
+
 /**
  * @author Miquel Sas
  */
 public class ParserHandler {
+
+	private static int getAttributeIndex(Attributes attributes, String name) {
+		for (int i = 0; i < attributes.getLength(); i++) {
+			if (attributes.getQName(i).equals(name)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	private static PathAttribute getPathAttribute(List<PathAttribute> attrs, String name) {
+		for (PathAttribute attr : attrs) {
+			if (attr.name.equals(name)) {
+				return attr;
+			}
+		}
+		return null;
+	}
 
 	/**
 	 * The deque with the different objects.
@@ -38,13 +58,94 @@ public class ParserHandler {
 	/**
 	 * Configuration of valid paths and attributes.
 	 */
-	private HashMap<String, List<Attribute>> paths = new HashMap<>();
+	private HashMap<String, List<PathAttribute>> paths = new HashMap<>();
 
 	/**
 	 * Default constructor.
 	 */
 	public ParserHandler() {
 		super();
+	}
+
+	/**
+	 * Check whether the nme attribute exists.
+	 * 
+	 * @param attributes SAX attributes.
+	 * @param name       Attribute name.
+	 * @return A boolean.
+	 */
+	public boolean exists(Attributes attributes, String name) {
+		return attributes.getIndex(name) >= 0;
+	}
+
+	/**
+	 * Return the value.
+	 * 
+	 * @param attributes SAX attributes.
+	 * @param name       Attribute name.
+	 * @return The value.
+	 */
+	public boolean getBoolean(Attributes attributes, String name) {
+		if (attributes.getValue(name).equals("true")) {
+			return true;
+		}
+		if (attributes.getValue(name).equals("false")) {
+			return false;
+		}
+		throw new IllegalStateException();
+	}
+
+	/**
+	 * Return the value.
+	 * 
+	 * @param attributes SAX attributes.
+	 * @param name       Attribute name.
+	 * @return The value.
+	 */
+	public double getDouble(Attributes attributes, String name) {
+		return Double.parseDouble(attributes.getValue(name));
+	}
+
+	/**
+	 * Return the value.
+	 * 
+	 * @param attributes SAX attributes.
+	 * @param name       Attribute name.
+	 * @return The value.
+	 */
+	public int getInteger(Attributes attributes, String name) {
+		return Integer.parseInt(attributes.getValue(name));
+	}
+
+	/**
+	 * Return the value.
+	 * 
+	 * @param attributes SAX attributes.
+	 * @param name       Attribute name.
+	 * @return The value.
+	 */
+	public int[] getIntegerArray(Attributes attributes, String name) {
+		int[] array = null;
+		String value = attributes.getValue(name);
+		if (value != null) {
+			String[] elements = Strings.parse(value, ",");
+			array = new int[elements.length];
+			for (int i = 0; i < elements.length; i++) {
+				array[i] = Integer.parseInt(elements[i]);
+			}
+		}
+		return array;
+	}
+
+	/**
+	 * Return the value.
+	 * 
+	 * @param attributes SAX attributes.
+	 * @param name       Attribute name.
+	 * @return The value.
+	 */
+	public String getString(Attributes attributes, String name) {
+		return attributes.getValue(name);
 	}
 
 	/**
@@ -55,13 +156,13 @@ public class ParserHandler {
 	public void set(String path) {
 		paths.put(path, new ArrayList<>());
 	}
-	
+
 	/**
 	 * Set a path if not already set, and the attribute.
 	 * 
-	 * @param path     The path.
-	 * @param name     The attribute name.
-	 * @param type     The attribute type.
+	 * @param path The path.
+	 * @param name The attribute name.
+	 * @param type The attribute type.
 	 */
 	public void set(String path, String name, String type) {
 		set(path, name, type, true);
@@ -79,10 +180,56 @@ public class ParserHandler {
 		if (!paths.keySet().contains(path)) {
 			paths.put(path, new ArrayList<>());
 		}
-		Attribute attribute = new Attribute(name, type, required);
-		List<Attribute> attributes = paths.get(path);
+		PathAttribute attribute = new PathAttribute(name, type, required);
+		List<PathAttribute> attributes = paths.get(path);
 		if (!attributes.contains(attribute)) {
 			attributes.add(attribute);
+		}
+	}
+
+	/**
+	 * Validate that the path is a valid path and the attributes correspond to the
+	 * accepted attributes.
+	 * 
+	 * @param path       The path.
+	 * @param attributes The SAX attributes.
+	 * @throws SAXException If not correct.
+	 */
+	public void validate(String path, Attributes attributes) throws SAXException {
+
+		/* The path must exist. */
+		if (!paths.keySet().contains(path)) {
+			throw new SAXException("Invalid path: " + path);
+		}
+
+		/* Retrieve the list of path attributes and check them. */
+		List<PathAttribute> pathAttrs = paths.get(path);
+
+		/* Emptyness. */
+		if (pathAttrs.isEmpty() && attributes.getLength() == 0) {
+			return;
+		}
+
+		/* Required attributes must be present. */
+		for (PathAttribute attr : pathAttrs) {
+			if (attr.required) {
+				int index = getAttributeIndex(attributes, attr.name);
+				if (index == -1) {
+					throw new SAXException(
+						"Required attribute \"" + attr.name + "\" not preesent.");
+				}
+			}
+		}
+
+		/* Validate attributes. */
+		for (int i = 0; i < attributes.getLength(); i++) {
+			String name = attributes.getQName(i);
+			PathAttribute attr = getPathAttribute(pathAttrs, name);
+			if (attr == null) {
+				throw new SAXException("Attribute \"" + name + "\" is not a valid attribute.");
+			}
+			String value = attributes.getValue(i);
+			attr.validate(value);
 		}
 	}
 

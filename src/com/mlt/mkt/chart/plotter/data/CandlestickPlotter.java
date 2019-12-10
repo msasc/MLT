@@ -59,6 +59,7 @@ public class CandlestickPlotter extends DataPlotter {
 	 * @param close Close index.
 	 */
 	public CandlestickPlotter(int open, int high, int low, int close) {
+		super("candlestick");
 		setIndexes(new int[] { open, high, low, close });
 	}
 

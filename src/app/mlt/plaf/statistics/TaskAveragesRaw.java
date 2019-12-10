@@ -198,12 +198,9 @@ public class TaskAveragesRaw extends TaskAverages {
 
 					Data candle = candles.get(j);
 
-					String timeStart = stats.getNameCandle(DB.FIELD_BAR_TIME_START, fast, slow, j);
-					rcStat.setValue(timeStart, candle.getTime());
+					String time = stats.getNameCandle(DB.FIELD_BAR_TIME, fast, slow, j);
+					rcStat.setValue(time, candle.getTime());
 					
-					String timeEnd = stats.getNameCandle(DB.FIELD_BAR_TIME_END, fast, slow, j);
-					rcStat.setValue(timeEnd, candle.getProperties().getLong("TIME_END"));
-
 					String open = stats.getNameCandle(DB.FIELD_BAR_OPEN, fast, slow, j);
 					rcStat.setValue(open, OHLC.getOpen(candle));
 
@@ -270,8 +267,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			if (endIndex >= buffer.size()) {
 				endIndex = buffer.size() - 1;
 			}
-			long timeStart = 0;
-			long timeEnd = 0;
+			long time = 0;
 			double open = 0;
 			double high = Numbers.MIN_DOUBLE;
 			double low = Numbers.MAX_DOUBLE;
@@ -279,7 +275,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			for (int j = startIndex; j <= endIndex; j++) {
 				Record rc = buffer.getHead(j);
 				if (j == startIndex) {
-					timeStart = rc.getValue(DB.FIELD_BAR_TIME).getLong();
+					time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
 					open = rc.getValue(DB.FIELD_BAR_OPEN).getDouble();
 				}
 				double high_rc = rc.getValue(DB.FIELD_BAR_HIGH).getDouble();
@@ -292,11 +288,9 @@ public class TaskAveragesRaw extends TaskAverages {
 				}
 				if (j == endIndex) {
 					close = rc.getValue(DB.FIELD_BAR_CLOSE).getDouble();
-					timeEnd = rc.getValue(DB.FIELD_BAR_TIME).getLong();
 				}
 			}
-			Data data = new Data(timeStart, open, high, low, close);
-			data.getProperties().setLong("TIME_END", timeEnd);
+			Data data = new Data(time, open, high, low, close);
 			candles.add(data);
 		}
 		return candles;

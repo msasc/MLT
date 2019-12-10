@@ -19,7 +19,9 @@
 
 package com.mlt.mkt.data;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import com.mlt.db.Field;
 import com.mlt.db.Record;
@@ -33,12 +35,33 @@ import com.mlt.db.Value;
  */
 public class DataConverter {
 
+	/**
+	 * Property structure.
+	 */
+	private static class Property {
+		/** Record index. */
+		int index;
+		/** Record and property alias. */
+		String alias;
+		/** Data type. */
+		Type type;
+	}
+
+	/**
+	 * Property types.
+	 */
+	private static enum Type {
+		BOOLEAN, DOUBLE, INTEGER, LONG, STRING
+	}
+
 	/** Master or default record. */
 	private Record masterRecord;
 	/** The indexes of the value fields. */
 	private int[] indexes;
 	/** Indexes map. */
 	private HashMap<String, Integer> mapIndexes;
+	/** Optional record values stroed in data properties. */
+	private List<Property> properties = new ArrayList<>();
 
 	/**
 	 * Constructor assinging only the master record.
@@ -88,6 +111,57 @@ public class DataConverter {
 	}
 
 	/**
+	 * Add a field index to store the data as properties.
+	 * 
+	 * @param index The field index.
+	 */
+	public void addProperty(int index) {
+		if (index < 0 || index >= masterRecord.size()) {
+			throw new IllegalArgumentException("Invalid field index: " + index);
+		}
+		String alias = masterRecord.getField(index).getAlias();
+		Type type = null;
+		switch (masterRecord.getField(index).getType()) {
+		case BOOLEAN:
+			type = Type.BOOLEAN;
+			break;
+		case DOUBLE:
+			type = Type.DOUBLE;
+			break;
+		case INTEGER:
+			type = Type.INTEGER;
+			break;
+		case LONG:
+			type = Type.LONG;
+			break;
+		case STRING:
+			type = Type.STRING;
+			break;
+		default:
+			throw new IllegalArgumentException(
+				"Invalid field data type: " + masterRecord.getField(index).getType());
+		}
+		Property property = new Property();
+		property.index = index;
+		property.alias = alias;
+		property.type = type;
+		properties.add(property);
+	}
+
+	/**
+	 * Add a field alias to store the data as properties.
+	 * 
+	 * @param alias The field alias.
+	 */
+	public void addProperty(String alias) {
+		int index = masterRecord.getFieldList().getFieldIndex(alias);
+		if (index < 0) {
+			throw new IllegalArgumentException("Invalid field alias: " + alias);
+		}
+		addProperty(index);
+	}
+
+	/**
 	 * Retur the alias of the data index.
 	 * 
 	 * @param index The data index.
@@ -112,7 +186,39 @@ public class DataConverter {
 		for (int i = 0; i < indexes.length; i++) {
 			values[i] = record.getValue(indexes[i]).getDouble();
 		}
-		return new Data(time, values);
+		Data data = new Data(time, values);
+		if (!properties.isEmpty()) {
+			for (Property property : properties) {
+				switch (property.type) {
+				case BOOLEAN:
+					data.getProperties().setBoolean(
+						property.alias,
+						record.getValue(property.index).getBoolean());
+					break;
+				case DOUBLE:
+					data.getProperties().setDouble(
+						property.alias,
+						record.getValue(property.index).getDouble());
+					break;
+				case INTEGER:
+					data.getProperties().setInteger(
+						property.alias,
+						record.getValue(property.index).getInteger());
+					break;
+				case LONG:
+					data.getProperties().setLong(
+						property.alias,
+						record.getValue(property.index).getLong());
+					break;
+				case STRING:
+					data.getProperties().setString(
+						property.alias,
+						record.getValue(property.index).getString());
+					break;
+				}
+			}
+		}
+		return data;
 	}
 
 	/**
@@ -139,6 +245,37 @@ public class DataConverter {
 			double value = data.getValue(i);
 			int index = indexes[i];
 			record.setValue(index, new Value(value));
+		}
+		if (!properties.isEmpty()) {
+			for (Property property : properties) {
+				switch (property.type) {
+				case BOOLEAN:
+					record.setValue(
+						property.index,
+						data.getProperties().getBoolean(property.alias));
+					break;
+				case DOUBLE:
+					record.setValue(
+						property.index,
+						data.getProperties().getDouble(property.alias));
+					break;
+				case INTEGER:
+					record.setValue(
+						property.index,
+						data.getProperties().getInteger(property.alias));
+					break;
+				case LONG:
+					record.setValue(
+						property.index,
+						data.getProperties().getLong(property.alias));
+					break;
+				case STRING:
+					record.setValue(
+						property.index,
+						data.getProperties().getString(property.alias));
+					break;
+				}
+			}
 		}
 		return record;
 	}

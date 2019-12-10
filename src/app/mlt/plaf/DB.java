@@ -106,8 +106,6 @@ public class DB {
 	public static final String FIELD_AVERAGE_SMOOTHS = "avg_smooths";
 
 	public static final String FIELD_BAR_TIME = "time";
-	public static final String FIELD_BAR_TIME_START = "time_start";
-	public static final String FIELD_BAR_TIME_END = "time_end";
 	public static final String FIELD_BAR_TIME_FMT = "time_fmt";
 	public static final String FIELD_BAR_OPEN = "open";
 	public static final String FIELD_BAR_HIGH = "high";

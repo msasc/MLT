@@ -269,6 +269,22 @@ public class ChartContainer extends BorderPane {
 	}
 
 	/**
+	 * Return the plot data with the given id or null if not exists.
+	 * 
+	 * @param id The plot data id.
+	 * @return The plot data or null.
+	 */
+	public PlotData getPlotData(String id) {
+		List<PlotData> plotDatas = getPlotDatas();
+		for (PlotData plotData : plotDatas) {
+			if (plotData.getId().equals(id)) {
+				return plotData;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Return the list of all plot datas.
 	 * 
 	 * @return The list ofplot datas.
@@ -363,7 +379,7 @@ public class ChartContainer extends BorderPane {
 	/**
 	 * Refresh all chart components.
 	 */
-	private void refreshAll() {
+	public void refreshAll() {
 
 		/* Ensure contexts and set indexes. */
 		charts.get(0).getDataContext().ensureContext();

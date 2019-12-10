@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.data;
@@ -37,7 +42,8 @@ import com.mlt.util.Numbers;
 public abstract class DataList {
 
 	/**
-	 * Returns the list of first level indicator data lists, given a list of data lists.
+	 * Returns the list of first level indicator data lists, given a list of data
+	 * lists.
 	 *
 	 * @param dataLists The source list of data lists.
 	 * @return The list of first level indicator data lists.
@@ -55,13 +61,15 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Returns the list of indicator data lists, in the order of precendence they are to be calculated. If an indicator
+	 * Returns the list of indicator data lists, in the order of precendence they
+	 * are to be calculated. If an indicator
 	 * uses the data of another indicator, the last one must be calculated first.
 	 *
 	 * @param dataLists The source list of data lists.
 	 * @return The list of indicator data lists,
 	 */
-	public static List<IndicatorDataList> getIndicatorDataListsToCalculate(List<DataList> dataLists) {
+	public static List<IndicatorDataList> getIndicatorDataListsToCalculate(
+		List<DataList> dataLists) {
 		List<IndicatorDataList> firstLevelIndicatorDataLists = getIndicatorDataLists(dataLists);
 		List<IndicatorDataList> indicatorDataLists = new ArrayList<>();
 		fillIndicatorDataLists(indicatorDataLists, firstLevelIndicatorDataLists);
@@ -74,7 +82,9 @@ public abstract class DataList {
 	 * @param results The result lists.
 	 * @param parents The parent lists.
 	 */
-	private static void fillIndicatorDataLists(List<IndicatorDataList> results, List<IndicatorDataList> parents) {
+	private static void fillIndicatorDataLists(
+		List<IndicatorDataList> results,
+		List<IndicatorDataList> parents) {
 		// Process required first.
 		for (IndicatorDataList parent : parents) {
 			List<IndicatorDataList> required = getIndicatorDataListsRequired(parent);
@@ -89,7 +99,8 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Returns the list of indicator data lists that the argument indicator data list requires as indicator sources.
+	 * Returns the list of indicator data lists that the argument indicator data
+	 * list requires as indicator sources.
 	 *
 	 * @param parent The parent indicator data list.
 	 * @return The list of children required indicator data lists.
@@ -171,6 +182,25 @@ public abstract class DataList {
 	}
 
 	/**
+	 * Check whether plotter is installed.
+	 * 
+	 * @param plotter The plotter.
+	 * @return A boolean.
+	 */
+	public boolean isPlotter(DataPlotter plotter) {
+		return dataPlotters.contains(plotter);
+	}
+
+	/**
+	 * Remove the given plotter.
+	 * 
+	 * @param plotter The plotter to remove.
+	 */
+	public void removePlotter(DataPlotter plotter) {
+		dataPlotters.remove(plotter);
+	}
+
+	/**
 	 * Returns the list of data plotters.
 	 *
 	 * @return The list of data plotters.
@@ -207,9 +237,11 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Check if a data list has to be plotted from scratch, mainly because it plots lines with dashes.
+	 * Check if a data list has to be plotted from scratch, mainly because it plots
+	 * lines with dashes.
 	 *
-	 * @return A boolean that indicates if the data list has to be plotte from scratch.
+	 * @return A boolean that indicates if the data list has to be plotte from
+	 *         scratch.
 	 */
 	public boolean isPlotFromScratch() {
 		return false;
@@ -341,12 +373,14 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Returns a boolean indicating whether the value at value index, of the data at data index, is a maximum for the
+	 * Returns a boolean indicating whether the value at value index, of the data at
+	 * data index, is a maximum for the
 	 * argument period.
 	 *
 	 * @param dataIndex  The index of the data element.
 	 * @param valueIndex The index of the value within the data.
-	 * @param period     The period, number of data elements to check before and after.
+	 * @param period     The period, number of data elements to check before and
+	 *                   after.
 	 * @return A boolean indicating whether the value is a maximum.
 	 */
 	public boolean isMaximum(int dataIndex, int valueIndex, int period) {
@@ -354,12 +388,14 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Returns a boolean indicating whether the value at value index, of the data at data index, is a minimum for the
+	 * Returns a boolean indicating whether the value at value index, of the data at
+	 * data index, is a minimum for the
 	 * argument period.
 	 *
 	 * @param dataIndex  The index of the data element.
 	 * @param valueIndex The index of the value within the data.
-	 * @param period     The period, number of data elements to check before and after.
+	 * @param period     The period, number of data elements to check before and
+	 *                   after.
 	 * @return A boolean indicating whether the value is a minimum.
 	 */
 	public boolean isMinimum(int dataIndex, int valueIndex, int period) {
@@ -367,13 +403,16 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Returns a boolean indicating whether the value at value index, of the data at data index, is a minimum/maximum
+	 * Returns a boolean indicating whether the value at value index, of the data at
+	 * data index, is a minimum/maximum
 	 * for the argument period.
 	 *
 	 * @param dataIndex  The index of the data element.
 	 * @param valueIndex The index of the value within the data.
-	 * @param period     The period, number of data elements to check before and after.
-	 * @param minimum    A boolean that indicates whether to check minimum or maximum.
+	 * @param period     The period, number of data elements to check before and
+	 *                   after.
+	 * @param minimum    A boolean that indicates whether to check minimum or
+	 *                   maximum.
 	 * @return A boolean indicating whether the value is a minimum/maximum.
 	 */
 	private boolean isMinimumMaximum(int dataIndex, int valueIndex, int period, boolean minimum) {

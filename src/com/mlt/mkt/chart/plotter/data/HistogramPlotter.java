@@ -43,8 +43,7 @@ public class HistogramPlotter extends DataPlotter {
 	 * Constructor.
 	 */
 	public HistogramPlotter() {
-		super();
-		setIndex(OHLC.VOLUME);
+		this(OHLC.VOLUME);
 	}
 
 	/**
@@ -53,7 +52,7 @@ public class HistogramPlotter extends DataPlotter {
 	 * @param index The index to plot.
 	 */
 	public HistogramPlotter(int index) {
-		super();
+		super("histogram");
 		setIndex(index);
 	}
 

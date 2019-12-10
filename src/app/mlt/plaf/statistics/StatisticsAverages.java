@@ -19,6 +19,8 @@ package app.mlt.plaf.statistics;
 
 import java.awt.Color;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -300,6 +302,41 @@ public class StatisticsAverages extends Statistics {
 	 * Popup menu for the chart.
 	 */
 	class MenuChart implements PopupMenuProvider {
+		
+		class ActionAddZigZagPlotter implements ActionListener {
+			ChartContainer container;
+			
+			ActionAddZigZagPlotter(ChartContainer container) {
+				this.container = container;
+			}
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				PlotData plotData = container.getPlotData("price_and_averages");
+				PlotterZigZag zigzagPlotter = new PlotterZigZag();
+				plotData.get(0).addPlotter(zigzagPlotter);
+				container.refreshAll();
+			}
+			
+		}
+		
+		class ActionRemoveZigZagPlotter implements ActionListener {
+			ChartContainer container;
+			
+			ActionRemoveZigZagPlotter(ChartContainer container) {
+				this.container = container;
+			}
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				PlotData plotData = container.getPlotData("price_and_averages");
+				PlotterZigZag zigzagPlotter = new PlotterZigZag();
+				plotData.get(0).removePlotter(zigzagPlotter);
+				container.refreshAll();
+			}
+			
+		}
+		
 		@Override
 		public PopupMenu getPopupMenu(Control control) {
 			if (control instanceof ChartContainer) {
@@ -338,6 +375,31 @@ public class StatisticsAverages extends Statistics {
 					option.setCloseWindow(false);
 					option.setAction(l -> container.addPlotData(getPlotDataSpreads(), true));
 					popup.add(option.getMenuItem());
+				}
+				if (container.containsPlotData("price_and_averages")) {
+					PlotData plotData = container.getPlotData("price_and_averages");
+					PlotterZigZag zz = new PlotterZigZag();
+					if (plotData.get(0).isPlotter(new PlotterZigZag())) {
+						Option option = new Option();
+						option.setKey("zig-zag");
+						option.setText("Remove zig-zag plotter");
+						option.setToolTip("Remove zig-zag plotter");
+						option.setOptionGroup(Group.CONFIGURE);
+						option.setDefaultClose(false);
+						option.setCloseWindow(false);
+						option.setAction(new ActionRemoveZigZagPlotter(container));
+						popup.add(option.getMenuItem());
+					} else {
+						Option option = new Option();
+						option.setKey("zig-zag");
+						option.setText("Add zig-zag plotter");
+						option.setToolTip("Add zig-zag plotter");
+						option.setOptionGroup(Group.CONFIGURE);
+						option.setDefaultClose(false);
+						option.setCloseWindow(false);
+						option.setAction(new ActionAddZigZagPlotter(container));
+						popup.add(option.getMenuItem());
+					}
 				}
 				return popup;
 			}
@@ -458,6 +520,142 @@ public class StatisticsAverages extends Statistics {
 	 * candle of the iter-averages candles, that is, for instance, 5 periods candle,
 	 * 20 periods candle, etc.
 	 */
+	class PlotterCandles extends DataPlotter {
+
+		class Candle {
+			int index;
+			Data data;
+
+			Candle(int index, Data data) {
+				this.index = index;
+				this.data = data;
+			}
+		}
+
+		int size;
+
+		int indexOpen;
+		int indexHigh;
+		int indexLow;
+		int indexClose;
+
+		PlotterCandles(int size) {
+			super("candles_" + size);
+
+			this.size = size;
+
+			this.indexOpen = getStatesDataConverter().getIndex(DB.FIELD_BAR_OPEN);
+			this.indexHigh = getStatesDataConverter().getIndex(DB.FIELD_BAR_HIGH);
+			this.indexLow = getStatesDataConverter().getIndex(DB.FIELD_BAR_LOW);
+			this.indexClose = getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE);
+
+			setIndexes(indexOpen, indexHigh, indexLow, indexClose);
+		}
+
+		@Override
+		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
+
+			/*
+			 * Plot candles of size periods starting at endIndex and moving backward.
+			 */
+			List<Candle> candles = new ArrayList<>();
+			for (int index = endIndex; index >= 0; index--) {
+
+				/* Add the candle. */
+				candles.add(new Candle(index, dataList.get(index)));
+
+				/* Process candles if required. */
+				if (candles.size() == size || index == 0) {
+					int start = candles.get(candles.size() - 1).index;
+					int end = candles.get(0).index;
+					double open = candles.get(candles.size() - 1).data.getValue(indexOpen);
+					double high = Numbers.MIN_DOUBLE;
+					double low = Numbers.MAX_DOUBLE;
+					double close = candles.get(0).data.getValue(indexClose);
+					for (int i = candles.size() - 1; i >= 0; i--) {
+						Candle candle = candles.get(i);
+						if (candle.data.getValue(indexHigh) > high) {
+							high = candle.data.getValue(indexHigh);
+						}
+						if (candle.data.getValue(indexLow) < low) {
+							low = candle.data.getValue(indexLow);
+						}
+					}
+					plot(ctx, start, end, open, high, low, close);
+					candles.clear();
+
+					/* Exit if plotted the first candle. */
+					if (start <= startIndex) {
+						break;
+					}
+				}
+
+			}
+
+		}
+
+		private void plot(
+			Context ctx,
+			int startIndex,
+			int endIndex,
+			double open,
+			double high,
+			double low,
+			double close) {
+
+			boolean bullish = (close >= open);
+			DataContext dc = getContext();
+
+			double openY = dc.getCoordinateY(open);
+			double highY = dc.getCoordinateY(high);
+			double lowY = dc.getCoordinateY(low);
+			double closeY = dc.getCoordinateY(close);
+			double bodyHigh = (bullish ? closeY : openY);
+			double bodyLow = (bullish ? openY : closeY);
+
+			double periodXStart = dc.getCoordinateX(startIndex);
+			double centerXStart = dc.getCenterCoordinateX(periodXStart);
+			double periodXEnd = dc.getCoordinateX(endIndex);
+			double centerXEnd = dc.getCenterCoordinateX(periodXEnd);
+			double margin = getDataMargin(dc);
+			double candleWidth = centerXEnd - centerXStart + (2 * margin);
+			double candleCenter = (centerXStart + centerXEnd) / 2;
+			double candleStart = candleCenter - (candleWidth / 2);
+
+			Color fillColor;
+			if (bullish) {
+				fillColor = getColorBullishEven();
+			} else {
+				fillColor = getColorBearishEven();
+			}
+
+			Path path = new Path();
+			path.setStroke(new Stroke(1.0));
+			if (candleWidth <= 1) {
+				path.setDrawPaint(fillColor);
+				path.moveTo(centerXStart, highY);
+				path.lineTo(centerXStart, lowY);
+				ctx.draw(path);
+			} else {
+				path.setDrawPaint(Color.BLACK);
+				path.setFillPaint(fillColor);
+				/* Upper shadow. */
+				path.moveTo(candleCenter, highY);
+				path.lineTo(candleCenter, bodyHigh);
+				/* Body. */
+				path.moveTo(candleStart, bodyHigh);
+				path.lineTo(candleStart + candleWidth, bodyHigh);
+				path.lineTo(candleStart + candleWidth, bodyLow);
+				path.lineTo(candleStart, bodyLow);
+				path.lineTo(candleStart, bodyHigh);
+				/* Lower shadow. */
+				path.moveTo(candleCenter, bodyLow);
+				path.lineTo(candleCenter, lowY);
+				ctx.fill(path);
+				ctx.draw(path);
+			}
+		}
+	}
 
 	/**
 	 * Zig-zag data plotter for the states data list.
@@ -481,6 +679,8 @@ public class StatisticsAverages extends Statistics {
 		int indexData;
 
 		PlotterZigZag() {
+			super("zig-zag");
+
 			indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT);
 			indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV);
 			setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
@@ -859,14 +1059,8 @@ public class StatisticsAverages extends Statistics {
 			for (int j = 0; j < count; j++) {
 
 				/* Time start, raw and fmt. */
-				name = getNameCandle(DB.FIELD_BAR_TIME_START, fast, slow, j);
-				header = getHeaderCandle("Time start", fast, slow, j);
-				fields.add(DB.field_long(name, header));
-				fields.add(DB.field_timeFmt(getPeriod(), name, name + "_fmt", header + " fmt"));
-
-				/* Time end. */
-				name = getNameCandle(DB.FIELD_BAR_TIME_END, fast, slow, j);
-				header = getHeaderCandle("Time end", fast, slow, j);
+				name = getNameCandle(DB.FIELD_BAR_TIME, fast, slow, j);
+				header = getHeaderCandle("Time", fast, slow, j);
 				fields.add(DB.field_long(name, header));
 				fields.add(DB.field_timeFmt(getPeriod(), name, name + "_fmt", header + " fmt"));
 
@@ -1584,6 +1778,17 @@ public class StatisticsAverages extends Statistics {
 			int[] indexes = Lists.toIntegerArray(list);
 			Record masterRecord = getTableStates().getDefaultRecord();
 			statesDataConverter = new DataConverter(masterRecord, indexes);
+
+			/*
+			 * Time of each first average (fast/slow) candle, except one period candle, to
+			 * be stored as data properties.
+			 */
+//			for (int i = 0; i < averages.size() - 1; i++) {
+//				int fast = averages.get(i).getPeriod();
+//				int slow = averages.get(i + 1).getPeriod();
+//				String name = getNameCandle(DB.FIELD_BAR_TIME, fast, slow, 0);
+//				statesDataConverter.addProperty(name);
+//			}
 		}
 		return statesDataConverter;
 	}

@@ -1,40 +1,77 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
- * <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.chart.plotter;
 
 import com.mlt.mkt.chart.DataContext;
 
 /**
- * Base abstract class of all plotter subclasses. Note that the frame for the plot data must have been calculated by a
- * call to <i>PlotData.calculateFrame</i> prior to any plot operation, except for those repaints in a small clip bounds
+ * Base abstract class of all plotter subclasses. Note that the frame for the
+ * plot data must have been calculated by a
+ * call to <i>PlotData.calculateFrame</i> prior to any plot operation, except
+ * for those repaints in a small clip bounds
  * that do not modify the frame maximum and minimum.
  * <p>
- * This base plotter primarily offers the context that has methods to calculate coordinates from values and values from
+ * This base plotter primarily offers the context that has methods to calculate
+ * coordinates from values and values from
  * coordinates.
+ * <p>
+ * Also offers a set of static plot utilities.
  * 
  * @author Miquel Sas
  */
 public class Plotter {
 
+	/** String identifier. */
+	private String id;
 	/** The plotter context. */
 	private DataContext context;
 
 	/**
-	 * Default constructor.
+	 * Constructor.
+	 * 
+	 * @param id Identifier.
 	 */
-	public Plotter() {
+	public Plotter(String id) {
 		super();
+		if (id == null) {
+			throw new NullPointerException();
+		}
+		this.id = id;
+	}
+
+	/**
+	 * Equals if it is exactly the same class and has the same id.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (getClass().getName().equals(obj.getClass().getName())) {
+			Plotter plotter = (Plotter) obj;
+			if (getId().equals(plotter.getId())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @return The string identifier.
+	 */
+	public String getId() {
+		return id;
 	}
 
 	/**

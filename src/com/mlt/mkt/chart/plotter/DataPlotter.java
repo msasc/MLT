@@ -69,9 +69,11 @@ public abstract class DataPlotter extends Plotter {
 
 	/**
 	 * Constructor.
+	 * 
+	 * @param id The identifier.
 	 */
-	public DataPlotter() {
-		super();
+	public DataPlotter(String id) {
+		super(id);
 	}
 
 	/**

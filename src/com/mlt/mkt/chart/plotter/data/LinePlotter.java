@@ -44,8 +44,7 @@ public class LinePlotter extends DataPlotter {
 	 * Constructor with the zero index.
 	 */
 	public LinePlotter() {
-		super();
-		setIndex(0);
+		this(0);
 	}
 
 	/**
@@ -54,7 +53,7 @@ public class LinePlotter extends DataPlotter {
 	 * @param index The data index.
 	 */
 	public LinePlotter(int index) {
-		super();
+		super("line");
 		setIndex(index);
 	}
 

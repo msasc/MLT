@@ -40,6 +40,5 @@ public class PriceInfo extends DataInfo {
 		addOutput("High", "H", OHLC.HIGH, "High data value");
 		addOutput("Low", "L", OHLC.LOW, "Low data value");
 		addOutput("Close", "C", OHLC.CLOSE, "Close data value");
-		addOutput("Volume", "V", OHLC.VOLUME, "Volume data value");
 	}
 }

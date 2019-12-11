@@ -151,8 +151,10 @@ public class DB {
 	public static final String FIELD_SERVER_NAME = "server_name";
 	public static final String FIELD_SERVER_TITLE = "server_title";
 
-	public static final String FIELD_STATES_LABEL = "label";
-	public static final String FIELD_STATES_PIVOT = "pivot";
+	public static final String FIELD_STATES_LABEL_CALC = "label_calc";
+	public static final String FIELD_STATES_LABEL_EDIT = "label_edit";
+	public static final String FIELD_STATES_PIVOT_CALC = "pivot_calc";
+	public static final String FIELD_STATES_PIVOT_EDIT = "pivot_edit";
 	public static final String FIELD_STATES_REFV = "refv";
 	public static final String FIELD_STATES_NORMALIZED = "normalized";
 	public static final String FIELD_STATES_PIVOT_SCANNED = "pivot_scanned";

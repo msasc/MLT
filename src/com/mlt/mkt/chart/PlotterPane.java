@@ -38,7 +38,6 @@ import com.mlt.desktop.layout.Dimension;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.mkt.chart.plotter.DataPlotter;
-import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.DataList;
 import com.mlt.mkt.data.IndicatorDataList;
 import com.mlt.mkt.data.PlotData;
@@ -386,12 +385,9 @@ public class PlotterPane extends BorderPane {
 				DataInfo info = pd.getDataInfo(i);
 				String text = "";
 				if (index >= 0 && index < pd.get(i).size()) {
-					Data data = pd.get(i).get(index);
-					if (data.isValid()) {
-						text = info.getInfoData(data, false);
-					}
+					text = info.getInfoData(pd, i, index);
 				}
-				if (!text.isEmpty()) {
+				if (text != null && !text.isEmpty()) {
 					infoPane.addInfo(text, Font.PLAIN, color);
 				}
 			}

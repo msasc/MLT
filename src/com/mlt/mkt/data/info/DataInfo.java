@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.mkt.data.info;
@@ -16,15 +21,16 @@ package com.mlt.mkt.data.info;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
-import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Data;
+import com.mlt.mkt.data.DataList;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
+import com.mlt.mkt.data.PlotData;
 import com.mlt.util.Formats;
-import java.util.Locale;
-import java.util.Objects;
 
 /**
  * Base information that describes data in a data list.
@@ -32,6 +38,56 @@ import java.util.Objects;
  * @author Miquel Sas
  */
 public class DataInfo {
+
+	/**
+	 * Information formatter.
+	 */
+	public interface Formatter {
+		/**
+		 * Return the data info as a string.
+		 * 
+		 * @param info      The data info, that has scales and other necessary
+		 *                  parameters.
+		 * @param plotData  The plot data.
+		 * @param listIndex The data list index.
+		 * @param index     The data index.
+		 * @return The information to display.
+		 */
+		String getInfoData(DataInfo info, PlotData plotData, int listIndex, int index);
+	}
+
+	/**
+	 * Default formatter.
+	 */
+	private static class DefaultFormatter implements Formatter {
+		@Override
+		public String getInfoData(DataInfo info, PlotData plotData, int listIndex, int index) {
+			DataList dataList = plotData.get(listIndex);
+			Data data = dataList.get(index);
+			if (!data.isValid()) {
+				return "";
+			}
+			StringBuilder b = new StringBuilder();
+			int count = info.getOutputCount();
+			for (int i = 0; i < count; i++) {
+				OutputInfo output = info.getOutput(i);
+				int outputIndex = output.getIndex();
+				if (i > 0) {
+					b.append(", ");
+				}
+				String shortName = output.getShortName();
+				if (shortName != null) {
+					b.append(shortName);
+					b.append(": ");
+				}
+				b.append(Formats.fromDouble(
+					data.getValue(outputIndex),
+					info.getTickScale(),
+					Locale.getDefault()));
+			}
+			return b.toString();
+		}
+	}
 
 	/** Name. */
 	private String name;
@@ -46,11 +102,13 @@ public class DataInfo {
 	private Period period;
 
 	/**
-	 * The pip scale used for the data in this data list. If -1, take it from the instrument.
+	 * The pip scale used for the data in this data list. If -1, take it from the
+	 * instrument.
 	 */
 	private int pipScale = -1;
 	/**
-	 * The tick scale used for the data in this data list. If -1, take it from the instrument.
+	 * The tick scale used for the data in this data list. If -1, take it from the
+	 * instrument.
 	 */
 	private int tickScale = -1;
 
@@ -58,12 +116,58 @@ public class DataInfo {
 	private List<OutputInfo> outputs = new ArrayList<>();
 	/** Map of output indexes. */
 	private Map<String, Integer> mapIndexes = new HashMap<>();
+	/** Information formatter. */
+	private Formatter formatter;
 
 	/**
 	 * Constructor.
 	 */
 	public DataInfo() {
 		super();
+		formatter = new DefaultFormatter();
+	}
+
+	/**
+	 * Constructor.
+	 * 
+	 * @param formatter The information formatter.
+	 */
+	public DataInfo(Formatter formatter) {
+		super();
+		this.formatter = formatter;
+	}
+
+	/**
+	 * Add the output and map the index to the name.
+	 *
+	 * @param output The output.
+	 */
+	private void addOutput(OutputInfo output) {
+		outputs.add(output);
+		mapIndexes.put(output.getName(), output.getIndex());
+	}
+
+	/**
+	 * Adds an output data information to the list of outputs.
+	 *
+	 * @param name      The output name.
+	 * @param shortName The output short name.
+	 * @param index     The index in the data.
+	 */
+	public void addOutput(String name, String shortName, int index) {
+		addOutput(new OutputInfo(name, shortName, index));
+	}
+
+	/**
+	 * Adds an output to the list of outputs.
+	 *
+	 * @param name        The output name.
+	 * @param shortName   The output short name.
+	 * @param index       The index in the data.
+	 * @param description The output description.
+	 */
+	public void addOutput(String name, String shortName, int index, String description) {
+		outputs.add(new OutputInfo(name, shortName, index, description));
 	}
 
 	/**
@@ -103,52 +207,54 @@ public class DataInfo {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Returns the long description.
+	 *
+	 * @return The long description.
 	 */
-	@Override
-	public int hashCode() {
-		int hash = 7;
-		hash = 67 * hash + Objects.hashCode(this.name);
-		hash = 67 * hash + Objects.hashCode(this.instrument);
-		hash = 67 * hash + Objects.hashCode(this.period);
-		hash = 67 * hash + this.pipScale;
-		hash = 67 * hash + this.tickScale;
-		return hash;
+	public String getDescription() {
+		return description;
 	}
 
 	/**
-	 * Adds an output data information to the list of outputs.
+	 * Returns a display information of the given data.
 	 *
-	 * @param name      The output name.
-	 * @param shortName The output short name.
-	 * @param index     The index in the data.
+	 * @param dataList The data list.
+	 * @param index    The index.
+	 * @return The display info.
 	 */
-	public void addOutput(String name, String shortName, int index) {
-		addOutput(new OutputInfo(name, shortName, index));
+	public String getInfoData(PlotData plotData, int listIndex, int index) {
+		return formatter.getInfoData(this, plotData, listIndex, index);
 	}
 
 	/**
-	 * Add the output and map the index to the name.
+	 * Returns the data instrument.
 	 *
-	 * @param output The output.
+	 * @return The data instrument.
 	 */
-	private void addOutput(OutputInfo output) {
-		outputs.add(output);
-		mapIndexes.put(output.getName(), output.getIndex());
+	public Instrument getInstrument() {
+		return instrument;
 	}
 
 	/**
-	 * Returns the output index given the name of the output.
+	 * Returns the identifier or name.
 	 *
-	 * @param name The name of the output.
-	 * @return The output index or -1 if the name is not valid.
+	 * @return The unique identifier or name, like for instance <b>SMA</b>.
 	 */
-	public int getOutputIndex(String name) {
-		Integer index = mapIndexes.get(name);
-		if (index == null) {
-			return -1;
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * Returns the output at the given index.
+	 *
+	 * @param index The output index.
+	 * @return The output.
+	 */
+	public OutputInfo getOutput(int index) {
+		if (index < outputs.size()) {
+			return outputs.get(index);
 		}
-		return index;
+		return null;
 	}
 
 	/**
@@ -167,18 +273,6 @@ public class DataInfo {
 	}
 
 	/**
-	 * Adds an output to the list of outputs.
-	 *
-	 * @param name        The output name.
-	 * @param shortName   The output short name.
-	 * @param index       The index in the data.
-	 * @param description The output description.
-	 */
-	public void addOutput(String name, String shortName, int index, String description) {
-		outputs.add(new OutputInfo(name, shortName, index, description));
-	}
-
-	/**
 	 * Returns the number of outputs.
 	 *
 	 * @return The number of outputs.
@@ -188,34 +282,17 @@ public class DataInfo {
 	}
 
 	/**
-	 * Returns the output at the given index.
+	 * Returns the output index given the name of the output.
 	 *
-	 * @param index The output index.
-	 * @return The output.
+	 * @param name The name of the output.
+	 * @return The output index or -1 if the name is not valid.
 	 */
-	public OutputInfo getOutput(int index) {
-		if (index < outputs.size()) {
-			return outputs.get(index);
+	public int getOutputIndex(String name) {
+		Integer index = mapIndexes.get(name);
+		if (index == null) {
+			return -1;
 		}
-		return null;
-	}
-
-	/**
-	 * Returns the data instrument.
-	 *
-	 * @return The data instrument.
-	 */
-	public Instrument getInstrument() {
-		return instrument;
-	}
-
-	/**
-	 * Sets the data instrument.
-	 *
-	 * @param instrument The data instrument.
-	 */
-	public void setInstrument(Instrument instrument) {
-		this.instrument = instrument;
+		return index;
 	}
 
 	/**
@@ -225,69 +302,6 @@ public class DataInfo {
 	 */
 	public Period getPeriod() {
 		return period;
-	}
-
-	/**
-	 * Sets the data period.
-	 *
-	 * @param period The data period.
-	 */
-	public void setPeriod(Period period) {
-		this.period = period;
-	}
-
-	/**
-	 * Returns the identifier or name.
-	 *
-	 * @return The unique identifier or name, like for instance <b>SMA</b>.
-	 */
-	public String getName() {
-		return name;
-	}
-
-	/**
-	 * Sets the unique identifier or name, like for instance <b>SMA</b>.
-	 *
-	 * @param id The unique identifier or name, like for instance <b>SMA</b>.
-	 */
-	public void setName(String id) {
-		this.name = id;
-	}
-
-	/**
-	 * Returns the title to use in list or tool tips.
-	 *
-	 * @return The title to use in list or tool tips.
-	 */
-	public String getTitle() {
-		return title;
-	}
-
-	/**
-	 * Sets the title to use in list or tool tips.
-	 *
-	 * @param title The title to use in list or tool tips.
-	 */
-	public void setTitle(String title) {
-		this.title = title;
-	}
-
-	/**
-	 * Returns the long description.
-	 *
-	 * @return The long description.
-	 */
-	public String getDescription() {
-		return description;
-	}
-
-	/**
-	 * Sets the long description.
-	 *
-	 * @param description The long description.
-	 */
-	public void setDescription(String description) {
-		this.description = description;
 	}
 
 	/**
@@ -307,15 +321,6 @@ public class DataInfo {
 	}
 
 	/**
-	 * Sets the pip scale for the data in this data list. If -1, retrieve it from the instrument.
-	 *
-	 * @param pipScale The pip scale.
-	 */
-	public void setPipScale(int pipScale) {
-		this.pipScale = pipScale;
-	}
-
-	/**
 	 * Returns the tick scale to use.
 	 *
 	 * @return The tick scale.
@@ -332,6 +337,15 @@ public class DataInfo {
 	}
 
 	/**
+	 * Returns the title to use in list or tool tips.
+	 *
+	 * @return The title to use in list or tool tips.
+	 */
+	public String getTitle() {
+		return title;
+	}
+
+	/**
 	 * Returns the volume scale or -1 if it can not be resolved.
 	 *
 	 * @return The volume scale.
@@ -344,6 +358,66 @@ public class DataInfo {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int hashCode() {
+		int hash = 7;
+		hash = 67 * hash + Objects.hashCode(this.name);
+		hash = 67 * hash + Objects.hashCode(this.instrument);
+		hash = 67 * hash + Objects.hashCode(this.period);
+		hash = 67 * hash + this.pipScale;
+		hash = 67 * hash + this.tickScale;
+		return hash;
+	}
+
+	/**
+	 * Sets the long description.
+	 *
+	 * @param description The long description.
+	 */
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	/**
+	 * Sets the data instrument.
+	 *
+	 * @param instrument The data instrument.
+	 */
+	public void setInstrument(Instrument instrument) {
+		this.instrument = instrument;
+	}
+
+	/**
+	 * Sets the unique identifier or name, like for instance <b>SMA</b>.
+	 *
+	 * @param id The unique identifier or name, like for instance <b>SMA</b>.
+	 */
+	public void setName(String id) {
+		this.name = id;
+	}
+
+	/**
+	 * Sets the data period.
+	 *
+	 * @param period The data period.
+	 */
+	public void setPeriod(Period period) {
+		this.period = period;
+	}
+
+	/**
+	 * Sets the pip scale for the data in this data list. If -1, retrieve it from
+	 * the instrument.
+	 *
+	 * @param pipScale The pip scale.
+	 */
+	public void setPipScale(int pipScale) {
+		this.pipScale = pipScale;
+	}
+
+	/**
 	 * Sets the tick or minimum value scale.
 	 *
 	 * @param tickScale The tick or minimum value scale.
@@ -353,35 +427,12 @@ public class DataInfo {
 	}
 
 	/**
-	 * Returns a display information of the given data.
+	 * Sets the title to use in list or tool tips.
 	 *
-	 * @param data           The data.
-	 * @param addVolumeValue A boolean that indicates whether volume value should be added.
-	 * @return The display info.
+	 * @param title The title to use in list or tool tips.
 	 */
-	public String getInfoData(Data data, boolean addVolumeValue) {
-		StringBuilder b = new StringBuilder();
-		int count = getOutputCount();
-		for (int i = 0; i < count; i++) {
-			OutputInfo output = getOutput(i);
-			int index = output.getIndex();
-			boolean addValue = true;
-			if (index == OHLC.VOLUME) {
-				addValue = addVolumeValue;
-			}
-			if (addValue) {
-				if (i > 0) {
-					b.append(", ");
-				}
-				String shortName = output.getShortName();
-				if (shortName != null) {
-					b.append(shortName);
-					b.append(": ");
-				}
-				b.append(Formats.fromDouble(data.getValue(index), getTickScale(), Locale.getDefault()));
-			}
-		}
-		return b.toString();
+	public void setTitle(String title) {
+		this.title = title;
 	}
 
 	/**

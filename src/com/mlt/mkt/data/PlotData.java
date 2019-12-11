@@ -791,8 +791,9 @@ public class PlotData implements Iterable<DataList> {
 	 * @return The removed data list.
 	 */
 	public DataList remove(int index) {
+		DataList dataList = dataLists.remove(index);
 		setStartAndEndIndexes();
-		return dataLists.remove(index);
+		return dataList;
 	}
 
 	/**

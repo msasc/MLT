@@ -19,14 +19,13 @@ package app.mlt.plaf.statistics;
 
 import java.awt.Color;
 import java.awt.RenderingHints;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 import javax.swing.Icon;
 
@@ -76,6 +75,7 @@ import com.mlt.mkt.data.Period;
 import com.mlt.mkt.data.PlotData;
 import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.ml.function.Normalizer;
+import com.mlt.util.Formats;
 import com.mlt.util.HTML;
 import com.mlt.util.Lists;
 import com.mlt.util.Logs;
@@ -105,6 +105,15 @@ import app.mlt.plaf.MLT;
  * @author Miquel Sas
  */
 public class StatisticsAverages extends Statistics {
+
+	private static final String KEY_PRICES_AND_AVERAGES = "prices_and_averages";
+	private static final String KEY_SLOPES = "slopes";
+	private static final String KEY_SPREADS = "spreads";
+	private static final String KEY_ZIGZAG = "zig-zag";
+
+	private static final String KEY_CANDLES(int size) {
+		return "candles-" + size;
+	}
 
 	/**
 	 * Chart the ticker.
@@ -299,52 +308,128 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Track data and its index.
+	 */
+	class Candle {
+		int index;
+		Data data;
+
+		Candle(int index, Data data) {
+			this.index = index;
+			this.data = data;
+		}
+	}
+
+	/**
+	 * Data information formatter for the candles plotter.
+	 */
+	class CandlesFormatter implements DataInfo.Formatter {
+
+		int size;
+		int count;
+
+		int indexOpen;
+		int indexHigh;
+		int indexLow;
+		int indexClose;
+
+		CandlesFormatter(int size, int count) {
+			this.size = size;
+			this.count = count;
+
+			this.indexOpen = getStatesDataConverter().getIndex(DB.FIELD_BAR_OPEN);
+			this.indexHigh = getStatesDataConverter().getIndex(DB.FIELD_BAR_HIGH);
+			this.indexLow = getStatesDataConverter().getIndex(DB.FIELD_BAR_LOW);
+			this.indexClose = getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE);
+		}
+
+		@Override
+		public String getInfoData(DataInfo info, PlotData plotData, int listIndex, int dataIndex) {
+
+			StringBuilder b = new StringBuilder();
+
+			DataList dataList = plotData.get(listIndex);
+			int startIndex = plotData.getStartIndex();
+			int endIndex = plotData.getEndIndex();
+
+			List<Candle> candles = new ArrayList<>();
+			int countPlotted = 0;
+			for (int index = endIndex; index >= 0; index--) {
+
+				/* Plotted all required. */
+				if (!plotAllCandles && countPlotted >= count) {
+					break;
+				}
+
+				/* Add the candle. */
+				if (index >= 0 && index < dataList.size()) {
+					candles.add(new Candle(index, dataList.get(index)));
+				}
+
+				/* Process candles if required. */
+				boolean indexIncluded = false;
+				if (candles.size() == size || index == 0) {
+					int start = candles.get(candles.size() - 1).index;
+					int end = candles.get(0).index;
+					if (start <= dataIndex && end >= dataIndex) {
+						int tickScale = info.getTickScale();
+						Locale locale = Locale.getDefault();
+						indexIncluded = true;
+						double open = candles.get(candles.size() - 1).data.getValue(indexOpen);
+						double high = Numbers.MIN_DOUBLE;
+						double low = Numbers.MAX_DOUBLE;
+						double close = candles.get(0).data.getValue(indexClose);
+						for (int i = candles.size() - 1; i >= 0; i--) {
+							Candle candle = candles.get(i);
+							if (candle.data.getValue(indexHigh) > high) {
+								high = candle.data.getValue(indexHigh);
+							}
+							if (candle.data.getValue(indexLow) < low) {
+								low = candle.data.getValue(indexLow);
+							}
+						}
+						b.append("O: ");
+						b.append(Formats.fromDouble(open, tickScale, locale));
+						b.append(", H: ");
+						b.append(Formats.fromDouble(high, tickScale, locale));
+						b.append(", L: ");
+						b.append(Formats.fromDouble(low, tickScale, locale));
+						b.append(", C: ");
+						b.append(Formats.fromDouble(close, tickScale, locale));
+					}
+					countPlotted++;
+					candles.clear();
+
+					/* If the index was in the candle, done. */
+					if (indexIncluded) {
+						break;
+					}
+
+					/* Exit if plotted the first candle. */
+					if (start <= startIndex) {
+						break;
+					}
+				}
+
+			}
+
+			return b.toString();
+		}
+	}
+
+	/**
 	 * Popup menu for the chart.
 	 */
 	class MenuChart implements PopupMenuProvider {
-		
-		class ActionAddZigZagPlotter implements ActionListener {
-			ChartContainer container;
-			
-			ActionAddZigZagPlotter(ChartContainer container) {
-				this.container = container;
-			}
 
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				PlotData plotData = container.getPlotData("price_and_averages");
-				PlotterZigZag zigzagPlotter = new PlotterZigZag();
-				plotData.get(0).addPlotter(zigzagPlotter);
-				container.refreshAll();
-			}
-			
-		}
-		
-		class ActionRemoveZigZagPlotter implements ActionListener {
-			ChartContainer container;
-			
-			ActionRemoveZigZagPlotter(ChartContainer container) {
-				this.container = container;
-			}
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				PlotData plotData = container.getPlotData("price_and_averages");
-				PlotterZigZag zigzagPlotter = new PlotterZigZag();
-				plotData.get(0).removePlotter(zigzagPlotter);
-				container.refreshAll();
-			}
-			
-		}
-		
 		@Override
 		public PopupMenu getPopupMenu(Control control) {
 			if (control instanceof ChartContainer) {
 				PopupMenu popup = new PopupMenu();
 				ChartContainer container = (ChartContainer) control;
-				if (!container.containsPlotData("price_and_averages")) {
+				if (!container.containsPlotData(KEY_PRICES_AND_AVERAGES)) {
 					Option option = new Option();
-					option.setKey("price_and_averages");
+					option.setKey(KEY_PRICES_AND_AVERAGES);
 					option.setText("Prices and averages");
 					option.setToolTip("Prices and averages");
 					option.setOptionGroup(Group.CONFIGURE);
@@ -354,9 +439,9 @@ public class StatisticsAverages extends Statistics {
 						l -> container.addPlotData(getPlotDataPriceAndAverages(), true));
 					popup.add(option.getMenuItem());
 				}
-				if (!container.containsPlotData("slopes")) {
+				if (!container.containsPlotData(KEY_SLOPES)) {
 					Option option = new Option();
-					option.setKey("slopes");
+					option.setKey(KEY_SLOPES);
 					option.setText("Slopes of averages");
 					option.setToolTip("Slopes of averages");
 					option.setOptionGroup(Group.CONFIGURE);
@@ -365,9 +450,9 @@ public class StatisticsAverages extends Statistics {
 					option.setAction(l -> container.addPlotData(getPlotDataSlopes(), true));
 					popup.add(option.getMenuItem());
 				}
-				if (!container.containsPlotData("spreads")) {
+				if (!container.containsPlotData(KEY_SPREADS)) {
 					Option option = new Option();
-					option.setKey("spreads");
+					option.setKey(KEY_SPREADS);
 					option.setText("Spreads between averages");
 					option.setToolTip("Spreads between averages");
 					option.setOptionGroup(Group.CONFIGURE);
@@ -376,28 +461,75 @@ public class StatisticsAverages extends Statistics {
 					option.setAction(l -> container.addPlotData(getPlotDataSpreads(), true));
 					popup.add(option.getMenuItem());
 				}
-				if (container.containsPlotData("price_and_averages")) {
-					PlotData plotData = container.getPlotData("price_and_averages");
+				if (container.containsPlotData(KEY_PRICES_AND_AVERAGES)) {
+					PlotData plotData = container.getPlotData(KEY_PRICES_AND_AVERAGES);
 					PlotterZigZag zz = new PlotterZigZag();
-					if (plotData.get(0).isPlotter(new PlotterZigZag())) {
+					if (plotData.get(0).isPlotter(zz)) {
 						Option option = new Option();
-						option.setKey("zig-zag");
+						option.setKey(KEY_ZIGZAG);
 						option.setText("Remove zig-zag plotter");
 						option.setToolTip("Remove zig-zag plotter");
 						option.setOptionGroup(Group.CONFIGURE);
 						option.setDefaultClose(false);
 						option.setCloseWindow(false);
-						option.setAction(new ActionRemoveZigZagPlotter(container));
+						option.setAction(l -> {
+							plotData.get(0).removePlotter(zz);
+							container.refreshAll();
+						});
 						popup.add(option.getMenuItem());
 					} else {
 						Option option = new Option();
-						option.setKey("zig-zag");
+						option.setKey(KEY_ZIGZAG);
 						option.setText("Add zig-zag plotter");
 						option.setToolTip("Add zig-zag plotter");
 						option.setOptionGroup(Group.CONFIGURE);
 						option.setDefaultClose(false);
 						option.setCloseWindow(false);
-						option.setAction(new ActionAddZigZagPlotter(container));
+						option.setAction(l -> {
+							plotData.get(0).addPlotter(zz);
+							container.refreshAll();
+						});
+						popup.add(option.getMenuItem());
+					}
+				}
+				for (int i = 0; i < averages.size() - 1; i++) {
+					int periodFast = averages.get(i).getPeriod();
+					int periodSlow = averages.get(i + 1).getPeriod();
+					int size = periodFast;
+					int count = periodSlow / periodFast;
+					if (!container.containsPlotData(KEY_CANDLES(size))) {
+						Option option = new Option();
+						option.setKey(KEY_CANDLES(size));
+						option.setText("Add candles pane of size " + size);
+						option.setToolTip("Add candles pane of size " + size);
+						option.setOptionGroup(Group.CONFIGURE);
+						option.setDefaultClose(false);
+						option.setCloseWindow(false);
+						PlotData plotData = getPlotDataCandles(size, count);
+						option.setAction(l -> container.addPlotData(plotData, true));
+						popup.add(option.getMenuItem());
+					}
+				}
+				for (int i = 0; i < averages.size() - 1; i++) {
+					int size = averages.get(i).getPeriod();
+					;
+					if (container.containsPlotData(KEY_CANDLES(size))) {
+						Option option = new Option();
+						option.setKey("toggle-plot-all-candles");
+						if (plotAllCandles) {
+							option.setText("Plot only level candles (size)");
+							option.setToolTip("Plot only the candles of the level (size)");
+						} else {
+							option.setText("Plot all possible candles");
+							option.setToolTip("Plot all possible candles");
+						}
+						option.setOptionGroup(Group.CONFIGURE);
+						option.setDefaultClose(false);
+						option.setCloseWindow(false);
+						option.setAction(l -> {
+							plotAllCandles = !plotAllCandles;
+							container.refreshAll();
+						});
 						popup.add(option.getMenuItem());
 					}
 				}
@@ -432,9 +564,13 @@ public class StatisticsAverages extends Statistics {
 	public static class ParametersHandler extends ParserHandler {
 
 		/** List of averages. */
-		private List<Average> averages = new ArrayList<>();
+		List<Average> averages = new ArrayList<>();
 		/** Bars ahead. */
-		private int barsAhead;
+		int barsAhead;
+		/** Percentage for calculated labels. */
+		double percentCalc;
+		/** Percentage for edited labels. */
+		double percentEdit;
 
 		/**
 		 * Constructor.
@@ -449,6 +585,8 @@ public class StatisticsAverages extends Statistics {
 			set("statistics/averages/average", "period", "integer");
 			set("statistics/averages/average", "smooths", "integer-array", false);
 			set("statistics/zig-zag", "bars-ahead", "integer");
+			set("statistics/label-calc", "percent", "double");
+			set("statistics/label-edit", "percent", "double");
 		}
 
 		/**
@@ -492,26 +630,24 @@ public class StatisticsAverages extends Statistics {
 						throw new Exception("Invalid bars-ahead " + barsAhead);
 					}
 				}
+				/* Validate and retrieve percent calc. */
+				if (path.equals("statistics/label-calc")) {
+					percentCalc = getDouble(attributes, "percent");
+					if (percentCalc <= 0 || percentCalc >= 50) {
+						throw new Exception("Invalid percentage for label calc " + percentCalc);
+					}
+				}
+				/* Validate and retrieve percent edit. */
+				if (path.equals("statistics/label-edit")) {
+					percentEdit = getDouble(attributes, "percent");
+					if (percentEdit <= 0 || percentEdit >= 50) {
+						throw new Exception("Invalid percentage for label calc " + percentCalc);
+					}
+				}
 
 			} catch (Exception exc) {
 				throw new SAXException(exc.getMessage(), exc);
 			}
-		}
-
-		/**
-		 * Return the list of averages.
-		 * 
-		 * @return The list of averages.
-		 */
-		public List<Average> getAverages() {
-			return averages;
-		}
-
-		/**
-		 * @return The number of bars ahead.
-		 */
-		public int getBarsAhead() {
-			return barsAhead;
 		}
 	}
 
@@ -522,27 +658,19 @@ public class StatisticsAverages extends Statistics {
 	 */
 	class PlotterCandles extends DataPlotter {
 
-		class Candle {
-			int index;
-			Data data;
-
-			Candle(int index, Data data) {
-				this.index = index;
-				this.data = data;
-			}
-		}
-
 		int size;
+		int count;
 
 		int indexOpen;
 		int indexHigh;
 		int indexLow;
 		int indexClose;
 
-		PlotterCandles(int size) {
-			super("candles_" + size);
+		PlotterCandles(int size, int count) {
+			super(KEY_CANDLES(size));
 
 			this.size = size;
+			this.count = count;
 
 			this.indexOpen = getStatesDataConverter().getIndex(DB.FIELD_BAR_OPEN);
 			this.indexHigh = getStatesDataConverter().getIndex(DB.FIELD_BAR_HIGH);
@@ -559,10 +687,18 @@ public class StatisticsAverages extends Statistics {
 			 * Plot candles of size periods starting at endIndex and moving backward.
 			 */
 			List<Candle> candles = new ArrayList<>();
+			int countPlotted = 0;
 			for (int index = endIndex; index >= 0; index--) {
 
+				/* Plotted all required. */
+				if (!plotAllCandles && countPlotted >= count) {
+					break;
+				}
+
 				/* Add the candle. */
-				candles.add(new Candle(index, dataList.get(index)));
+				if (index >= 0 && index < dataList.size()) {
+					candles.add(new Candle(index, dataList.get(index)));
+				}
 
 				/* Process candles if required. */
 				if (candles.size() == size || index == 0) {
@@ -582,6 +718,7 @@ public class StatisticsAverages extends Statistics {
 						}
 					}
 					plot(ctx, start, end, open, high, low, close);
+					countPlotted++;
 					candles.clear();
 
 					/* Exit if plotted the first candle. */
@@ -679,9 +816,9 @@ public class StatisticsAverages extends Statistics {
 		int indexData;
 
 		PlotterZigZag() {
-			super("zig-zag");
+			super(KEY_ZIGZAG);
 
-			indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT);
+			indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT_CALC);
 			indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV);
 			setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
 		}
@@ -836,6 +973,10 @@ public class StatisticsAverages extends Statistics {
 	private List<Average> averages = new ArrayList<>();
 	/** Bars ahead to calculate zig-zag operator. */
 	private int barsAhead = 100;
+	/** Percentage to exit calculated pivots. */
+	private double percentCalc = 10;
+	/** Percentage to exit edited pivots. */
+	private double percentEdit = 10;
 
 	/** States table. */
 	private Table tableStates;
@@ -849,6 +990,9 @@ public class StatisticsAverages extends Statistics {
 	private DataConverter statesDataConverter;
 	/** States list persistor. */
 	private ListPersistor statesListPersistor;
+
+	/** Plot all candles flag. */
+	private boolean plotAllCandles = true;
 
 	/**
 	 * Constructor.
@@ -1636,6 +1780,30 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @param size  The size of the candles.
+	 * @param count The number of candles.
+	 * @return The plot data for candles of the given size.
+	 */
+	private PlotData getPlotDataCandles(int size, int count) {
+
+		/* Data info and data list. */
+		DataInfo info = new DataInfo(new CandlesFormatter(size, count));
+		info.setInstrument(getInstrument());
+		info.setName(KEY_CANDLES(size));
+		info.setDescription("Candles size " + size);
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getStatesListPersistor(), getStatesDataConverter());
+
+		dataList.addPlotter(new PlotterCandles(size, count));
+
+		PlotData plotData = new PlotData(KEY_CANDLES(size));
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
 	 * @return The plot data for states prices and averages.
 	 */
 	private PlotData getPlotDataPriceAndAverages() {
@@ -1669,7 +1837,7 @@ public class StatisticsAverages extends Statistics {
 		/* Pivot. */
 		dataList.addPlotter(new PlotterZigZag());
 
-		PlotData plotData = new PlotData("price_and_averages");
+		PlotData plotData = new PlotData(KEY_PRICES_AND_AVERAGES);
 		plotData.add(dataList);
 
 		return plotData;
@@ -1682,7 +1850,7 @@ public class StatisticsAverages extends Statistics {
 
 		DataInfo info = new DataInfo();
 		info.setInstrument(getInstrument());
-		info.setName("slopes");
+		info.setName(KEY_SLOPES);
 		info.setDescription("Averages slopes");
 		info.setPeriod(getPeriod());
 		DataListSource dataList =
@@ -1698,7 +1866,7 @@ public class StatisticsAverages extends Statistics {
 			dataList.addPlotter(plotter);
 		}
 
-		PlotData plotData = new PlotData("slopes");
+		PlotData plotData = new PlotData(KEY_SLOPES);
 		plotData.add(dataList);
 
 		return plotData;
@@ -1711,7 +1879,7 @@ public class StatisticsAverages extends Statistics {
 
 		DataInfo info = new DataInfo();
 		info.setInstrument(getInstrument());
-		info.setName("spreads");
+		info.setName(KEY_SPREADS);
 		info.setDescription("Averages spreads");
 		info.setPeriod(getPeriod());
 		DataListSource dataList =
@@ -1727,7 +1895,7 @@ public class StatisticsAverages extends Statistics {
 			dataList.addPlotter(plotter);
 		}
 
-		PlotData plotData = new PlotData("spreads");
+		PlotData plotData = new PlotData(KEY_SPREADS);
 		plotData.add(dataList);
 
 		return plotData;
@@ -1751,7 +1919,7 @@ public class StatisticsAverages extends Statistics {
 			List<Field> fields;
 
 			/* Pivot and reference value. */
-			list.add(table.getFieldIndex(DB.FIELD_STATES_PIVOT));
+			list.add(table.getFieldIndex(DB.FIELD_STATES_PIVOT_CALC));
 			list.add(table.getFieldIndex(DB.FIELD_STATES_REFV));
 
 			/* Averages. */
@@ -1930,13 +2098,22 @@ public class StatisticsAverages extends Statistics {
 		 * Calculated pivot (High=1, None=0, Low=-1) and Label (Long=1, Out=0, Short=-1)
 		 */
 		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
-		tableStates.addField(DB.field_integer(DB.FIELD_STATES_PIVOT, "Pivot", "Pivot mark"));
 		tableStates.addField(
 			DB.field_data(instrument, DB.FIELD_STATES_REFV, "Ref value", "Pivot reference value"));
-		tableStates.addField(DB.field_integer(DB.FIELD_STATES_LABEL, "Label", "Training label"));
-		tableStates.getField(DB.FIELD_STATES_PIVOT).setFieldGroup(grpLabels);
+		tableStates.addField(
+			DB.field_integer(DB.FIELD_STATES_PIVOT_CALC, "Pivot calc", "Pivot calculated"));
+		tableStates.addField(
+			DB.field_integer(DB.FIELD_STATES_PIVOT_EDIT, "Pivot edit", "Pivot edited"));
+		tableStates.addField(
+			DB.field_integer(DB.FIELD_STATES_LABEL_CALC, "Label calc", "Label calculated pivot"));
+		tableStates.addField(
+			DB.field_integer(DB.FIELD_STATES_LABEL_EDIT, "Label edit", "Label edited pivot"));
+		
 		tableStates.getField(DB.FIELD_STATES_REFV).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_LABEL).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_PIVOT_CALC).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_PIVOT_EDIT).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_LABEL_CALC).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_LABEL_EDIT).setFieldGroup(grpLabels);
 
 		/* Lists of fields. */
 		List<Field> fields;
@@ -2038,8 +2215,10 @@ public class StatisticsAverages extends Statistics {
 		Parser parser = new Parser();
 		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
 		averages.clear();
-		averages.addAll(handler.getAverages());
-		barsAhead = handler.getBarsAhead();
+		averages.addAll(handler.averages);
+		barsAhead = handler.barsAhead;
+		percentCalc = handler.percentCalc;
+		percentEdit = handler.percentEdit;
 	}
 
 	/**

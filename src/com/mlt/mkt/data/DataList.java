@@ -173,6 +173,13 @@ public abstract class DataList {
 	}
 
 	/**
+	 * Add the data element to this list.
+	 *
+	 * @param data The data element.
+	 */
+	public abstract void add(Data data);
+
+	/**
 	 * Add the data plotter.
 	 *
 	 * @param plotter The plotter.
@@ -182,22 +189,35 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Check whether plotter is installed.
-	 * 
-	 * @param plotter The plotter.
-	 * @return A boolean.
+	 * {@inheritDoc}
 	 */
-	public boolean isPlotter(DataPlotter plotter) {
-		return dataPlotters.contains(plotter);
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof DataList) {
+			DataList dataList = (DataList) obj;
+			if (!getDataInfo().equals(dataList.getDataInfo())) {
+				return false;
+			}
+			return getPlotType().equals(dataList.getPlotType());
+		}
+		return false;
 	}
 
 	/**
-	 * Remove the given plotter.
-	 * 
-	 * @param plotter The plotter to remove.
+	 * Returns the data element at the given index.
+	 *
+	 * @param index The index.
+	 * @return The data element at the given index.
 	 */
-	public void removePlotter(DataPlotter plotter) {
-		dataPlotters.remove(plotter);
+	public abstract Data get(int index);
+
+	/**
+	 * Returns this data list data info.
+	 *
+	 * @return The data info.
+	 */
+	public DataInfo getDataInfo() {
+		return dataInfo;
 	}
 
 	/**
@@ -228,47 +248,52 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Check if the data list must be plotted.
+	 * Returns the odd code, 1 odd, 2 even, 0 none.
 	 *
-	 * @return A boolean.
+	 * @param data The data item.
+	 * @return The odd code.
 	 */
-	public boolean isPlot() {
-		return plot;
-	}
-
-	/**
-	 * Check if a data list has to be plotted from scratch, mainly because it plots
-	 * lines with dashes.
-	 *
-	 * @return A boolean that indicates if the data list has to be plotte from
-	 *         scratch.
-	 */
-	public boolean isPlotFromScratch() {
-		return false;
-	}
-
-	/**
-	 * Set if the data list must be plotted.
-	 *
-	 * @param plot A boolean.
-	 */
-	public void setPlot(boolean plot) {
-		this.plot = plot;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		if (obj instanceof DataList) {
-			DataList dataList = (DataList) obj;
-			if (!getDataInfo().equals(dataList.getDataInfo())) {
-				return false;
-			}
-			return getPlotType().equals(dataList.getPlotType());
+	public int getOddCode(Data data) {
+		if (data == null) {
+			return 0;
 		}
-		return false;
+		LocalDateTime t = LocalDateTime.now(ZoneId.of("UTC"));
+		switch (getDataInfo().getPeriod().getUnit()) {
+		case MILLISECOND:
+		case SECOND:
+		case MINUTE:
+		case HOUR:
+			if (Numbers.isOdd(t.getDayOfMonth())) {
+				return 1;
+			}
+			return 2;
+		case DAY:
+			if (Numbers.isOdd(t.get(ChronoField.ALIGNED_WEEK_OF_YEAR))) {
+				return 1;
+			}
+			return 2;
+		case WEEK:
+			if (Numbers.isOdd(t.getMonthValue())) {
+				return 1;
+			}
+			return 2;
+		case MONTH:
+			if (Numbers.isOdd(t.getYear())) {
+				return 1;
+			}
+			return 2;
+		default:
+			return 0;
+		}
+	}
+
+	/**
+	 * Returns the type of plot.
+	 *
+	 * @return The type of plot.
+	 */
+	public PlotType getPlotType() {
+		return plotType;
 	}
 
 	/**
@@ -285,22 +310,6 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Returns this data list data info.
-	 *
-	 * @return The data info.
-	 */
-	public DataInfo getDataInfo() {
-		return dataInfo;
-	}
-
-	/**
-	 * Returns the number of elements in this list.
-	 *
-	 * @return The number of elements in this list.
-	 */
-	public abstract int size();
-
-	/**
 	 * Returns <tt>true</tt> if this list contains no elements.
 	 *
 	 * @return <tt>true</tt> if this list contains no elements.
@@ -308,68 +317,22 @@ public abstract class DataList {
 	public abstract boolean isEmpty();
 
 	/**
-	 * Add the data element to this list.
+	 * Check if a given period is Even.
 	 *
-	 * @param data The data element.
+	 * @param index The index of the period.
+	 * @return A boolean that indicates if the period is Even.
 	 */
-	public abstract void add(Data data);
-
-	/**
-	 * Returns the data element at the given index.
-	 *
-	 * @param index The index.
-	 * @return The data element at the given index.
-	 */
-	public abstract Data get(int index);
-
-	/**
-	 * Remove and return the data at the given index.
-	 *
-	 * @param index The index.
-	 * @return The removed data or null.
-	 */
-	public abstract Data remove(int index);
-
-	/**
-	 * Returns the type of plot.
-	 *
-	 * @return The type of plot.
-	 */
-	public PlotType getPlotType() {
-		return plotType;
-	}
-
-	/**
-	 * Sets the type of plot.
-	 *
-	 * @param plotType The type of plot.
-	 */
-	public void setPlotType(PlotType plotType) {
-		this.plotType = plotType;
-	}
-
-	/**
-	 * Set the plotter context to data plotters.
-	 *
-	 * @param context The plotter context.
-	 */
-	public void setContext(DataContext context) {
-		getDataPlotters().forEach(plotter -> plotter.setContext(context));
-	}
-
-	/**
-	 * Returns a string representation.
-	 *
-	 * @return A readable string representation.
-	 */
-	@Override
-	public String toString() {
-		DataInfo info = getDataInfo();
-		StringBuilder b = new StringBuilder();
-		b.append("[");
-		b.append(info);
-		b.append("]");
-		return b.toString();
+	public boolean isEven(int index) {
+		if (isEmpty()) {
+			return false;
+		}
+		if (isEmpty()) {
+			return false;
+		}
+		if (size() <= index) {
+			return false;
+		}
+		return (getOddCode(get(index)) == 2);
 	}
 
 	/**
@@ -470,61 +433,98 @@ public abstract class DataList {
 	}
 
 	/**
-	 * Check if a given period is Even.
+	 * Check if the data list must be plotted.
 	 *
-	 * @param index The index of the period.
-	 * @return A boolean that indicates if the period is Even.
+	 * @return A boolean.
 	 */
-	public boolean isEven(int index) {
-		if (isEmpty()) {
-			return false;
-		}
-		if (isEmpty()) {
-			return false;
-		}
-		if (size() <= index) {
-			return false;
-		}
-		return (getOddCode(get(index)) == 2);
+	public boolean isPlot() {
+		return plot;
 	}
 
 	/**
-	 * Returns the odd code, 1 odd, 2 even, 0 none.
+	 * Check if a data list has to be plotted from scratch, mainly because it plots
+	 * lines with dashes.
 	 *
-	 * @param data The data item.
-	 * @return The odd code.
+	 * @return A boolean that indicates if the data list has to be plotte from
+	 *         scratch.
 	 */
-	public int getOddCode(Data data) {
-		if (data == null) {
-			return 0;
-		}
-		LocalDateTime t = LocalDateTime.now(ZoneId.of("UTC"));
-		switch (getDataInfo().getPeriod().getUnit()) {
-		case MILLISECOND:
-		case SECOND:
-		case MINUTE:
-		case HOUR:
-			if (Numbers.isOdd(t.getDayOfMonth())) {
-				return 1;
-			}
-			return 2;
-		case DAY:
-			if (Numbers.isOdd(t.get(ChronoField.ALIGNED_WEEK_OF_YEAR))) {
-				return 1;
-			}
-			return 2;
-		case WEEK:
-			if (Numbers.isOdd(t.getMonthValue())) {
-				return 1;
-			}
-			return 2;
-		case MONTH:
-			if (Numbers.isOdd(t.getYear())) {
-				return 1;
-			}
-			return 2;
-		default:
-			return 0;
-		}
+	public boolean isPlotFromScratch() {
+		return false;
+	}
+
+	/**
+	 * Check whether plotter is installed.
+	 * 
+	 * @param plotter The plotter.
+	 * @return A boolean.
+	 */
+	public boolean isPlotter(DataPlotter plotter) {
+		return dataPlotters.contains(plotter);
+	}
+
+	/**
+	 * Remove and return the data at the given index.
+	 *
+	 * @param index The index.
+	 * @return The removed data or null.
+	 */
+	public abstract Data remove(int index);
+
+	/**
+	 * Remove the given plotter.
+	 * 
+	 * @param plotter The plotter to remove.
+	 */
+	public void removePlotter(DataPlotter plotter) {
+		dataPlotters.remove(plotter);
+	}
+
+	/**
+	 * Set the plotter context to data plotters.
+	 *
+	 * @param context The plotter context.
+	 */
+	public void setContext(DataContext context) {
+		getDataPlotters().forEach(plotter -> plotter.setContext(context));
+	}
+
+	/**
+	 * Set if the data list must be plotted.
+	 *
+	 * @param plot A boolean.
+	 */
+	public void setPlot(boolean plot) {
+		this.plot = plot;
+	}
+
+	/**
+	 * Sets the type of plot.
+	 *
+	 * @param plotType The type of plot.
+	 */
+	public void setPlotType(PlotType plotType) {
+		this.plotType = plotType;
+	}
+
+	/**
+	 * Returns the number of elements in this list.
+	 *
+	 * @return The number of elements in this list.
+	 */
+	public abstract int size();
+
+	/**
+	 * Returns a string representation.
+	 *
+	 * @return A readable string representation.
+	 */
+	@Override
+	public String toString() {
+		DataInfo info = getDataInfo();
+		StringBuilder b = new StringBuilder();
+		b.append("[");
+		b.append(info);
+		b.append("]");
+		return b.toString();
 	}
 }

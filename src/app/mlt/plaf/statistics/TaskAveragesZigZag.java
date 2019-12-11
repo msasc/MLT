@@ -79,7 +79,7 @@ public class TaskAveragesZigZag extends TaskAverages {
 		}
 		if (option.equals("START")) {
 			ValueMap map = new ValueMap();
-			map.put(DB.FIELD_STATES_PIVOT, new Value(0));
+			map.put(DB.FIELD_STATES_PIVOT_CALC, new Value(0));
 			map.put(DB.FIELD_STATES_REFV, new Value(0.0));
 			persistor.update(new Criteria(), map);
 		}
@@ -176,7 +176,7 @@ public class TaskAveragesZigZag extends TaskAverages {
 			}
 
 			/* Update. */
-			rcStates.setValue(DB.FIELD_STATES_PIVOT, pivot);
+			rcStates.setValue(DB.FIELD_STATES_PIVOT_CALC, pivot);
 			persistor.update(rcStates);
 			
 			/* Register last pivot. */

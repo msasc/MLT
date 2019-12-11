@@ -26,6 +26,7 @@ import java.util.List;
 import javax.swing.KeyStroke;
 
 import com.mlt.db.FieldGroup;
+import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorDDL;
 import com.mlt.db.PersistorException;
@@ -168,8 +169,10 @@ public class ActionStatistics extends ActionRun {
 				}
 
 				/* Add to model. */
-				int index = tableStats.getModel().getRecordSet().getInsertIndex(rc);
-				tableStats.getModel().getRecordSet().add(index, rc);
+				RecordSet recordSet = tableStats.getModel().getRecordSet();
+				Order order = persistor.getView().getOrderBy();
+				int index = recordSet.getInsertIndex(rc, order);
+				recordSet.add(index, rc);
 
 			} catch (Exception exc) {
 				Logs.catching(exc);

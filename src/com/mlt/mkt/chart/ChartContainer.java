@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import com.mlt.desktop.control.BorderPane;
 import com.mlt.desktop.control.Button;
@@ -161,7 +163,7 @@ public class ChartContainer extends BorderPane {
 			}
 		}
 	}
-
+	
 	/** The toolbar. */
 	private ToolBar toolBar;
 	/** List of plotter panes. */
@@ -200,7 +202,7 @@ public class ChartContainer extends BorderPane {
 		zoomPane = new ZoomPane(charts);
 		toolBar.addPane(zoomPane);
 		setTop(toolBar);
-
+		
 	}
 
 	/**

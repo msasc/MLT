@@ -155,7 +155,8 @@ public class DB {
 	public static final String FIELD_STATES_LABEL_EDIT = "label_edit";
 	public static final String FIELD_STATES_PIVOT_CALC = "pivot_calc";
 	public static final String FIELD_STATES_PIVOT_EDIT = "pivot_edit";
-	public static final String FIELD_STATES_REFV = "refv";
+	public static final String FIELD_STATES_REFV_CALC = "refv_calc";
+	public static final String FIELD_STATES_REFV_EDIT = "refv_edit";
 	public static final String FIELD_STATES_NORMALIZED = "normalized";
 	public static final String FIELD_STATES_PIVOT_SCANNED = "pivot_scanned";
 
@@ -742,6 +743,7 @@ public class DB {
 		table.getField(FIELD_STATISTICS_ID).addPossibleValue("AVG", "Averages");
 
 		table.addField(field_string(FIELD_STATISTICS_KEY, 2, "Key", "Statistics key"));
+		table.getField(FIELD_STATISTICS_KEY).setUppercase(true);
 
 		Field params =
 			field_string(

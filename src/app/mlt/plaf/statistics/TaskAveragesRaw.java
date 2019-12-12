@@ -193,44 +193,48 @@ public class TaskAveragesRaw extends TaskAverages {
 			for (int i = 0; i < averages.size(); i++) {
 				int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
 				int slow = averages.get(i).getPeriod();
-				List<Data> candles = getCandles(fast, slow, rcBuffer);
+				int mult = averages.size() - i;
+				List<Data> candles = getCandles(fast, slow, mult, rcBuffer);
 				for (int j = 0; j < candles.size(); j++) {
 
 					Data candle = candles.get(j);
 
-					String time = stats.getNameCandle(DB.FIELD_BAR_TIME, fast, slow, j);
+					String time = stats.getNameCandle(DB.FIELD_BAR_TIME, fast, slow, mult, j);
 					rcStat.setValue(time, candle.getTime());
-					
-					String open = stats.getNameCandle(DB.FIELD_BAR_OPEN, fast, slow, j);
+
+					String open = stats.getNameCandle(DB.FIELD_BAR_OPEN, fast, slow, mult, j);
 					rcStat.setValue(open, OHLC.getOpen(candle));
 
-					String high = stats.getNameCandle(DB.FIELD_BAR_HIGH, fast, slow, j);
+					String high = stats.getNameCandle(DB.FIELD_BAR_HIGH, fast, slow, mult, j);
 					rcStat.setValue(high, OHLC.getHigh(candle));
 
-					String low = stats.getNameCandle(DB.FIELD_BAR_LOW, fast, slow, j);
+					String low = stats.getNameCandle(DB.FIELD_BAR_LOW, fast, slow, mult, j);
 					rcStat.setValue(low, OHLC.getLow(candle));
 
-					String close = stats.getNameCandle(DB.FIELD_BAR_CLOSE, fast, slow, j);
+					String close = stats.getNameCandle(DB.FIELD_BAR_CLOSE, fast, slow, mult, j);
 					rcStat.setValue(close, OHLC.getClose(candle));
 
-					String range = stats.getNameCandle(DB.FIELD_BAR_RANGE, fast, slow, j, "raw");
+					String range =
+						stats.getNameCandle(DB.FIELD_BAR_RANGE, fast, slow, mult, j, "raw");
 					rcStat.setValue(range, OHLC.getRange(candle));
 
 					String bodyFactor =
-						stats.getNameCandle(DB.FIELD_BAR_BODY_FACTOR, fast, slow, j, "raw");
+						stats.getNameCandle(DB.FIELD_BAR_BODY_FACTOR, fast, slow, mult, j, "raw");
 					rcStat.setValue(bodyFactor, OHLC.getBodyFactor(candle));
 
 					String bodyPos =
-						stats.getNameCandle(DB.FIELD_BAR_BODY_POS, fast, slow, j, "raw");
+						stats.getNameCandle(DB.FIELD_BAR_BODY_POS, fast, slow, mult, j, "raw");
 					rcStat.setValue(bodyPos, OHLC.getBodyPosition(candle));
 
-					String sign = stats.getNameCandle(DB.FIELD_BAR_SIGN, fast, slow, j, "raw");
+					String sign =
+						stats.getNameCandle(DB.FIELD_BAR_SIGN, fast, slow, mult, j, "raw");
 					rcStat.setValue(sign, OHLC.getSign(candle));
 
 					if (j < candles.size() - 1) {
 						Data previous = candles.get(j + 1);
 						String center =
-							stats.getNameCandle(DB.FIELD_BAR_REL_POS, fast, slow, j, j + 1, "raw");
+							stats.getNameCandle(
+								DB.FIELD_BAR_REL_POS, fast, slow, mult, j, j + 1, "raw");
 						rcStat.setValue(center, OHLC.getRelativePositions(candle, previous));
 					}
 				}
@@ -250,31 +254,32 @@ public class TaskAveragesRaw extends TaskAverages {
 	/**
 	 * Return the list of candles between periods.
 	 * 
-	 * @param fastPeriod Fast period.
-	 * @param slowPeriod Slow period.
-	 * @param buffer     Buffer of records.
+	 * @param fast   Fast period.
+	 * @param slow   Slow period.
+	 * @param mult   Count muñtiplier.
+	 * @param buffer Buffer of records.
 	 * @return The list of candles.
 	 */
-	private List<Data> getCandles(int fastPeriod, int slowPeriod, FixedSizeList<Record> buffer) {
+	private List<Data> getCandles(int fast, int slow, int mult, FixedSizeList<Record> buffer) {
 		List<Data> candles = new ArrayList<>();
-		int countCandles = slowPeriod / fastPeriod;
-		for (int i = 0; i < countCandles; i++) {
-			int startIndex = buffer.size() - (fastPeriod * (i + 1));
-			if (startIndex < 0) {
-				startIndex = 0;
+		int count = (slow / fast) * mult;
+		for (int i = 0; i < count; i++) {
+			int start = buffer.size() - (fast * (i + 1));
+			if (start < 0) {
+				start = 0;
 			}
-			int endIndex = startIndex + fastPeriod - 1;
-			if (endIndex >= buffer.size()) {
-				endIndex = buffer.size() - 1;
+			int end = start + fast - 1;
+			if (end >= buffer.size()) {
+				end = buffer.size() - 1;
 			}
 			long time = 0;
 			double open = 0;
 			double high = Numbers.MIN_DOUBLE;
 			double low = Numbers.MAX_DOUBLE;
 			double close = 0;
-			for (int j = startIndex; j <= endIndex; j++) {
+			for (int j = start; j <= end; j++) {
 				Record rc = buffer.getHead(j);
-				if (j == startIndex) {
+				if (j == start) {
 					time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
 					open = rc.getValue(DB.FIELD_BAR_OPEN).getDouble();
 				}
@@ -286,7 +291,7 @@ public class TaskAveragesRaw extends TaskAverages {
 				if (low_rc < low) {
 					low = low_rc;
 				}
-				if (j == endIndex) {
+				if (j == end) {
 					close = rc.getValue(DB.FIELD_BAR_CLOSE).getDouble();
 				}
 			}

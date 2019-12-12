@@ -155,9 +155,6 @@ public class ActionStatistics extends ActionRun {
 				rc = form.getRecord();
 				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
 
-				/* Save the record. */
-				persistor.save(rc);
-
 				/* Do create the tables again. */
 				PersistorDDL ddl = persistor.getDDL();
 				List<Table> tables = stats.getTables();
@@ -167,6 +164,9 @@ public class ActionStatistics extends ActionRun {
 					}
 					ddl.buildTable(table);
 				}
+
+				/* Save the record. */
+				persistor.save(rc);
 
 				/* Add to model. */
 				RecordSet recordSet = tableStats.getModel().getRecordSet();

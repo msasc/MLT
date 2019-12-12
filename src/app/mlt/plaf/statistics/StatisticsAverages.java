@@ -496,7 +496,8 @@ public class StatisticsAverages extends Statistics {
 					int periodFast = averages.get(i).getPeriod();
 					int periodSlow = averages.get(i + 1).getPeriod();
 					int size = periodFast;
-					int count = periodSlow / periodFast;
+					int mult = averages.size() - i - 1;
+					int count = (periodSlow / periodFast) * mult;
 					if (!container.containsPlotData(KEY_CANDLES(size))) {
 						Option option = new Option();
 						option.setKey(KEY_CANDLES(size));
@@ -819,7 +820,7 @@ public class StatisticsAverages extends Statistics {
 			super(KEY_ZIGZAG);
 
 			indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT_CALC);
-			indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV);
+			indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV_CALC);
 			setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
 		}
 
@@ -1047,9 +1048,9 @@ public class StatisticsAverages extends Statistics {
 	 * 
 	 * @param name   Field name.
 	 * @param header Field header.
-	 * @param label  Field label.
 	 * @param fast   Fast period.
 	 * @param slow   Slow period.
+	 * @param mult   Count multiplier.
 	 * @param index  Field index.
 	 * @param scale  Format scale.
 	 * @return The field.
@@ -1057,12 +1058,12 @@ public class StatisticsAverages extends Statistics {
 	private Field getCandleField(
 		String name,
 		String header,
-		String label,
 		int fast,
 		int slow,
+		int mult,
 		int index,
 		int scale) {
-		return getCandleField(name, header, label, fast, slow, index, scale, null);
+		return getCandleField(name, header, fast, slow, mult, index, scale, null);
 	}
 
 	/**
@@ -1077,9 +1078,9 @@ public class StatisticsAverages extends Statistics {
 	 * 
 	 * @param name   Field name.
 	 * @param header Field header.
-	 * @param label  Field label.
 	 * @param fast   Fast period.
 	 * @param slow   Slow period.
+	 * @param mult   Count multiplier.
 	 * @param index0 Field first index.
 	 * @param index1 Field second index.
 	 * @param scale  Format scale.
@@ -1089,17 +1090,16 @@ public class StatisticsAverages extends Statistics {
 	private Field getCandleField(
 		String name,
 		String header,
-		String label,
 		int fast,
 		int slow,
+		int mult,
 		int index0,
 		int index1,
 		int scale,
 		String suffix) {
-		name = getNameCandle(name, fast, slow, index0, index1, suffix);
-		header = getHeaderCandle(header, fast, slow, index0, index1, suffix);
-		label = getLabelCandle(label, fast, slow, index0, index1, suffix);
-		Field field = DB.field_double(name, header, label);
+		name = getNameCandle(name, fast, slow, mult, index0, index1, suffix);
+		header = getHeaderCandle(header, fast, slow, mult, index0, index1, suffix);
+		Field field = DB.field_double(name, header);
 		field.setStringConverter(getNumberConverter(scale));
 		return field;
 	}
@@ -1109,9 +1109,9 @@ public class StatisticsAverages extends Statistics {
 	 * 
 	 * @param name   Field name.
 	 * @param header Field header.
-	 * @param label  Field label.
 	 * @param fast   Fast period.
 	 * @param slow   Slow period.
+	 * @param mult   Count multiplier.
 	 * @param index  Field index.
 	 * @param scale  Format scale.
 	 * @param suffix Optional suffix.
@@ -1120,13 +1120,13 @@ public class StatisticsAverages extends Statistics {
 	private Field getCandleField(
 		String name,
 		String header,
-		String label,
 		int fast,
 		int slow,
+		int mult,
 		int index,
 		int scale,
 		String suffix) {
-		return getCandleField(name, header, label, fast, slow, index, -1, scale, suffix);
+		return getCandleField(name, header, fast, slow, mult, index, -1, scale, suffix);
 	}
 
 	/**
@@ -1198,53 +1198,54 @@ public class StatisticsAverages extends Statistics {
 			fields = new ArrayList<>();
 			int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
 			int slow = averages.get(i).getPeriod();
-			int count = slow / fast;
+			int mult = averages.size() - i;
+			int count = (slow / fast) * mult;
 			String name, header;
 			for (int j = 0; j < count; j++) {
 
 				/* Time start, raw and fmt. */
-				name = getNameCandle(DB.FIELD_BAR_TIME, fast, slow, j);
-				header = getHeaderCandle("Time", fast, slow, j);
+				name = getNameCandle(DB.FIELD_BAR_TIME, fast, slow, mult, j);
+				header = getHeaderCandle("Time", fast, slow, mult, j);
 				fields.add(DB.field_long(name, header));
 				fields.add(DB.field_timeFmt(getPeriod(), name, name + "_fmt", header + " fmt"));
 
 				/* Open, high, low, close. */
-				fields.add(getCandleField(DB.FIELD_BAR_OPEN, "Open", "Open", fast, slow, j, 4));
-				fields.add(getCandleField(DB.FIELD_BAR_HIGH, "High", "High", fast, slow, j, 4));
-				fields.add(getCandleField(DB.FIELD_BAR_LOW, "Low", "Low", fast, slow, j, 4));
-				fields.add(getCandleField(DB.FIELD_BAR_CLOSE, "Close", "Close", fast, slow, j, 4));
+				fields.add(getCandleField(DB.FIELD_BAR_OPEN, "Open", fast, slow, mult, j, 4));
+				fields.add(getCandleField(DB.FIELD_BAR_HIGH, "High", fast, slow, mult, j, 4));
+				fields.add(getCandleField(DB.FIELD_BAR_LOW, "Low", fast, slow, mult, j, 4));
+				fields.add(
+					getCandleField(DB.FIELD_BAR_CLOSE, "Close", fast, slow, mult, j, 4));
 
 				/* Raw values. */
-				fields.add(
-					getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 4, "raw"));
 				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_FACTOR, "Body factor", "factor", fast, slow, j, 8, "raw"));
+					DB.FIELD_BAR_RANGE, "Range", fast, slow, mult, j, 4, "raw"));
 				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_POS, "Body pos", "Body position", fast, slow, j, 8, "raw"));
+					DB.FIELD_BAR_BODY_FACTOR, "Body factor", fast, slow, mult, j, 8, "raw"));
+				fields.add(getCandleField(
+					DB.FIELD_BAR_BODY_POS, "Body pos", fast, slow, mult, j, 8, "raw"));
 				if (j < count - 1) {
 					fields.add(getCandleField(
-						DB.FIELD_BAR_REL_POS, "Rel pos", "Relative position", fast, slow, j, j + 1,
-						8, "raw"));
+						DB.FIELD_BAR_REL_POS, "Rel pos", fast, slow, mult, j, j + 1, 8, "raw"));
 				}
-				fields.add(
-					getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "raw"));
+				fields
+					.add(getCandleField(DB.FIELD_BAR_SIGN, "Sign", fast, slow, mult, j, 8, "raw"));
 
 				/* Normalized values. */
-				fields.add(
-					getCandleField(DB.FIELD_BAR_RANGE, "Range", "Range", fast, slow, j, 8, "nrm"));
 				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_FACTOR, "Body factor", "factor", fast, slow, j, 8, "nrm"));
+					DB.FIELD_BAR_RANGE, "Range", fast, slow, mult, j, 8, "nrm"));
 				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_POS, "Body pos", "Body position", fast, slow, j, 8, "nrm"));
+					DB.FIELD_BAR_BODY_FACTOR, "Body factor", fast, slow, mult, j, 8, "nrm"));
+				fields.add(getCandleField(
+					DB.FIELD_BAR_BODY_POS, "Body pos", fast, slow, mult, j, 8, "nrm"));
 				if (j < count - 1) {
 					fields.add(getCandleField(
-						DB.FIELD_BAR_REL_POS, "Relative pos", "Relative position", fast, slow, j,
-						j + 1, 8, "nrm"));
+						DB.FIELD_BAR_REL_POS, "Relative pos", fast, slow, mult, j, j + 1, 8,
+						"nrm"));
 				}
 
 				/* Sign, continuous from -1 to 1. */
-				fields.add(
-					getCandleField(DB.FIELD_BAR_SIGN, "Sign", "Sign", fast, slow, j, 8, "nrm"));
+				fields.add(getCandleField(
+					DB.FIELD_BAR_SIGN, "Sign", fast, slow, mult, j, 8, "nrm"));
 
 			}
 			mapLists.put(key, fields);
@@ -1340,11 +1341,12 @@ public class StatisticsAverages extends Statistics {
 	 * @param header The name (open/high/low/close)
 	 * @param fast   The fast period.
 	 * @param slow   The slow period.
+	 * @param mult   Count multiplier.
 	 * @param index  The index.
 	 * @return The name of the candle.
 	 */
-	public String getHeaderCandle(String header, int fast, int slow, int index) {
-		return getHeaderCandle(header, fast, slow, index, null);
+	public String getHeaderCandle(String header, int fast, int slow, int mult, int index) {
+		return getHeaderCandle(header, fast, slow, mult, index, null);
 	}
 
 	/**
@@ -1354,6 +1356,7 @@ public class StatisticsAverages extends Statistics {
 	 * @param label  The name (open/high/low/close)
 	 * @param fast   The fast period.
 	 * @param slow   The slow period.
+	 * @param mult   Count multiplier.
 	 * @param index0 The first index.
 	 * @param index1 The second index.
 	 * @param suffix The suffix.
@@ -1363,10 +1366,29 @@ public class StatisticsAverages extends Statistics {
 		String label,
 		int fast,
 		int slow,
+		int mult,
 		int index0,
 		int index1,
 		String suffix) {
-		return getLabelCandle(label, fast, slow, index0, index1, suffix);
+		int count = (slow / fast) * mult;
+		int pad = Numbers.getDigits(count);
+		StringBuilder b = new StringBuilder();
+		b.append(label);
+		b.append(" ");
+		b.append(fast);
+		b.append("/");
+		b.append(slow);
+		b.append(" - ");
+		b.append(Strings.leftPad(Integer.toString(index0), pad, "0"));
+		if (index1 >= 0) {
+			b.append(" vs ");
+			b.append(Strings.leftPad(Integer.toString(index1), pad, "0"));
+		}
+		if (suffix != null) {
+			b.append(" - ");
+			b.append(suffix);
+		}
+		return b.toString();
 	}
 
 	/**
@@ -1376,12 +1398,19 @@ public class StatisticsAverages extends Statistics {
 	 * @param header The name (open/high/low/close)
 	 * @param fast   The fast period.
 	 * @param slow   The slow period.
+	 * @param mult   Count multiplier.
 	 * @param index  The index.
 	 * @param suffix The suffix.
 	 * @return The name of the candle.
 	 */
-	public String getHeaderCandle(String header, int fast, int slow, int index, String suffix) {
-		return getLabelCandle(header, fast, slow, index, suffix);
+	public String getHeaderCandle(
+		String header,
+		int fast,
+		int slow,
+		int mult,
+		int index,
+		String suffix) {
+		return getHeaderCandle(header, fast, slow, mult, index, -1, suffix);
 	}
 
 	/**
@@ -1438,75 +1467,6 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Return the label of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param label The name (open/high/low/close)
-	 * @param fast  The fast period.
-	 * @param slow  The slow period.
-	 * @param index The index.
-	 * @return The name of the candle.
-	 */
-	public String getLabelCandle(String label, int fast, int slow, int index) {
-		return getLabelCandle(label, fast, slow, index, null);
-	}
-
-	/**
-	 * Return the label of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param label  The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param index0 The first index.
-	 * @param index1 The second index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getLabelCandle(
-		String label,
-		int fast,
-		int slow,
-		int index0,
-		int index1,
-		String suffix) {
-		int count = slow / fast;
-		int pad = Numbers.getDigits(count);
-		StringBuilder b = new StringBuilder();
-		b.append(label);
-		b.append(" ");
-		b.append(fast);
-		b.append("/");
-		b.append(slow);
-		b.append(" - ");
-		b.append(Strings.leftPad(Integer.toString(index0), pad));
-		if (index1 >= 0) {
-			b.append(" vs ");
-			b.append(Strings.leftPad(Integer.toString(index1), pad));
-		}
-		if (suffix != null) {
-			b.append(" - ");
-			b.append(suffix);
-		}
-		return b.toString();
-	}
-
-	/**
-	 * Return the label of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param label  The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param index  The index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getLabelCandle(String label, int fast, int slow, int index, String suffix) {
-		return getLabelCandle(label, fast, slow, index, -1, suffix);
-	}
-
-	/**
 	 * Return the average slope field label.
 	 * 
 	 * @param index  The average index.
@@ -1559,11 +1519,12 @@ public class StatisticsAverages extends Statistics {
 	 * @param name  The name (open/high/low/close)
 	 * @param fast  The fast period.
 	 * @param slow  The slow period.
+	 * @param mult  Count multiplier.
 	 * @param index The index.
 	 * @return The name of the candle.
 	 */
-	public String getNameCandle(String name, int fast, int slow, int index) {
-		return getNameCandle(name, fast, slow, index, null);
+	public String getNameCandle(String name, int fast, int slow, int mult, int index) {
+		return getNameCandle(name, fast, slow, mult, index, null);
 	}
 
 	/**
@@ -1573,6 +1534,7 @@ public class StatisticsAverages extends Statistics {
 	 * @param name   The name (open/high/low/close)
 	 * @param fast   The fast period.
 	 * @param slow   The slow period.
+	 * @param mult   Count multiplier.
 	 * @param index  The index.
 	 * @param suffix The suffix.
 	 * @return The name of the candle.
@@ -1581,10 +1543,11 @@ public class StatisticsAverages extends Statistics {
 		String name,
 		int fast,
 		int slow,
+		int mult,
 		int index0,
 		int index1,
 		String suffix) {
-		int count = slow / fast;
+		int count = (slow / fast) * mult;
 		int pad = Numbers.getDigits(count);
 		StringBuilder b = new StringBuilder();
 		b.append(name);
@@ -1593,10 +1556,10 @@ public class StatisticsAverages extends Statistics {
 		b.append("_");
 		b.append(slow);
 		b.append("_");
-		b.append(Strings.leftPad(Integer.toString(index0), pad));
+		b.append(Strings.leftPad(Integer.toString(index0), pad, "0"));
 		if (index1 >= 0) {
 			b.append("vs");
-			b.append(Strings.leftPad(Integer.toString(index1), pad));
+			b.append(Strings.leftPad(Integer.toString(index1), pad, "0"));
 		}
 		if (suffix != null) {
 			b.append("_");
@@ -1612,12 +1575,19 @@ public class StatisticsAverages extends Statistics {
 	 * @param name   The name (open/high/low/close)
 	 * @param fast   The fast period.
 	 * @param slow   The slow period.
+	 * @param mult   Count multiplier.
 	 * @param index  The index.
 	 * @param suffix The suffix.
 	 * @return The name of the candle.
 	 */
-	public String getNameCandle(String name, int fast, int slow, int index, String suffix) {
-		return getNameCandle(name, fast, slow, index, -1, suffix);
+	public String getNameCandle(
+		String name,
+		int fast,
+		int slow,
+		int mult,
+		int index,
+		String suffix) {
+		return getNameCandle(name, fast, slow, mult, index, -1, suffix);
 	}
 
 	/**
@@ -1780,6 +1750,20 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @return The percentage for calculated labels.
+	 */
+	public double getPercentCalc() {
+		return percentCalc;
+	}
+
+	/**
+	 * @return The percentage for edited labels.
+	 */
+	public double getPercentEdit() {
+		return percentEdit;
+	}
+
+	/**
 	 * @param size  The size of the candles.
 	 * @param count The number of candles.
 	 * @return The plot data for candles of the given size.
@@ -1920,7 +1904,7 @@ public class StatisticsAverages extends Statistics {
 
 			/* Pivot and reference value. */
 			list.add(table.getFieldIndex(DB.FIELD_STATES_PIVOT_CALC));
-			list.add(table.getFieldIndex(DB.FIELD_STATES_REFV));
+			list.add(table.getFieldIndex(DB.FIELD_STATES_REFV_CALC));
 
 			/* Averages. */
 			fields = getFieldListAverages();
@@ -2099,7 +2083,9 @@ public class StatisticsAverages extends Statistics {
 		 */
 		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
 		tableStates.addField(
-			DB.field_data(instrument, DB.FIELD_STATES_REFV, "Ref value", "Pivot reference value"));
+			DB.field_data(instrument, DB.FIELD_STATES_REFV_CALC, "Ref-val calc", "Ref value calc"));
+		tableStates.addField(
+			DB.field_data(instrument, DB.FIELD_STATES_REFV_EDIT, "Ref-val edit", "Ref value edit"));
 		tableStates.addField(
 			DB.field_integer(DB.FIELD_STATES_PIVOT_CALC, "Pivot calc", "Pivot calculated"));
 		tableStates.addField(
@@ -2108,8 +2094,9 @@ public class StatisticsAverages extends Statistics {
 			DB.field_integer(DB.FIELD_STATES_LABEL_CALC, "Label calc", "Label calculated pivot"));
 		tableStates.addField(
 			DB.field_integer(DB.FIELD_STATES_LABEL_EDIT, "Label edit", "Label edited pivot"));
-		
-		tableStates.getField(DB.FIELD_STATES_REFV).setFieldGroup(grpLabels);
+
+		tableStates.getField(DB.FIELD_STATES_REFV_CALC).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_REFV_EDIT).setFieldGroup(grpLabels);
 		tableStates.getField(DB.FIELD_STATES_PIVOT_CALC).setFieldGroup(grpLabels);
 		tableStates.getField(DB.FIELD_STATES_PIVOT_EDIT).setFieldGroup(grpLabels);
 		tableStates.getField(DB.FIELD_STATES_LABEL_CALC).setFieldGroup(grpLabels);
@@ -2184,7 +2171,7 @@ public class StatisticsAverages extends Statistics {
 
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
 		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
-
+		
 		return tableStates;
 	}
 

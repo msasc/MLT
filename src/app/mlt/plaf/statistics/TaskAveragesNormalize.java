@@ -87,7 +87,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 		calculateTotalWork();
 
 		/* List of fields to normalize (raw values) and normalizers. */
-		List<Field> fields = stats.getFieldListToNormalize();
+		List<Field> fields = stats.getFieldListToNormalizeStates();
 		HashMap<String, Normalizer> mapNormalizers = stats.getNormalizers();
 		if (mapNormalizers.size() != fields.size()) {
 			throw new IllegalStateException("Bad normalizers");

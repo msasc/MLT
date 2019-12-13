@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import com.mlt.util.Properties;
 import java.util.Arrays;
@@ -35,6 +36,87 @@ import java.util.Arrays;
  * @author Miquel Sas
  */
 public class Record implements Comparable<Object> {
+	
+	/**
+	 * Callable to delete records concurrently.
+	 */
+	public static class Delete implements Callable<Void> {
+		
+		private Record record;
+		private Persistor persistor;
+
+		/**
+		 * @param record The record.
+		 * @param persistor The persistor.
+		 */
+		public Delete(Record record, Persistor persistor) {
+			this.record = record;
+			this.persistor = persistor;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public Void call() throws Exception {
+			persistor.delete(record);
+			return null;
+		}
+	}
+
+	/**
+	 * Callable to insert records concurrently.
+	 */
+	public static class Insert implements Callable<Void> {
+		
+		private Record record;
+		private Persistor persistor;
+
+		/**
+		 * @param record The record.
+		 * @param persistor The persistor.
+		 */
+		public Insert(Record record, Persistor persistor) {
+			this.record = record;
+			this.persistor = persistor;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public Void call() throws Exception {
+			persistor.insert(record);
+			return null;
+		}
+	}
+
+	/**
+	 * Callable to update records concurrently.
+	 */
+	public static class Update implements Callable<Void> {
+		
+		private Record record;
+		private Persistor persistor;
+
+		/**
+		 * @param record The record.
+		 * @param persistor The persistor.
+		 */
+		public Update(Record record, Persistor persistor) {
+			this.record = record;
+			this.persistor = persistor;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public Void call() throws Exception {
+			persistor.update(record);
+			return null;
+		}
+	}
 
 	/**
 	 * Key used to set the total property.

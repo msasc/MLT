@@ -22,7 +22,6 @@ import java.util.List;
 import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
 import com.mlt.db.Field;
-import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
@@ -30,6 +29,7 @@ import com.mlt.db.Table;
 import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
+import com.mlt.util.Strings;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
@@ -57,32 +57,12 @@ public class TaskAveragesRanges extends TaskAverages {
 	 */
 	@Override
 	protected long calculateTotalWork() throws Throwable {
-		long totalWork = stats.getFieldListToNormalize().size();
+		long totalWork = stats.getFieldListToNormalizeStates().size();
+		List<Average> avgs = stats.getAverages();
+		int candlesNormalize = stats.getFieldListToNormalizeCandles().size();
+		totalWork += avgs.size() * candlesNormalize;
 		setTotalWork(totalWork);
 		return getTotalWork();
-	}
-
-	/**
-	 * @return The total number of states records to consider.
-	 */
-	private long countStates() throws Throwable {
-		return stats.getTableStates().getPersistor().count(null);
-	}
-
-	/**
-	 * @param name    The field name.
-	 * @param minimum Minimum value.
-	 * @param maximum Maximum value.
-	 * @return The number of records with the field GE minimum and LE maximum.
-	 */
-	private long countStates(String name, double minimum, double maximum) throws Throwable {
-		Persistor persistor = stats.getTableStates().getPersistor();
-		Field field = persistor.getField(name);
-		Criteria criteria = new Criteria();
-		criteria.add(Condition.fieldGE(field, new Value(minimum)));
-		criteria.add(Condition.fieldLE(field, new Value(maximum)));
-		long count = persistor.count(criteria);
-		return count;
 	}
 
 	/**
@@ -100,10 +80,11 @@ public class TaskAveragesRanges extends TaskAverages {
 
 		/* Count. */
 		calculateTotalWork();
-		double countStates = countStates();
 
-		/* Do iterate fields to normalize. */
-		List<Field> fields = stats.getFieldListToNormalize();
+		/* Do iterate fields to normalize from states table. */
+		List<Field> fields = null;
+
+		fields = stats.getFieldListToNormalizeStates();
 		long totalWork = getTotalWork();
 		long workDone = 0;
 		for (int i = 0; i < fields.size(); i++) {
@@ -116,45 +97,113 @@ public class TaskAveragesRanges extends TaskAverages {
 
 			/* Retrieve values. */
 			String name = fields.get(i).getName();
-			workDone = i + 1;
+			workDone += 1;
 			update(name, workDone, totalWork);
-			Record rcView = getData(name);
+			Record rcView = getDataStates(name);
 			double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
 			double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
 			double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
 			double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
-			
-			double minimum_10 = average - (1 * std_dev);
-			double maximum_10 = average + (1 * std_dev);
-			double count_10 = countStates(name, minimum_10, maximum_10);
-			double avg_std_10 = 100 * count_10 / countStates;
-			
-			double minimum_20 = average - (2 * std_dev);
-			double maximum_20 = average + (2 * std_dev);
-			double count_20 = countStates(name, minimum_20, maximum_20);
-			double avg_std_20 = 100 * count_20 / countStates;
-			
+
 			Record record = ranges.getDefaultRecord();
 			record.setValue(DB.FIELD_RANGE_NAME, name);
 			record.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
 			record.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
 			record.setValue(DB.FIELD_RANGE_AVERAGE, average);
 			record.setValue(DB.FIELD_RANGE_STDDEV, std_dev);
-			record.setValue(DB.FIELD_RANGE_AVG_STD_10, avg_std_10);
-			record.setValue(DB.FIELD_RANGE_AVG_STD_20, avg_std_20);
-			
+
 			ranges.getPersistor().insert(record);
+		}
+		if (isCancelled()) {
+			return;
+		}
+
+		/* Do iterate fields to normalize from candles table. */
+		fields = stats.getFieldListToNormalizeCandles();
+		int pad = stats.getCandlePad();
+		List<Average> avgs = stats.getAverages();
+		for (int i = 0; i < avgs.size(); i++) {
+
+			int size = stats.getCandleSize(i);
+			for (int j = 0; j < fields.size(); j++) {
+
+				/* Check cancel requested. */
+				if (isCancelRequested()) {
+					setCancelled();
+					break;
+				}
+
+				/* Retrieve values. */
+				String name = fields.get(j).getName();
+				String namePad = name + "_" + Strings.leftPad(Integer.toString(size), pad, "0");
+				workDone += 1;
+				update(name, workDone, totalWork);
+
+				Record rcView = getDataCandles(size, name);
+				double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
+				double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
+				double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
+				double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
+
+				Record record = ranges.getDefaultRecord();
+				record.setValue(DB.FIELD_RANGE_NAME, namePad);
+				record.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
+				record.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
+				record.setValue(DB.FIELD_RANGE_AVERAGE, average);
+				record.setValue(DB.FIELD_RANGE_STDDEV, std_dev);
+
+				ranges.getPersistor().insert(record);
+			}
+
+			if (isCancelled()) {
+				break;
+			}
 		}
 	}
 
 	/**
-	 * Return record the view to calculate the range for a field.
-	 * 
+	 * @param size The size of the candles.
 	 * @param name The field name.
-	 * @return The view.
-	 * @throws PersistorException
+	 * @return The record of the view to calculate the range for a field..
 	 */
-	private Record getData(String name) throws PersistorException {
+	private Record getDataCandles(int size, String name) throws PersistorException {
+
+		View view = new View();
+		view.setMasterTable(stats.getTableCandles());
+
+		Field minimum = DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum");
+		minimum.setFunction("min(" + name + ")");
+		view.addField(minimum);
+
+		Field maximum = DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum");
+		maximum.setFunction("max(" + name + ")");
+		view.addField(maximum);
+
+		Field average = DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average");
+		average.setFunction("avg(" + name + ")");
+		view.addField(average);
+
+		Field std_dev = DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev");
+		std_dev.setFunction("stddev(" + name + ")");
+		view.addField(std_dev);
+
+		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+
+		Field fSIZE = stats.getTableCandles().getField(DB.FIELD_CANDLE_SIZE);
+		Criteria criteria = new Criteria();
+		criteria.add(Condition.fieldEQ(fSIZE, new Value(size)));
+
+		RecordSet rs = view.getPersistor().select(criteria);
+		Record rc = rs.get(0);
+		return rc;
+
+	}
+
+	/**
+	 * @param name The field name.
+	 * @return The record of the view to calculate the range for a field..
+	 */
+	private Record getDataStates(String name) throws PersistorException {
 
 		View view = new View();
 		view.setMasterTable(stats.getTableStates());

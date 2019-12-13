@@ -80,8 +80,8 @@ import com.mlt.util.HTML;
 import com.mlt.util.Lists;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
+import com.mlt.util.Properties;
 import com.mlt.util.StringConverter;
-import com.mlt.util.Strings;
 import com.mlt.util.xml.parser.Parser;
 import com.mlt.util.xml.parser.ParserHandler;
 import com.mlt.util.xml.writer.XMLAttribute;
@@ -202,13 +202,6 @@ public class StatisticsAverages extends Statistics {
 					model.addColumn(fields.get(i).getAlias());
 				}
 
-				for (int i = 0; i < averages.size(); i++) {
-					fields = getFieldListCandles(i);
-					for (int j = 0; j < fields.size(); j++) {
-						model.addColumn(fields.get(j).getAlias());
-					}
-				}
-
 				model.setRecordSet(new DataRecordSet(persistor));
 
 				TableRecord table = new TableRecord(true);
@@ -254,8 +247,6 @@ public class StatisticsAverages extends Statistics {
 				model.addColumn(DB.FIELD_RANGE_MAXIMUM);
 				model.addColumn(DB.FIELD_RANGE_AVERAGE);
 				model.addColumn(DB.FIELD_RANGE_STDDEV);
-				model.addColumn(DB.FIELD_RANGE_AVG_STD_10);
-				model.addColumn(DB.FIELD_RANGE_AVG_STD_20);
 
 				model.setRecordSet(persistor.select(null));
 
@@ -492,12 +483,9 @@ public class StatisticsAverages extends Statistics {
 						popup.add(option.getMenuItem());
 					}
 				}
-				for (int i = 0; i < averages.size() - 1; i++) {
-					int periodFast = averages.get(i).getPeriod();
-					int periodSlow = averages.get(i + 1).getPeriod();
-					int size = periodFast;
-					int mult = averages.size() - i - 1;
-					int count = (periodSlow / periodFast) * mult;
+				for (int i = 1; i < averages.size(); i++) {
+					int size = getCandleSize(i);
+					int count = getCandleCount(i);
 					if (!container.containsPlotData(KEY_CANDLES(size))) {
 						Option option = new Option();
 						option.setKey(KEY_CANDLES(size));
@@ -511,9 +499,8 @@ public class StatisticsAverages extends Statistics {
 						popup.add(option.getMenuItem());
 					}
 				}
-				for (int i = 0; i < averages.size() - 1; i++) {
-					int size = averages.get(i).getPeriod();
-					;
+				for (int i = 1; i < averages.size(); i++) {
+					int size = getCandleSize(i);
 					if (container.containsPlotData(KEY_CANDLES(size))) {
 						Option option = new Option();
 						option.setKey("toggle-plot-all-candles");
@@ -877,10 +864,12 @@ public class StatisticsAverages extends Statistics {
 						maxIndex = index;
 					}
 				}
-				if (pivots.get(0).pivot == 1) {
-					pivots.add(0, new Pivot(-1, minValue, minIndex));
-				} else {
-					pivots.add(0, new Pivot(1, maxValue, maxIndex));
+				if (!pivots.isEmpty()) {
+					if (pivots.get(0).pivot == 1) {
+						pivots.add(0, new Pivot(-1, minValue, minIndex));
+					} else {
+						pivots.add(0, new Pivot(1, maxValue, maxIndex));
+					}
 				}
 			}
 			/*
@@ -918,10 +907,12 @@ public class StatisticsAverages extends Statistics {
 						maxIndex = index;
 					}
 				}
-				if (pivots.get(pivots.size() - 1).pivot == 1) {
-					pivots.add(new Pivot(-1, minValue, minIndex));
-				} else {
-					pivots.add(new Pivot(1, maxValue, maxIndex));
+				if (!pivots.isEmpty()) {
+					if (pivots.get(pivots.size() - 1).pivot == 1) {
+						pivots.add(new Pivot(-1, minValue, minIndex));
+					} else {
+						pivots.add(new Pivot(1, maxValue, maxIndex));
+					}
 				}
 			}
 
@@ -970,27 +961,11 @@ public class StatisticsAverages extends Statistics {
 
 	}
 
+	/** Properties. */
+	private Properties properties = new Properties();
+
 	/** List of averages. */
 	private List<Average> averages = new ArrayList<>();
-	/** Bars ahead to calculate zig-zag operator. */
-	private int barsAhead = 100;
-	/** Percentage to exit calculated pivots. */
-	private double percentCalc = 10;
-	/** Percentage to exit edited pivots. */
-	private double percentEdit = 10;
-
-	/** States table. */
-	private Table tableStates;
-	/** Ranges table. */
-	private Table tableRanges;
-
-	/** Map of field lists. */
-	private HashMap<String, List<Field>> mapLists = new HashMap<>();
-
-	/** States data converter. */
-	private DataConverter statesDataConverter;
-	/** States list persistor. */
-	private ListPersistor statesListPersistor;
 
 	/** Plot all candles flag. */
 	private boolean plotAllCandles = true;
@@ -1035,6 +1010,15 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void finalize() throws Throwable {
+		properties.clear();
+		super.finalize();
+	}
+
+	/**
 	 * Return an unmodifiable copy of the list of averages.
 	 * 
 	 * @return The list of averages.
@@ -1044,211 +1028,66 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Return the candle field.
-	 * 
-	 * @param name   Field name.
-	 * @param header Field header.
-	 * @param fast   Fast period.
-	 * @param slow   Slow period.
-	 * @param mult   Count multiplier.
-	 * @param index  Field index.
-	 * @param scale  Format scale.
-	 * @return The field.
-	 */
-	private Field getCandleField(
-		String name,
-		String header,
-		int fast,
-		int slow,
-		int mult,
-		int index,
-		int scale) {
-		return getCandleField(name, header, fast, slow, mult, index, scale, null);
-	}
-
-	/**
 	 * @return The number of bars ahead for zig-zag calculation.
 	 */
 	public int getBarsAhead() {
-		return barsAhead;
+		return properties.getInteger("bars_ahead");
 	}
 
 	/**
-	 * Return the candle field.
-	 * 
-	 * @param name   Field name.
-	 * @param header Field header.
-	 * @param fast   Fast period.
-	 * @param slow   Slow period.
-	 * @param mult   Count multiplier.
-	 * @param index0 Field first index.
-	 * @param index1 Field second index.
-	 * @param scale  Format scale.
-	 * @param suffix Optional suffix.
-	 * @return The field.
+	 * @param index Index of average.
+	 * @return Number of candles.
 	 */
-	private Field getCandleField(
-		String name,
-		String header,
-		int fast,
-		int slow,
-		int mult,
-		int index0,
-		int index1,
-		int scale,
-		String suffix) {
-		name = getNameCandle(name, fast, slow, mult, index0, index1, suffix);
-		header = getHeaderCandle(header, fast, slow, mult, index0, index1, suffix);
-		Field field = DB.field_double(name, header);
-		field.setStringConverter(getNumberConverter(scale));
-		return field;
+	public int getCandleCount(int index) {
+		int fast = (index == 0 ? 1 : averages.get(index - 1).getPeriod());
+		int slow = averages.get(index).getPeriod();
+		int mult = averages.size() - index;
+		int count = (slow / fast) * mult;
+		return count;
+		
+	}
+	
+	/**
+	 * @return The pad for candles size in names.
+	 */
+	public int getCandlePad() {
+		int maxSize = Numbers.MIN_INTEGER;
+		for (int i = 0; i < averages.size(); i++) {
+			int size = getCandleSize(i);
+			maxSize = Math.max(maxSize, size);
+		}
+		return Numbers.getDigits(maxSize);
 	}
 
 	/**
-	 * Return the candle field.
-	 * 
-	 * @param name   Field name.
-	 * @param header Field header.
-	 * @param fast   Fast period.
-	 * @param slow   Slow period.
-	 * @param mult   Count multiplier.
-	 * @param index  Field index.
-	 * @param scale  Format scale.
-	 * @param suffix Optional suffix.
-	 * @return The field.
+	 * @param index Index of average.
+	 * @return Size of candles.
 	 */
-	private Field getCandleField(
-		String name,
-		String header,
-		int fast,
-		int slow,
-		int mult,
-		int index,
-		int scale,
-		String suffix) {
-		return getCandleField(name, header, fast, slow, mult, index, -1, scale, suffix);
+	public int getCandleSize(int index) {
+		int size = (index == 0 ? 1 : averages.get(index - 1).getPeriod());
+		return size;
 	}
-
-	/**
-	 * Return the name of the field group for candles of the average.
-	 * 
-	 * @param avg Average index.
-	 * @return The name of the field group for candles.
-	 */
-	public String getCandleGroupName(int avg) {
-		int fast = (avg == 0 ? 1 : averages.get(avg - 1).getPeriod());
-		int slow = averages.get(avg).getPeriod();
-		StringBuilder b = new StringBuilder();
-		b.append("candles_");
-		b.append(fast);
-		b.append("_");
-		b.append(slow);
-		return b.toString();
-	}
-
-	/**
-	 * Return the title of the field group for candles of the average.
-	 * 
-	 * @param avg Average index.
-	 * @return The title of the field group for candles.
-	 */
-	public String getCandleGroupTitle(int avg) {
-		int fast = (avg == 0 ? 1 : averages.get(avg - 1).getPeriod());
-		int slow = averages.get(avg).getPeriod();
-		StringBuilder b = new StringBuilder();
-		b.append("Candles ");
-		b.append(fast);
-		b.append("/");
-		b.append(slow);
-		return b.toString();
-	}
-
+	
 	/**
 	 * Return the list of average fields.
 	 * 
 	 * @return The list of average fields.
 	 */
 	public List<Field> getFieldListAverages() {
-		List<Field> fields = mapLists.get("averages");
+		@SuppressWarnings("unchecked")
+		List<Field> fields = (List<Field>) properties.getObject("fields_averages");
 		if (fields == null) {
 			fields = new ArrayList<>();
 			for (int i = 0; i < averages.size(); i++) {
-				String name = getNameAverage(i);
-				String header = getHeaderAverage(i);
-				String label = getLabelAverage(i);
+				Average avg = averages.get(i);
+				String name = Average.getNameAverage(avg);
+				String header = Average.getHeaderAverage(avg);
+				String label = Average.getLabelAverage(avg);
 				Field field = DB.field_double(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
-			mapLists.put("averages", fields);
-		}
-		return fields;
-	}
-
-	/**
-	 * Returns the list of candle related fields of an average.
-	 * 
-	 * @param i The average index.
-	 * @return The list of candle related fields.
-	 */
-	public List<Field> getFieldListCandles(int i) {
-		String key = getCandleGroupName(i);
-		List<Field> fields = mapLists.get(key);
-		if (fields == null) {
-			fields = new ArrayList<>();
-			int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
-			int slow = averages.get(i).getPeriod();
-			int mult = averages.size() - i;
-			int count = (slow / fast) * mult;
-			String name, header;
-			for (int j = 0; j < count; j++) {
-
-				/* Time start, raw and fmt. */
-				name = getNameCandle(DB.FIELD_BAR_TIME, fast, slow, mult, j);
-				header = getHeaderCandle("Time", fast, slow, mult, j);
-				fields.add(DB.field_long(name, header));
-				fields.add(DB.field_timeFmt(getPeriod(), name, name + "_fmt", header + " fmt"));
-
-				/* Open, high, low, close. */
-				fields.add(getCandleField(DB.FIELD_BAR_OPEN, "Open", fast, slow, mult, j, 4));
-				fields.add(getCandleField(DB.FIELD_BAR_HIGH, "High", fast, slow, mult, j, 4));
-				fields.add(getCandleField(DB.FIELD_BAR_LOW, "Low", fast, slow, mult, j, 4));
-				fields.add(
-					getCandleField(DB.FIELD_BAR_CLOSE, "Close", fast, slow, mult, j, 4));
-
-				/* Raw values. */
-				fields.add(getCandleField(
-					DB.FIELD_BAR_RANGE, "Range", fast, slow, mult, j, 4, "raw"));
-				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_FACTOR, "Body factor", fast, slow, mult, j, 8, "raw"));
-				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_POS, "Body pos", fast, slow, mult, j, 8, "raw"));
-				if (j < count - 1) {
-					fields.add(getCandleField(
-						DB.FIELD_BAR_REL_POS, "Rel pos", fast, slow, mult, j, j + 1, 8, "raw"));
-				}
-				fields
-					.add(getCandleField(DB.FIELD_BAR_SIGN, "Sign", fast, slow, mult, j, 8, "raw"));
-
-				/* Normalized values. */
-				fields.add(getCandleField(
-					DB.FIELD_BAR_RANGE, "Range", fast, slow, mult, j, 8, "nrm"));
-				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_FACTOR, "Body factor", fast, slow, mult, j, 8, "nrm"));
-				fields.add(getCandleField(
-					DB.FIELD_BAR_BODY_POS, "Body pos", fast, slow, mult, j, 8, "nrm"));
-				if (j < count - 1) {
-					fields.add(getCandleField(
-						DB.FIELD_BAR_REL_POS, "Relative pos", fast, slow, mult, j, j + 1, 8,
-						"nrm"));
-				}
-
-				/* Sign, continuous from -1 to 1. */
-				fields.add(getCandleField(
-					DB.FIELD_BAR_SIGN, "Sign", fast, slow, mult, j, 8, "nrm"));
-
-			}
-			mapLists.put(key, fields);
+			properties.setObject("fields_averages", fields);
 		}
 		return fields;
 	}
@@ -1261,20 +1100,22 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of fields for slopes.
 	 */
 	public List<Field> getFieldListSlopes(String suffix) {
-		List<Field> fields = mapLists.get("slopes-" + suffix);
+		@SuppressWarnings("unchecked")
+		List<Field> fields = (List<Field>) properties.getObject("fields_slopes_" + suffix);
 		if (fields == null) {
 			fields = new ArrayList<>();
 			String name, header, label;
 			Field field;
 			for (int i = 0; i < averages.size(); i++) {
-				name = getNameSlope(i, suffix);
-				header = getHeaderSlope(i, suffix);
-				label = getLabelSlope(i, suffix);
+				Average avg = averages.get(i);
+				name = Average.getNameSlope(avg, suffix);
+				header = Average.getHeaderSlope(avg, suffix);
+				label = Average.getLabelSlope(avg, suffix);
 				field = DB.field_double(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
-			mapLists.put("slopes-" + suffix, fields);
+			properties.setObject("fields_slopes_" + suffix, fields);
 		}
 		return fields;
 	}
@@ -1287,32 +1128,46 @@ public class StatisticsAverages extends Statistics {
 	 * @return The list of fields for slopes.
 	 */
 	public List<Field> getFieldListSpreads(String suffix) {
-		List<Field> fields = mapLists.get("spreads-" + suffix);
+		@SuppressWarnings("unchecked")
+		List<Field> fields = (List<Field>) properties.getObject("fields_spreads_" + suffix);
 		if (fields == null) {
 			fields = new ArrayList<>();
 			String name, header, label;
 			Field field;
 			for (int i = 0; i < averages.size(); i++) {
+				Average fast = averages.get(i);
 				for (int j = i + 1; j < averages.size(); j++) {
-					name = getNameSpread(i, j, suffix);
-					header = getHeaderSpread(i, j, suffix);
-					label = getLabelSpread(i, j, suffix);
+					Average slow = averages.get(j);
+					name = Average.getNameSpread(fast, slow, suffix);
+					header = Average.getHeaderSpread(fast, slow, suffix);
+					label = Average.getLabelSpread(fast, slow, suffix);
 					field = DB.field_double(name, header, label);
 					field.setStringConverter(getNumberConverter(8));
 					fields.add(field);
 				}
 			}
-			mapLists.put("spreads-" + suffix, fields);
+			properties.setObject("fields_spreads_" + suffix, fields);
 		}
+		return fields;
+	}
+	
+	/**
+	 * @return The list of fields to normalize.
+	 */
+	public List<Field> getFieldListToNormalizeCandles() {
+		List<Field> fields = new ArrayList<>();
+		fields.add(getTableCandles().getField(DB.FIELD_CANDLE_RANGE + "_raw"));
+		fields.add(getTableCandles().getField(DB.FIELD_CANDLE_BODY_FACTOR + "_raw"));
+		fields.add(getTableCandles().getField(DB.FIELD_CANDLE_BODY_POS + "_raw"));
+		fields.add(getTableCandles().getField(DB.FIELD_CANDLE_SIGN + "_raw"));
+		fields.add(getTableCandles().getField(DB.FIELD_CANDLE_REL_POS + "_raw"));
 		return fields;
 	}
 
 	/**
-	 * Return the list of fields to normalize.
-	 * 
 	 * @return The list of fields to normalize.
 	 */
-	public List<Field> getFieldListToNormalize() {
+	public List<Field> getFieldListToNormalizeStates() {
 		List<Field> fields = new ArrayList<>();
 		for (int i = 0; i < getTableStates().getFieldCount(); i++) {
 			Field field = getTableStates().getField(i);
@@ -1321,122 +1176,6 @@ public class StatisticsAverages extends Statistics {
 			}
 		}
 		return fields;
-	}
-
-	/**
-	 * Get the average header.
-	 * 
-	 * @param index The average index.
-	 * @return The header.
-	 */
-	public String getHeaderAverage(int index) {
-		Average avg = averages.get(index);
-		return "Avg " + avg.toString();
-	}
-
-	/**
-	 * Return the header of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param header The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param mult   Count multiplier.
-	 * @param index  The index.
-	 * @return The name of the candle.
-	 */
-	public String getHeaderCandle(String header, int fast, int slow, int mult, int index) {
-		return getHeaderCandle(header, fast, slow, mult, index, null);
-	}
-
-	/**
-	 * Return the label of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param label  The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param mult   Count multiplier.
-	 * @param index0 The first index.
-	 * @param index1 The second index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getHeaderCandle(
-		String label,
-		int fast,
-		int slow,
-		int mult,
-		int index0,
-		int index1,
-		String suffix) {
-		int count = (slow / fast) * mult;
-		int pad = Numbers.getDigits(count);
-		StringBuilder b = new StringBuilder();
-		b.append(label);
-		b.append(" ");
-		b.append(fast);
-		b.append("/");
-		b.append(slow);
-		b.append(" - ");
-		b.append(Strings.leftPad(Integer.toString(index0), pad, "0"));
-		if (index1 >= 0) {
-			b.append(" vs ");
-			b.append(Strings.leftPad(Integer.toString(index1), pad, "0"));
-		}
-		if (suffix != null) {
-			b.append(" - ");
-			b.append(suffix);
-		}
-		return b.toString();
-	}
-
-	/**
-	 * Return the header of an Open/High/Low/Close... candle that relates the fast
-	 * and slow periods.
-	 * 
-	 * @param header The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param mult   Count multiplier.
-	 * @param index  The index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getHeaderCandle(
-		String header,
-		int fast,
-		int slow,
-		int mult,
-		int index,
-		String suffix) {
-		return getHeaderCandle(header, fast, slow, mult, index, -1, suffix);
-	}
-
-	/**
-	 * Get the slope header.
-	 * 
-	 * @param index  The average index.
-	 * @param suffix The suffix.
-	 * @return The slope header.
-	 */
-	public String getHeaderSlope(int index, String suffix) {
-		Average avg = averages.get(index);
-		return "Slope " + avg.getPeriod() + "_" + suffix;
-	}
-
-	/**
-	 * Get the spread header.
-	 * 
-	 * @param fastIndex The fast average index.
-	 * @param slowIndex The slow average index.
-	 * @param suffix    The suffix.
-	 * @return The spread header.
-	 */
-	public String getHeaderSpread(int fastIndex, int slowIndex, String suffix) {
-		Average fast = averages.get(fastIndex);
-		Average slow = averages.get(slowIndex);
-		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix;
 	}
 
 	/**
@@ -1456,164 +1195,12 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Return the average field label.
-	 * 
-	 * @param index Index of the average.
-	 * @return The label.
-	 */
-	public String getLabelAverage(int index) {
-		Average avg = averages.get(index);
-		return "Average " + avg.toString();
-	}
-
-	/**
-	 * Return the average slope field label.
-	 * 
-	 * @param index  The average index.
-	 * @param suffix The suffix.
-	 * @return The slope field label.
-	 */
-	public String getLabelSlope(int index, String suffix) {
-		Average avg = averages.get(index);
-		return "Slope " + avg.getPeriod() + "_" + suffix + " value";
-	}
-
-	/**
-	 * Return the average spread field label.
-	 * 
-	 * @param indexFast The index of the fast average.
-	 * @param indexSlow The index of the slow average.
-	 * @param suffix    The suffix.
-	 * @return The average spread field label.
-	 */
-	public String getLabelSpread(int indexFast, int indexSlow, String suffix) {
-		Average fast = averages.get(indexFast);
-		Average slow = averages.get(indexSlow);
-		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix + " value";
-	}
-
-	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public String getLegend() {
 		HTML html = new HTML();
 		return html.toString();
-	}
-
-	/**
-	 * Return the name of the average.
-	 * 
-	 * @param index The average index.
-	 * @return The name.
-	 */
-	public String getNameAverage(int index) {
-		Average avg = averages.get(index);
-		return "average_" + avg.getPeriod();
-	}
-
-	/**
-	 * Return the name of an open/high/low/close... candle that relates the fast and
-	 * slow periods.
-	 * 
-	 * @param name  The name (open/high/low/close)
-	 * @param fast  The fast period.
-	 * @param slow  The slow period.
-	 * @param mult  Count multiplier.
-	 * @param index The index.
-	 * @return The name of the candle.
-	 */
-	public String getNameCandle(String name, int fast, int slow, int mult, int index) {
-		return getNameCandle(name, fast, slow, mult, index, null);
-	}
-
-	/**
-	 * Return the name of an open/high/low/close... candle that relates the fast and
-	 * slow periods.
-	 * 
-	 * @param name   The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param mult   Count multiplier.
-	 * @param index  The index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getNameCandle(
-		String name,
-		int fast,
-		int slow,
-		int mult,
-		int index0,
-		int index1,
-		String suffix) {
-		int count = (slow / fast) * mult;
-		int pad = Numbers.getDigits(count);
-		StringBuilder b = new StringBuilder();
-		b.append(name);
-		b.append("_");
-		b.append(fast);
-		b.append("_");
-		b.append(slow);
-		b.append("_");
-		b.append(Strings.leftPad(Integer.toString(index0), pad, "0"));
-		if (index1 >= 0) {
-			b.append("vs");
-			b.append(Strings.leftPad(Integer.toString(index1), pad, "0"));
-		}
-		if (suffix != null) {
-			b.append("_");
-			b.append(suffix);
-		}
-		return b.toString();
-	}
-
-	/**
-	 * Return the name of an open/high/low/close... candle that relates the fast and
-	 * slow periods.
-	 * 
-	 * @param name   The name (open/high/low/close)
-	 * @param fast   The fast period.
-	 * @param slow   The slow period.
-	 * @param mult   Count multiplier.
-	 * @param index  The index.
-	 * @param suffix The suffix.
-	 * @return The name of the candle.
-	 */
-	public String getNameCandle(
-		String name,
-		int fast,
-		int slow,
-		int mult,
-		int index,
-		String suffix) {
-		return getNameCandle(name, fast, slow, mult, index, -1, suffix);
-	}
-
-	/**
-	 * Return the name of the slope.
-	 * 
-	 * @param index  The average index.
-	 * @param suffix The suffix.
-	 * @return The name.
-	 */
-	public String getNameSlope(int index, String suffix) {
-		Average avg = averages.get(index);
-		return "slope_" + avg.getPeriod() + "_" + suffix;
-	}
-
-	/**
-	 * Return the name of the spread field.
-	 * 
-	 * @param indexFast Index of the fas average.
-	 * @param indexSlow Index of the slow average.
-	 * @param suffix    Suffix (raw-nrm)
-	 * @return The name of the spread field.
-	 */
-	public String getNameSpread(int indexFast, int indexSlow, String suffix) {
-		Average fast = averages.get(indexFast);
-		Average slow = averages.get(indexSlow);
-		return "spread_" + fast.getPeriod() + "_" + slow.getPeriod() + "_" + suffix;
 	}
 
 	/**
@@ -1753,14 +1340,14 @@ public class StatisticsAverages extends Statistics {
 	 * @return The percentage for calculated labels.
 	 */
 	public double getPercentCalc() {
-		return percentCalc;
+		return properties.getDouble("percent_calc", 10);
 	}
 
 	/**
 	 * @return The percentage for edited labels.
 	 */
 	public double getPercentEdit() {
-		return percentEdit;
+		return properties.getDouble("percent_edit", 10);
 	}
 
 	/**
@@ -1889,59 +1476,53 @@ public class StatisticsAverages extends Statistics {
 	 * @return The states converter to data structure.
 	 */
 	private DataConverter getStatesDataConverter() {
-		if (statesDataConverter == null) {
-
-			Table table = getTableStates();
-			List<Integer> list = new ArrayList<>();
-
-			/* Open, high, low, close. */
-			list.add(table.getFieldIndex(DB.FIELD_BAR_OPEN));
-			list.add(table.getFieldIndex(DB.FIELD_BAR_HIGH));
-			list.add(table.getFieldIndex(DB.FIELD_BAR_LOW));
-			list.add(table.getFieldIndex(DB.FIELD_BAR_CLOSE));
-
-			List<Field> fields;
-
-			/* Pivot and reference value. */
-			list.add(table.getFieldIndex(DB.FIELD_STATES_PIVOT_CALC));
-			list.add(table.getFieldIndex(DB.FIELD_STATES_REFV_CALC));
-
-			/* Averages. */
-			fields = getFieldListAverages();
-			for (Field field : fields) {
-				int index = table.getFieldIndex(field);
-				list.add(index);
-			}
-
-			/* Slopes normalized. */
-			fields = getFieldListSlopes("nrm");
-			for (Field field : fields) {
-				int index = table.getFieldIndex(field);
-				list.add(index);
-			}
-
-			/* Spreads normalized. */
-			fields = getFieldListSpreads("nrm");
-			for (Field field : fields) {
-				int index = table.getFieldIndex(field);
-				list.add(index);
-			}
-
-			int[] indexes = Lists.toIntegerArray(list);
-			Record masterRecord = getTableStates().getDefaultRecord();
-			statesDataConverter = new DataConverter(masterRecord, indexes);
-
-			/*
-			 * Time of each first average (fast/slow) candle, except one period candle, to
-			 * be stored as data properties.
-			 */
-//			for (int i = 0; i < averages.size() - 1; i++) {
-//				int fast = averages.get(i).getPeriod();
-//				int slow = averages.get(i + 1).getPeriod();
-//				String name = getNameCandle(DB.FIELD_BAR_TIME, fast, slow, 0);
-//				statesDataConverter.addProperty(name);
-//			}
+		DataConverter statesDataConverter =
+			(DataConverter) properties.getObject("states_data_converter");
+		if (statesDataConverter != null) {
+			return statesDataConverter;
 		}
+
+		Table table = getTableStates();
+		List<Integer> list = new ArrayList<>();
+
+		/* Open, high, low, close. */
+		list.add(table.getFieldIndex(DB.FIELD_BAR_OPEN));
+		list.add(table.getFieldIndex(DB.FIELD_BAR_HIGH));
+		list.add(table.getFieldIndex(DB.FIELD_BAR_LOW));
+		list.add(table.getFieldIndex(DB.FIELD_BAR_CLOSE));
+
+		List<Field> fields;
+
+		/* Pivot and reference value. */
+		list.add(table.getFieldIndex(DB.FIELD_STATES_PIVOT_CALC));
+		list.add(table.getFieldIndex(DB.FIELD_STATES_REFV_CALC));
+
+		/* Averages. */
+		fields = getFieldListAverages();
+		for (Field field : fields) {
+			int index = table.getFieldIndex(field);
+			list.add(index);
+		}
+
+		/* Slopes normalized. */
+		fields = getFieldListSlopes("nrm");
+		for (Field field : fields) {
+			int index = table.getFieldIndex(field);
+			list.add(index);
+		}
+
+		/* Spreads normalized. */
+		fields = getFieldListSpreads("nrm");
+		for (Field field : fields) {
+			int index = table.getFieldIndex(field);
+			list.add(index);
+		}
+
+		int[] indexes = Lists.toIntegerArray(list);
+		Record masterRecord = getTableStates().getDefaultRecord();
+		statesDataConverter = new DataConverter(masterRecord, indexes);
+
+		properties.setObject("states_data_converter", statesDataConverter);
 		return statesDataConverter;
 	}
 
@@ -1949,10 +1530,12 @@ public class StatisticsAverages extends Statistics {
 	 * @return The states list persistor.
 	 */
 	private ListPersistor getStatesListPersistor() {
-		if (statesListPersistor == null) {
-			statesListPersistor = new ListPersistor(getTableStates().getPersistor());
+		ListPersistor persistor = (ListPersistor) properties.getObject("states_list_persistor");
+		if (persistor == null) {
+			persistor = new ListPersistor(getTableStates().getPersistor());
+			properties.setObject("states_list_persistor", persistor);
 		}
-		return statesListPersistor;
+		return persistor;
 	}
 
 	/**
@@ -1970,6 +1553,68 @@ public class StatisticsAverages extends Statistics {
 		b.append("-");
 		b.append(getKey());
 		return b.toString();
+	}
+
+	/**
+	 * Return the table with candles detail.
+	 * 
+	 * @return The table with candles detail.
+	 */
+	public Table getTableCandles() {
+
+		Table tableCandles = (Table) properties.getObject("table_candles");
+		if (tableCandles != null) {
+			return tableCandles;
+		}
+
+		tableCandles = new Table();
+
+		Instrument instrument = getInstrument();
+		Period period = getPeriod();
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix() + "_cnd");
+
+		tableCandles.setSchema(DB.schema_server());
+		tableCandles.setName(name);
+
+		/* Key, time parent, size and order. */
+		tableCandles.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time parent"));
+		tableCandles.addField(DB.field_integer(DB.FIELD_CANDLE_SIZE, "Size"));
+		tableCandles.addField(DB.field_integer(DB.FIELD_CANDLE_NORDER, "Order"));
+
+		/* Time, open high, low close candle. */
+		tableCandles.addField(DB.field_long(DB.FIELD_CANDLE_TIME, "Time"));
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_OPEN, "Open"));
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_HIGH, "High"));
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_LOW, "Low"));
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_CLOSE, "Close"));
+
+		/* Raw values. */
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_RANGE + "_raw", "Range raw"));
+		tableCandles.addField(
+			DB.field_double(DB.FIELD_CANDLE_BODY_FACTOR + "_raw", "Body factor raw"));
+		tableCandles.addField(
+			DB.field_double(DB.FIELD_CANDLE_BODY_POS + "_raw", "Body pos raw"));
+		tableCandles.addField(
+			DB.field_double(DB.FIELD_CANDLE_REL_POS + "_raw", "Rel pos raw"));
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_SIGN + "_raw", "Sign raw"));
+
+		/* Normalized values. */
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_RANGE + "_nrm", "Range nrm"));
+		tableCandles.addField(
+			DB.field_double(DB.FIELD_CANDLE_BODY_FACTOR + "_nrm", "Body factor nrm"));
+		tableCandles.addField(
+			DB.field_double(DB.FIELD_CANDLE_BODY_POS + "_nrm", "Body pos nrm"));
+		tableCandles.addField(
+			DB.field_double(DB.FIELD_CANDLE_REL_POS + "_nrm", "Rel pos nrm"));
+		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_SIGN + "_nrm", "Sign nrm"));
+
+		tableCandles.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
+		tableCandles.getField(DB.FIELD_CANDLE_SIZE).setPrimaryKey(true);
+		tableCandles.getField(DB.FIELD_CANDLE_NORDER).setPrimaryKey(true);
+
+		View view = tableCandles.getSimpleView(tableCandles.getPrimaryKey());
+		tableCandles.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+		return tableCandles;
 	}
 
 	/**
@@ -1992,6 +1637,8 @@ public class StatisticsAverages extends Statistics {
 	 * @return The ranges table.
 	 */
 	public Table getTableRanges() {
+
+		Table tableRanges = (Table) properties.getObject("table_ranges");
 		if (tableRanges != null) {
 			return tableRanges;
 		}
@@ -2010,21 +1657,19 @@ public class StatisticsAverages extends Statistics {
 		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum"));
 		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average"));
 		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev"));
-		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_AVG_STD_10, "Avg Std 1.0"));
-		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_AVG_STD_20, "Avg Std 2.0"));
 
 		tableRanges.getField(DB.FIELD_RANGE_MINIMUM).setDisplayDecimals(8);
 		tableRanges.getField(DB.FIELD_RANGE_MAXIMUM).setDisplayDecimals(8);
 		tableRanges.getField(DB.FIELD_RANGE_AVERAGE).setDisplayDecimals(8);
 		tableRanges.getField(DB.FIELD_RANGE_STDDEV).setDisplayDecimals(8);
-		tableRanges.getField(DB.FIELD_RANGE_AVG_STD_10).setDisplayDecimals(2);
-		tableRanges.getField(DB.FIELD_RANGE_AVG_STD_20).setDisplayDecimals(2);
 
 		/* Primary key. */
 		tableRanges.getField(DB.FIELD_RANGE_NAME).setPrimaryKey(true);
 
 		View view = tableRanges.getComplexView(tableRanges.getPrimaryKey());
 		tableRanges.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+
+		properties.setObject("table_ranges", tableRanges);
 		return tableRanges;
 	}
 
@@ -2036,6 +1681,7 @@ public class StatisticsAverages extends Statistics {
 		List<Table> tables = new ArrayList<>();
 		tables.add(getTableRanges());
 		tables.add(getTableStates());
+		tables.add(getTableCandles());
 		return tables;
 	}
 
@@ -2045,6 +1691,8 @@ public class StatisticsAverages extends Statistics {
 	 * @return The table.
 	 */
 	public Table getTableStates() {
+
+		Table tableStates = (Table) properties.getObject("table_states");
 		if (tableStates != null) {
 			return tableStates;
 		}
@@ -2146,16 +1794,16 @@ public class StatisticsAverages extends Statistics {
 		}
 
 		/* Candle fields. */
-		for (int i = 0; i < averages.size(); i++) {
-			String grpName = getCandleGroupName(i);
-			String grpTitle = getCandleGroupTitle(i);
-			FieldGroup group = new FieldGroup(ndx++, grpName, grpTitle);
-			fields = getFieldListCandles(i);
-			for (Field field : fields) {
-				field.setFieldGroup(group);
-				tableStates.addField(field);
-			}
-		}
+//		for (int i = 0; i < averages.size(); i++) {
+//			String grpName = getCandleGroupName(i);
+//			String grpTitle = getCandleGroupTitle(i);
+//			FieldGroup group = new FieldGroup(ndx++, grpName, grpTitle);
+//			fields = getFieldListCandles(i);
+//			for (Field field : fields) {
+//				field.setFieldGroup(group);
+//				tableStates.addField(field);
+//			}
+//		}
 
 		/* Control flags. */
 		FieldGroup grpControls = new FieldGroup(ndx++, "controls", "Controls");
@@ -2171,7 +1819,8 @@ public class StatisticsAverages extends Statistics {
 
 		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
 		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
-		
+
+		properties.setObject("table_states", tableStates);
 		return tableStates;
 	}
 
@@ -2203,9 +1852,9 @@ public class StatisticsAverages extends Statistics {
 		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
 		averages.clear();
 		averages.addAll(handler.averages);
-		barsAhead = handler.barsAhead;
-		percentCalc = handler.percentCalc;
-		percentEdit = handler.percentEdit;
+		properties.setInteger("bars_ahead", handler.barsAhead);
+		properties.setDouble("percent_calc", handler.percentCalc);
+		properties.setDouble("percent_edit", handler.percentEdit);
 	}
 
 	/**
@@ -2233,8 +1882,8 @@ public class StatisticsAverages extends Statistics {
 			}
 		}
 		/* Must have positive bars ahead. */
-		if (barsAhead <= 0) {
-			throw new IllegalArgumentException("Invalid bars ahead for zig-zag " + barsAhead);
+		if (getBarsAhead() <= 0) {
+			throw new IllegalArgumentException("Invalid bars ahead for zig-zag " + getBarsAhead());
 		}
 	}
 }

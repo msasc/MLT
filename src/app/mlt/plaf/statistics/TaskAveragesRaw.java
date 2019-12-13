@@ -19,11 +19,18 @@ package app.mlt.plaf.statistics;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
 
+import com.mlt.db.Condition;
+import com.mlt.db.Criteria;
+import com.mlt.db.Field;
+import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.Record;
 import com.mlt.db.RecordIterator;
 import com.mlt.db.Table;
+import com.mlt.db.Value;
 import com.mlt.desktop.Option;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.Instrument;
@@ -40,7 +47,7 @@ import app.mlt.plaf.DB;
  * @author Miquel Sas
  */
 public class TaskAveragesRaw extends TaskAverages {
-
+	
 	/**
 	 * Constructor.
 	 * 
@@ -85,14 +92,19 @@ public class TaskAveragesRaw extends TaskAverages {
 			}
 		}
 
+		/* Delete candles after the last states, if any. */
+		deleteCandles();
+
 		/* States and ticker tables. */
-		Table states = stats.getTableStates();
-		Table ticker = DB.table_ticker(stats.getInstrument(), stats.getPeriod());
+		Persistor statesPersistor = stats.getTableStates().getPersistor();
+		Table tickerTable = DB.table_ticker(stats.getInstrument(), stats.getPeriod());
+		Persistor tickerPersistor = tickerTable.getPersistor();
+		Persistor candlesPersistor = stats.getTableCandles().getPersistor();
 
 		/* Count and retrieve already calculated. */
 		calculateTotalWork();
 		long totalWork = getTotalWork();
-		long calculated = states.getPersistor().count(null);
+		long calculated = statesPersistor.count(null);
 
 		/* If already all calculated, do nothing. */
 		if (calculated == totalWork) {
@@ -108,8 +120,9 @@ public class TaskAveragesRaw extends TaskAverages {
 		long workDone = 0;
 		FixedSizeList<Double> avgBuffer = new FixedSizeList<>(maxPeriod);
 		FixedSizeList<Record> rcBuffer = new FixedSizeList<>(maxPeriod);
-		RecordIterator iter = ticker.getPersistor().iterator(null, ticker.getPrimaryKey());
+		RecordIterator iter = tickerPersistor.iterator(null, tickerTable.getPrimaryKey());
 		Record rcPrev = null;
+		List<Callable<Void>> insertor = new ArrayList<>();
 		while (iter.hasNext()) {
 
 			/* Check cancel requested. */
@@ -145,7 +158,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			}
 
 			/* Statistics record. */
-			Record rcStat = states.getDefaultRecord();
+			Record rcStat = statesPersistor.getDefaultRecord();
 			rcStat.setValue(DB.FIELD_BAR_TIME, rcTick.getValue(DB.FIELD_BAR_TIME));
 			rcStat.setValue(DB.FIELD_BAR_OPEN, rcTick.getValue(DB.FIELD_BAR_OPEN));
 			rcStat.setValue(DB.FIELD_BAR_HIGH, rcTick.getValue(DB.FIELD_BAR_HIGH));
@@ -154,9 +167,9 @@ public class TaskAveragesRaw extends TaskAverages {
 
 			/* Calculate averages. */
 			for (int i = 0; i < averages.size(); i++) {
-				Average average = averages.get(i);
-				double value = average.getAverage(avgBuffer);
-				String name = stats.getNameAverage(i);
+				Average avg = averages.get(i);
+				double value = avg.getAverage(avgBuffer);
+				String name = Average.getNameAverage(avg);
 				rcStat.setValue(name, value);
 			}
 
@@ -165,110 +178,107 @@ public class TaskAveragesRaw extends TaskAverages {
 				rcPrev = rcStat;
 			}
 			for (int i = 0; i < averages.size(); i++) {
-				String nameAverage = stats.getNameAverage(i);
+				Average avg = averages.get(i);
+				String nameAverage = Average.getNameAverage(avg);
 				double prev = rcPrev.getValue(nameAverage).getDouble();
 				double curr = rcStat.getValue(nameAverage).getDouble();
 				double slope = 0;
 				if (prev != 0) {
 					slope = (curr / prev) - 1;
 				}
-				String nameSlope = stats.getNameSlope(i, "raw");
+				String nameSlope = Average.getNameSlope(avg, "raw");
 				rcStat.setValue(nameSlope, slope);
 			}
 
 			/* Calculate raw spreads. */
 			for (int i = 0; i < averages.size(); i++) {
-				String nameFast = stats.getNameAverage(i);
+				Average fast = averages.get(i);
+				String nameFast = Average.getNameAverage(fast);
 				double avgFast = rcStat.getValue(nameFast).getDouble();
 				for (int j = i + 1; j < averages.size(); j++) {
-					String nameSlow = stats.getNameAverage(j);
+					Average slow = averages.get(j);
+					String nameSlow = Average.getNameAverage(slow);
 					double avgSlow = rcStat.getValue(nameSlow).getDouble();
 					double spread = (avgFast / avgSlow) - 1;
-					String nameSpread = stats.getNameSpread(i, j, "raw");
+					String nameSpread = Average.getNameSpread(fast, slow, "raw");
 					rcStat.setValue(nameSpread, spread);
 				}
 			}
 
+			/* If not achieved work done, just register previous record and continue. */
+			if (workDone <= calculated) {
+				rcPrev = rcStat;
+				continue;
+			}
+			
+			/* Insert. */
+			insertor.add(new Record.Insert(rcStat, statesPersistor));
+
 			/* Calculate candles raw values. */
 			for (int i = 0; i < averages.size(); i++) {
-				int fast = (i == 0 ? 1 : averages.get(i - 1).getPeriod());
-				int slow = averages.get(i).getPeriod();
-				int mult = averages.size() - i;
-				List<Data> candles = getCandles(fast, slow, mult, rcBuffer);
+				int size = stats.getCandleSize(i);
+				int count = stats.getCandleCount(i);
+				List<Data> candles = getCandles(size, count, rcBuffer);
 				for (int j = 0; j < candles.size(); j++) {
 
 					Data candle = candles.get(j);
+					Record rc = candlesPersistor.getDefaultRecord();
+					rc.setValue(DB.FIELD_BAR_TIME, rcTick.getValue(DB.FIELD_BAR_TIME));
+					rc.setValue(DB.FIELD_CANDLE_SIZE, new Value(size));
+					rc.setValue(DB.FIELD_CANDLE_NORDER, new Value(j));
+					rc.setValue(DB.FIELD_CANDLE_TIME, new Value(candle.getTime()));
+					rc.setValue(DB.FIELD_CANDLE_OPEN, new Value(OHLC.getOpen(candle)));
+					rc.setValue(DB.FIELD_CANDLE_HIGH, new Value(OHLC.getHigh(candle)));
+					rc.setValue(DB.FIELD_CANDLE_LOW, new Value(OHLC.getLow(candle)));
+					rc.setValue(DB.FIELD_CANDLE_CLOSE, new Value(OHLC.getClose(candle)));
 
-					String time = stats.getNameCandle(DB.FIELD_BAR_TIME, fast, slow, mult, j);
-					rcStat.setValue(time, candle.getTime());
-
-					String open = stats.getNameCandle(DB.FIELD_BAR_OPEN, fast, slow, mult, j);
-					rcStat.setValue(open, OHLC.getOpen(candle));
-
-					String high = stats.getNameCandle(DB.FIELD_BAR_HIGH, fast, slow, mult, j);
-					rcStat.setValue(high, OHLC.getHigh(candle));
-
-					String low = stats.getNameCandle(DB.FIELD_BAR_LOW, fast, slow, mult, j);
-					rcStat.setValue(low, OHLC.getLow(candle));
-
-					String close = stats.getNameCandle(DB.FIELD_BAR_CLOSE, fast, slow, mult, j);
-					rcStat.setValue(close, OHLC.getClose(candle));
-
-					String range =
-						stats.getNameCandle(DB.FIELD_BAR_RANGE, fast, slow, mult, j, "raw");
-					rcStat.setValue(range, OHLC.getRange(candle));
-
-					String bodyFactor =
-						stats.getNameCandle(DB.FIELD_BAR_BODY_FACTOR, fast, slow, mult, j, "raw");
-					rcStat.setValue(bodyFactor, OHLC.getBodyFactor(candle));
-
-					String bodyPos =
-						stats.getNameCandle(DB.FIELD_BAR_BODY_POS, fast, slow, mult, j, "raw");
-					rcStat.setValue(bodyPos, OHLC.getBodyPosition(candle));
-
-					String sign =
-						stats.getNameCandle(DB.FIELD_BAR_SIGN, fast, slow, mult, j, "raw");
-					rcStat.setValue(sign, OHLC.getSign(candle));
-
+					String range = DB.FIELD_CANDLE_RANGE + "_raw";
+					rc.setValue(range, new Value(OHLC.getRange(candle)));
+					String bodyFactor = DB.FIELD_CANDLE_BODY_FACTOR + "_raw";
+					rc.setValue(bodyFactor, new Value(OHLC.getBodyFactor(candle)));
+					String bodyPos = DB.FIELD_CANDLE_BODY_POS + "_raw";
+					rc.setValue(bodyPos, new Value(OHLC.getBodyPosition(candle)));
+					String sign = DB.FIELD_CANDLE_SIGN + "_raw";
+					rc.setValue(sign, new Value(OHLC.getSign(candle)));
 					if (j < candles.size() - 1) {
 						Data previous = candles.get(j + 1);
-						String center =
-							stats.getNameCandle(
-								DB.FIELD_BAR_REL_POS, fast, slow, mult, j, j + 1, "raw");
-						rcStat.setValue(center, OHLC.getRelativePositions(candle, previous));
+						String center = DB.FIELD_CANDLE_REL_POS + "_raw";
+						rc.setValue(center, new Value(OHLC.getRelativePositions(candle, previous)));
 					}
+					insertor.add(new Record.Insert(rc, candlesPersistor));
 				}
 			}
 
 			/* Register previous record and calculated (modulus). */
 			rcPrev = rcStat;
 
-			/* Insert if passed already calculated. */
-			if (workDone > calculated) {
-				states.getPersistor().insert(rcStat);
+			/* Passed already calculated, do insert. */
+			if (insertor.size() >= 100) {
+				ForkJoinPool.commonPool().invokeAll(insertor);
+				insertor.clear();
 			}
 		}
 		iter.close();
+		if (!insertor.isEmpty()) {
+			ForkJoinPool.commonPool().invokeAll(insertor);
+			insertor.clear();
+		}
 	}
 
 	/**
-	 * Return the list of candles between periods.
-	 * 
-	 * @param fast   Fast period.
-	 * @param slow   Slow period.
-	 * @param mult   Count muñtiplier.
+	 * @param size   Candle size.
+	 * @param count  Number of candles.
 	 * @param buffer Buffer of records.
-	 * @return The list of candles.
+	 * @return The list of candles between periods.
 	 */
-	private List<Data> getCandles(int fast, int slow, int mult, FixedSizeList<Record> buffer) {
+	private List<Data> getCandles(int size, int count, FixedSizeList<Record> buffer) {
 		List<Data> candles = new ArrayList<>();
-		int count = (slow / fast) * mult;
 		for (int i = 0; i < count; i++) {
-			int start = buffer.size() - (fast * (i + 1));
+			int start = buffer.size() - (size * (i + 1));
 			if (start < 0) {
 				start = 0;
 			}
-			int end = start + fast - 1;
+			int end = start + size - 1;
 			if (end >= buffer.size()) {
 				end = buffer.size() - 1;
 			}
@@ -301,4 +311,34 @@ public class TaskAveragesRaw extends TaskAverages {
 		return candles;
 	}
 
+	/**
+	 * Delete eventual candles after the last states time.
+	 */
+	private void deleteCandles() throws Throwable {
+		long time = getLastStatesTime();
+		Persistor persistor = stats.getTableCandles().getPersistor();
+		Field fTIME = persistor.getField(DB.FIELD_BAR_TIME);
+		Criteria criteria = new Criteria();
+		criteria.add(Condition.fieldGT(fTIME, new Value(time)));
+		persistor.delete(criteria);
+	}
+
+	/**
+	 * @return The last time of the states table.
+	 * @throws Throwable
+	 */
+	private long getLastStatesTime() throws Throwable {
+		long time = 0;
+		Persistor persistor = stats.getTableStates().getPersistor();
+		Field fTIME = persistor.getField(DB.FIELD_BAR_TIME);
+		Order order = new Order();
+		order.add(fTIME, false);
+		RecordIterator iter = persistor.iterator(null, order);
+		if (iter.hasNext()) {
+			Record rc = iter.next();
+			time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
+		}
+		iter.close();
+		return time;
+	}
 }

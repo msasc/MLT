@@ -101,10 +101,6 @@ public class DB {
 		}
 	}
 
-	public static final String FIELD_AVERAGE_TYPE = "avg_type";
-	public static final String FIELD_AVERAGE_PERIOD = "avg_period";
-	public static final String FIELD_AVERAGE_SMOOTHS = "avg_smooths";
-
 	public static final String FIELD_BAR_TIME = "time";
 	public static final String FIELD_BAR_TIME_FMT = "time_fmt";
 	public static final String FIELD_BAR_OPEN = "open";
@@ -112,13 +108,18 @@ public class DB {
 	public static final String FIELD_BAR_LOW = "low";
 	public static final String FIELD_BAR_CLOSE = "close";
 	public static final String FIELD_BAR_VOLUME = "volume";
-	public static final String FIELD_BAR_RANGE = "range";
-	public static final String FIELD_BAR_BODY_FACTOR = "body_factor";
-	public static final String FIELD_BAR_BODY_POS = "body_pos";
-	public static final String FIELD_BAR_REL_POS = "relpos_factor";
-	public static final String FIELD_BAR_SIGN = "sign";
-
-	public static final String FIELD_DATA_FILTER = "data_filter";
+	public static final String FIELD_CANDLE_NORDER = "cnd_norder";
+	public static final String FIELD_CANDLE_TIME = "cnd_time";
+	public static final String FIELD_CANDLE_SIZE = "cnd_size";
+	public static final String FIELD_CANDLE_OPEN = "cnd_open";
+	public static final String FIELD_CANDLE_HIGH = "cnd_high";
+	public static final String FIELD_CANDLE_LOW = "cnd_low";
+	public static final String FIELD_CANDLE_CLOSE = "cnd_close";
+	public static final String FIELD_CANDLE_RANGE = "range";
+	public static final String FIELD_CANDLE_BODY_FACTOR = "body_factor";
+	public static final String FIELD_CANDLE_BODY_POS = "body_pos";
+	public static final String FIELD_CANDLE_REL_POS = "relpos_factor";
+	public static final String FIELD_CANDLE_SIGN = "sign";
 
 	public static final String FIELD_INSTRUMENT_ID = "instr_id";
 	public static final String FIELD_INSTRUMENT_DESC = "instr_desc";
@@ -130,22 +131,16 @@ public class DB {
 	public static final String FIELD_INSTRUMENT_TICK_SCALE = "instr_ticks";
 	public static final String FIELD_INSTRUMENT_VOLUME_SCALE = "instr_vols";
 
-	public static final String FIELD_OFFER_SIDE = "offer_side";
-
-	public static final String FIELD_PERIOD = "period";
 	public static final String FIELD_PERIOD_ID = "period_id";
 	public static final String FIELD_PERIOD_NAME = "period_name";
 	public static final String FIELD_PERIOD_SIZE = "period_size";
 	public static final String FIELD_PERIOD_UNIT_INDEX = "period_unit_index";
 
 	public static final String FIELD_RANGE_NAME = "name";
-	public static final String FIELD_RANGE_PERIOD = "period";
 	public static final String FIELD_RANGE_MINIMUM = "minimum";
 	public static final String FIELD_RANGE_MAXIMUM = "maximum";
 	public static final String FIELD_RANGE_AVERAGE = "average";
 	public static final String FIELD_RANGE_STDDEV = "std_dev";
-	public static final String FIELD_RANGE_AVG_STD_10 = "avg_std_10";
-	public static final String FIELD_RANGE_AVG_STD_20 = "avg_std_20";
 
 	public static final String FIELD_SERVER_ID = "server_id";
 	public static final String FIELD_SERVER_NAME = "server_name";

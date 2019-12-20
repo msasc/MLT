@@ -57,9 +57,9 @@ public class TaskAveragesRanges extends TaskAverages {
 	 */
 	@Override
 	protected long calculateTotalWork() throws Throwable {
-		long totalWork = stats.getFieldListToNormalizeStates().size();
+		long totalWork = stats.getFieldNamesToNormalizeStates().size();
 		List<Average> avgs = stats.getAverages();
-		int candlesNormalize = stats.getFieldListToNormalizeCandles().size();
+		int candlesNormalize = stats.getFieldNamesToNormalizeCandles().size();
 		totalWork += avgs.size() * candlesNormalize;
 		setTotalWork(totalWork);
 		return getTotalWork();
@@ -81,13 +81,14 @@ public class TaskAveragesRanges extends TaskAverages {
 		/* Count. */
 		calculateTotalWork();
 
-		/* Do iterate fields to normalize from states table. */
-		List<Field> fields = null;
+		/* List of names to normalize. */
+		List<String> names;
 
-		fields = stats.getFieldListToNormalizeStates();
+		/* Normalize states. */
+		names = stats.getFieldNamesToNormalizeStates();
 		long totalWork = getTotalWork();
 		long workDone = 0;
-		for (int i = 0; i < fields.size(); i++) {
+		for (int i = 0; i < names.size(); i++) {
 
 			/* Check cancel requested. */
 			if (isCancelRequested()) {
@@ -96,10 +97,11 @@ public class TaskAveragesRanges extends TaskAverages {
 			}
 
 			/* Retrieve values. */
-			String name = fields.get(i).getName();
+			String name = names.get(i);
+			String name_raw = DB.name_suffix(name, "raw");
 			workDone += 1;
-			update(name, workDone, totalWork);
-			Record rcView = getDataStates(name);
+			update(name_raw, workDone, totalWork);
+			Record rcView = getDataStates(name_raw);
 			double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
 			double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
 			double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
@@ -118,14 +120,14 @@ public class TaskAveragesRanges extends TaskAverages {
 			return;
 		}
 
-		/* Do iterate fields to normalize from candles table. */
-		fields = stats.getFieldListToNormalizeCandles();
+		/* Normalize candles. */
+		names = stats.getFieldNamesToNormalizeCandles();
 		int pad = stats.getCandlePad();
 		List<Average> avgs = stats.getAverages();
 		for (int i = 0; i < avgs.size(); i++) {
 
 			int size = stats.getCandleSize(i);
-			for (int j = 0; j < fields.size(); j++) {
+			for (int j = 0; j < names.size(); j++) {
 
 				/* Check cancel requested. */
 				if (isCancelRequested()) {
@@ -134,19 +136,20 @@ public class TaskAveragesRanges extends TaskAverages {
 				}
 
 				/* Retrieve values. */
-				String name = fields.get(j).getName();
-				String namePad = name + "_" + Strings.leftPad(Integer.toString(size), pad, "0");
+				String name = names.get(j);
+				String name_raw = DB.name_suffix(name, "raw");
+				String name_pad = name + "_" + Strings.leftPad(Integer.toString(size), pad, "0");
 				workDone += 1;
-				update(name, workDone, totalWork);
+				update(name_raw, workDone, totalWork);
 
-				Record rcView = getDataCandles(size, name);
+				Record rcView = getDataCandles(size, name_raw);
 				double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
 				double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
 				double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
 				double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
 
 				Record record = ranges.getDefaultRecord();
-				record.setValue(DB.FIELD_RANGE_NAME, namePad);
+				record.setValue(DB.FIELD_RANGE_NAME, name_pad);
 				record.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
 				record.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
 				record.setValue(DB.FIELD_RANGE_AVERAGE, average);

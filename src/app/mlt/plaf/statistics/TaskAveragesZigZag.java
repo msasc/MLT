@@ -17,6 +17,11 @@
 
 package app.mlt.plaf.statistics;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
+
 import com.mlt.db.Criteria;
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Persistor;
@@ -91,6 +96,7 @@ public class TaskAveragesZigZag extends TaskAverages {
 		int lastPivot = 0;
 		int lastIndex = -1;
 		/* Iterate states. */
+		List<Callable<Void>> concurrents = new ArrayList<>();
 		for (int i = 0; i < listPersistor.size(); i++) {
 
 			/* Check cancel requested. */
@@ -171,7 +177,6 @@ public class TaskAveragesZigZag extends TaskAverages {
 			/* Check that pivot, if set, is the inverse of last one. */
 			if (pivot != 0 && lastPivot != 0) {
 				if (pivot == lastPivot) {
-//					throw new IllegalStateException("Illegal state: pivot repeated");
 					pivot = 0;
 				}
 			}
@@ -179,13 +184,21 @@ public class TaskAveragesZigZag extends TaskAverages {
 			/* Update. */
 			rcStates.setValue(DB.FIELD_STATES_PIVOT_CALC, pivot);
 			rcStates.setValue(DB.FIELD_STATES_PIVOT_EDIT, pivot);
-			persistor.update(rcStates);
+			concurrents.add(new Record.Update(rcStates, persistor));
+			if (concurrents.size() >= 100) {
+				ForkJoinPool.commonPool().invokeAll(concurrents);
+				concurrents.clear();
+			}
 			
 			/* Register last pivot. */
 			if (pivot != 0) {
 				lastPivot = pivot;
 				lastIndex = i;
 			}
+		}
+		if (!concurrents.isEmpty()) {
+			ForkJoinPool.commonPool().invokeAll(concurrents);
+			concurrents.clear();
 		}
 	}
 

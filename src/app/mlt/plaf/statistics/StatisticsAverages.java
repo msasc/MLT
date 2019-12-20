@@ -293,6 +293,7 @@ public class StatisticsAverages extends Statistics {
 			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesZigZag(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesLabelsCalc(StatisticsAverages.this));
 			frame.show();
 		}
 
@@ -1044,9 +1045,9 @@ public class StatisticsAverages extends Statistics {
 		int mult = averages.size() - index;
 		int count = (slow / fast) * mult;
 		return count;
-		
+
 	}
-	
+
 	/**
 	 * @return The pad for candles size in names.
 	 */
@@ -1067,7 +1068,7 @@ public class StatisticsAverages extends Statistics {
 		int size = (index == 0 ? 1 : averages.get(index - 1).getPeriod());
 		return size;
 	}
-	
+
 	/**
 	 * Return the list of average fields.
 	 * 
@@ -1080,9 +1081,9 @@ public class StatisticsAverages extends Statistics {
 			fields = new ArrayList<>();
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
-				String name = Average.getNameAverage(avg);
-				String header = Average.getHeaderAverage(avg);
-				String label = Average.getLabelAverage(avg);
+				String name = DB.name_average(avg);
+				String header = DB.header_average(avg);
+				String label = DB.label_average(avg);
 				Field field = DB.field_double(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
@@ -1108,9 +1109,9 @@ public class StatisticsAverages extends Statistics {
 			Field field;
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
-				name = Average.getNameSlope(avg, suffix);
-				header = Average.getHeaderSlope(avg, suffix);
-				label = Average.getLabelSlope(avg, suffix);
+				name = DB.name_slope(avg, suffix);
+				header = DB.header_slope(avg, suffix);
+				label = DB.label_slope(avg, suffix);
 				field = DB.field_double(name, header, label);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
@@ -1138,9 +1139,9 @@ public class StatisticsAverages extends Statistics {
 				Average fast = averages.get(i);
 				for (int j = i + 1; j < averages.size(); j++) {
 					Average slow = averages.get(j);
-					name = Average.getNameSpread(fast, slow, suffix);
-					header = Average.getHeaderSpread(fast, slow, suffix);
-					label = Average.getLabelSpread(fast, slow, suffix);
+					name = DB.name_spread(fast, slow, suffix);
+					header = DB.header_spread(fast, slow, suffix);
+					label = DB.label_spread(fast, slow, suffix);
 					field = DB.field_double(name, header, label);
 					field.setStringConverter(getNumberConverter(8));
 					fields.add(field);
@@ -1150,7 +1151,7 @@ public class StatisticsAverages extends Statistics {
 		}
 		return fields;
 	}
-	
+
 	/**
 	 * @return The list of fields to normalize.
 	 */
@@ -1176,6 +1177,33 @@ public class StatisticsAverages extends Statistics {
 			}
 		}
 		return fields;
+	}
+
+	/**
+	 * @return The list of field names to normalize.
+	 */
+	public List<String> getFieldNamesToNormalizeCandles() {
+		List<String> names = new ArrayList<>();
+		names.add(DB.FIELD_CANDLE_RANGE);
+		names.add(DB.FIELD_CANDLE_BODY_FACTOR);
+		names.add(DB.FIELD_CANDLE_BODY_POS);
+		names.add(DB.FIELD_CANDLE_SIGN);
+		names.add(DB.FIELD_CANDLE_REL_POS);
+		return names;
+	}
+
+	/**
+	 * @return The list of field names to normalize.
+	 */
+	public List<String> getFieldNamesToNormalizeStates() {
+		List<String> names = new ArrayList<>();
+		for (int i = 0; i < getTableStates().getFieldCount(); i++) {
+			String name = getTableStates().getField(i).getName();
+			if (name.endsWith("_raw")) {
+				names.add(name.substring(0, name.length() - 4));
+			}
+		}
+		return names;
 	}
 
 	/**
@@ -1571,7 +1599,7 @@ public class StatisticsAverages extends Statistics {
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
-		String name = DB.name_ticker(instrument, period, getTableNameSuffix() + "_cnd");
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix("cnd"));
 
 		tableCandles.setSchema(DB.schema_server());
 		tableCandles.setName(name);
@@ -1588,26 +1616,33 @@ public class StatisticsAverages extends Statistics {
 		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_LOW, "Low"));
 		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_CLOSE, "Close"));
 
+		String range, body_factor, body_pos, rel_pos, sign;
+
 		/* Raw values. */
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_RANGE + "_raw", "Range raw"));
-		tableCandles.addField(
-			DB.field_double(DB.FIELD_CANDLE_BODY_FACTOR + "_raw", "Body factor raw"));
-		tableCandles.addField(
-			DB.field_double(DB.FIELD_CANDLE_BODY_POS + "_raw", "Body pos raw"));
-		tableCandles.addField(
-			DB.field_double(DB.FIELD_CANDLE_REL_POS + "_raw", "Rel pos raw"));
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_SIGN + "_raw", "Sign raw"));
+		range = DB.name_suffix(DB.FIELD_CANDLE_RANGE, "raw");
+		body_factor = DB.name_suffix(DB.FIELD_CANDLE_BODY_FACTOR, "raw");
+		body_pos = DB.name_suffix(DB.FIELD_CANDLE_BODY_POS, "raw");
+		rel_pos = DB.name_suffix(DB.FIELD_CANDLE_REL_POS, "raw");
+		sign = DB.name_suffix(DB.FIELD_CANDLE_SIGN, "raw");
+		tableCandles.addField(DB.field_double(range, "Range raw"));
+		tableCandles.addField(DB.field_double(body_factor, "Body factor raw"));
+		tableCandles.addField(DB.field_double(body_pos, "Body pos raw"));
+		tableCandles.addField(DB.field_double(rel_pos, "Rel pos raw"));
+		tableCandles.addField(DB.field_double(sign, "Sign raw"));
 
 		/* Normalized values. */
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_RANGE + "_nrm", "Range nrm"));
-		tableCandles.addField(
-			DB.field_double(DB.FIELD_CANDLE_BODY_FACTOR + "_nrm", "Body factor nrm"));
-		tableCandles.addField(
-			DB.field_double(DB.FIELD_CANDLE_BODY_POS + "_nrm", "Body pos nrm"));
-		tableCandles.addField(
-			DB.field_double(DB.FIELD_CANDLE_REL_POS + "_nrm", "Rel pos nrm"));
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_SIGN + "_nrm", "Sign nrm"));
+		range = DB.name_suffix(DB.FIELD_CANDLE_RANGE, "nrm");
+		body_factor = DB.name_suffix(DB.FIELD_CANDLE_BODY_FACTOR, "nrm");
+		body_pos = DB.name_suffix(DB.FIELD_CANDLE_BODY_POS, "nrm");
+		rel_pos = DB.name_suffix(DB.FIELD_CANDLE_REL_POS, "nrm");
+		sign = DB.name_suffix(DB.FIELD_CANDLE_SIGN, "nrm");
+		tableCandles.addField(DB.field_double(range, "Range nrm"));
+		tableCandles.addField(DB.field_double(body_factor, "Body factor nrm"));
+		tableCandles.addField(DB.field_double(body_pos, "Body pos nrm"));
+		tableCandles.addField(DB.field_double(rel_pos, "Rel pos nrm"));
+		tableCandles.addField(DB.field_double(sign, "Sign nrm"));
 
+		/* Primary key. */
 		tableCandles.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
 		tableCandles.getField(DB.FIELD_CANDLE_SIZE).setPrimaryKey(true);
 		tableCandles.getField(DB.FIELD_CANDLE_NORDER).setPrimaryKey(true);
@@ -1620,15 +1655,17 @@ public class StatisticsAverages extends Statistics {
 	/**
 	 * Return the table name suffix.
 	 * 
+	 * @param suffix Last suffix.
 	 * @return The table name suffix.
 	 */
-	private String getTableNameSuffix() {
-		StringBuilder suffix = new StringBuilder();
-		suffix.append("_");
-		suffix.append(getId());
-		suffix.append("_");
-		suffix.append(getKey());
-		return suffix.toString().toLowerCase();
+	private String getTableNameSuffix(String suffix) {
+		StringBuilder b = new StringBuilder();
+		b.append(getId());
+		b.append("_");
+		b.append(getKey());
+		b.append("_");
+		b.append(suffix);
+		return b.toString().toLowerCase();
 	}
 
 	/**
@@ -1647,7 +1684,7 @@ public class StatisticsAverages extends Statistics {
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
-		String name = DB.name_ticker(instrument, period, getTableNameSuffix() + "_rng");
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix("rng"));
 
 		tableRanges.setSchema(DB.schema_server());
 		tableRanges.setName(name);
@@ -1701,7 +1738,7 @@ public class StatisticsAverages extends Statistics {
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
-		String name = DB.name_ticker(instrument, period, getTableNameSuffix() + "_src");
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix("src"));
 
 		tableStates.setSchema(DB.schema_server());
 		tableStates.setName(name);
@@ -1792,18 +1829,6 @@ public class StatisticsAverages extends Statistics {
 			field.setFieldGroup(grpSpreadsNrm);
 			tableStates.addField(field);
 		}
-
-		/* Candle fields. */
-//		for (int i = 0; i < averages.size(); i++) {
-//			String grpName = getCandleGroupName(i);
-//			String grpTitle = getCandleGroupTitle(i);
-//			FieldGroup group = new FieldGroup(ndx++, grpName, grpTitle);
-//			fields = getFieldListCandles(i);
-//			for (Field field : fields) {
-//				field.setFieldGroup(group);
-//				tableStates.addField(field);
-//			}
-//		}
 
 		/* Control flags. */
 		FieldGroup grpControls = new FieldGroup(ndx++, "controls", "Controls");

@@ -47,6 +47,7 @@ import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
+import app.mlt.plaf.statistics.Average;
 import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**
@@ -337,6 +338,30 @@ public class DB {
 		return field;
 	}
 
+	public static String header_average(Average avg) {
+		return "Avg " + avg.toString();
+	}
+
+	public static String header_slope(Average avg, String suffix) {
+		return "Slope " + avg.getPeriod() + "_" + suffix;
+	}
+
+	public static String header_spread(Average fast, Average slow, String suffix) {
+		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix;
+	}
+
+	public static String label_average(Average avg) {
+		return "Average " + avg.toString();
+	}
+
+	public static String label_slope(Average avg, String suffix) {
+		return "Slope " + avg.getPeriod() + "_" + suffix + " value";
+	}
+
+	public static String label_spread(Average fast, Average slow, String suffix) {
+		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix + " value";
+	}
+
 	/**
 	 * Lookup an instrument.
 	 * 
@@ -396,6 +421,30 @@ public class DB {
 		lookup.setTitle("Select the ticker");
 		Record record = lookup.lookupRecord();
 		return record;
+	}
+
+	public static String name_average(Average avg) {
+		return "average_" + avg.getPeriod();
+	}
+
+	public static String name_slope(Average avg) {
+		return "slope_" + avg.getPeriod();
+	}
+
+	public static String name_slope(Average avg, String suffix) {
+		return name_suffix(name_slope(avg), suffix);
+	}
+
+	public static String name_spread(Average fast, Average slow) {
+		return "spread_" + fast.getPeriod() + "_" + slow.getPeriod();
+	}
+
+	public static String name_spread(Average fast, Average slow, String suffix) {
+		return name_suffix(name_spread(fast, slow), suffix);
+	}
+
+	public static String name_suffix(String name, String suffix) {
+		return name + "_" + suffix;
 	}
 
 	/**

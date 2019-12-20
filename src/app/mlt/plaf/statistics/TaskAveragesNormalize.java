@@ -17,21 +17,27 @@
 
 package app.mlt.plaf.statistics;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
 
 import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
 import com.mlt.db.Field;
+import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.Record;
 import com.mlt.db.RecordIterator;
-import com.mlt.db.Table;
 import com.mlt.db.Value;
 import com.mlt.db.ValueMap;
 import com.mlt.desktop.Option;
+import com.mlt.desktop.converters.TimeFmtConverter;
 import com.mlt.ml.function.Normalizer;
+import com.mlt.util.StringConverter;
+import com.mlt.util.Strings;
 
 import app.mlt.plaf.DB;
 
@@ -41,7 +47,10 @@ import app.mlt.plaf.DB;
  * @author Miquel Sas
  */
 public class TaskAveragesNormalize extends TaskAverages {
-	
+
+	/** First time not normalized. */
+	private long firstTimeNotNormalized = -1;
+
 	/**
 	 * Constructor.
 	 * 
@@ -58,7 +67,31 @@ public class TaskAveragesNormalize extends TaskAverages {
 	 */
 	@Override
 	protected long calculateTotalWork() throws Throwable {
-		setTotalWork(stats.getTableStates().getPersistor().count(getSelectCriteria()));
+
+		Persistor persistor;
+
+		persistor = stats.getTableStates().getPersistor();
+		Field fieldTime = persistor.getField(DB.FIELD_BAR_TIME);
+		Field fieldNrm = persistor.getField(DB.FIELD_STATES_NORMALIZED);
+		Criteria criteria = new Criteria();
+		criteria.add(Condition.fieldNE(fieldNrm, new Value("Y")));
+		Order order = new Order();
+		order.add(fieldTime, true);
+		firstTimeNotNormalized = 0;
+		RecordIterator iter = persistor.iterator(null, order);
+		if (iter.hasNext()) {
+			Record rc = iter.next();
+			firstTimeNotNormalized = rc.getValue(DB.FIELD_BAR_TIME).getLong();
+		}
+		iter.close();
+
+		long totalWork = 0;
+		persistor = stats.getTableStates().getPersistor();
+		totalWork += persistor.count(getSelectCriteria(persistor));
+		persistor = stats.getTableCandles().getPersistor();
+		totalWork += persistor.count(getSelectCriteria(persistor));
+
+		setTotalWork(totalWork);
 		return getTotalWork();
 	}
 
@@ -85,24 +118,26 @@ public class TaskAveragesNormalize extends TaskAverages {
 
 		/* Count. */
 		calculateTotalWork();
-
-		/* List of fields to normalize (raw values) and normalizers. */
-		List<Field> fields = stats.getFieldListToNormalizeStates();
-		HashMap<String, Normalizer> mapNormalizers = stats.getNormalizers();
-		if (mapNormalizers.size() != fields.size()) {
-			throw new IllegalStateException("Bad normalizers");
-		}
-		List<Normalizer> normalizers = new ArrayList<>();
-		for (Field field : fields) {
-			normalizers.add(mapNormalizers.get(field.getName()));
-		}
-
-		/* Iterate states. */
+		
+		/* Normalizers. */
+		HashMap<String, Normalizer> normalizers = stats.getNormalizers();
+		
+		/* Names, persistors, order, itertor and concurrent updates. */
+		List<String> names;
+		Persistor persistor;
+		Order order;
+		RecordIterator iter;
+		List<Callable<Void>> concurrents = new ArrayList<>();
+		
+		/* Work tracking. */
 		long totalWork = getTotalWork();
 		long workDone = 0;
-		Table states = stats.getTableStates();
-		RecordIterator iter =
-			states.getPersistor().iterator(getSelectCriteria(), states.getPrimaryKey());
+
+		/* Normalize states. */
+		names = stats.getFieldNamesToNormalizeStates();
+		persistor = stats.getTableStates().getPersistor();
+		order = stats.getTableStates().getPrimaryKey();
+		iter = persistor.iterator(getSelectCriteria(persistor), order);
 		while (iter.hasNext()) {
 
 			/* Check cancel requested. */
@@ -112,47 +147,112 @@ public class TaskAveragesNormalize extends TaskAverages {
 			}
 
 			/* Retrieve record. */
-			Record rcStates = iter.next();
+			Record record = iter.next();
 
 			/* Notify work. */
 			workDone++;
 			if (workDone % 10 == 0 || workDone == totalWork) {
 				StringBuilder b = new StringBuilder();
-				b.append(rcStates.toString(DB.FIELD_BAR_TIME_FMT));
+				b.append(record.toString(DB.FIELD_BAR_TIME_FMT));
 				b.append(", ");
-				b.append(rcStates.toString(DB.FIELD_BAR_OPEN));
+				b.append(record.toString(DB.FIELD_BAR_OPEN));
 				b.append(", ");
-				b.append(rcStates.toString(DB.FIELD_BAR_HIGH));
+				b.append(record.toString(DB.FIELD_BAR_HIGH));
 				b.append(", ");
-				b.append(rcStates.toString(DB.FIELD_BAR_LOW));
+				b.append(record.toString(DB.FIELD_BAR_LOW));
 				b.append(", ");
-				b.append(rcStates.toString(DB.FIELD_BAR_CLOSE));
+				b.append(record.toString(DB.FIELD_BAR_CLOSE));
 				update(b.toString(), workDone, totalWork);
 			}
 
 			/* Fields to normalize. */
-			for (int i = 0; i < fields.size(); i++) {
-				Field field = fields.get(i);
-				String name_raw = field.getName();
-				String name_nrm = name_raw.substring(0, name_raw.length() - 3) + "nrm";
-				Normalizer normalizer = normalizers.get(i);
-				double value_raw = rcStates.getValue(name_raw).getDouble();
+			for (int i = 0; i < names.size(); i++) {
+				String name = names.get(i);
+				String name_raw = DB.name_suffix(name, "raw");
+				String name_nrm = DB.name_suffix(name, "nrm");
+				Normalizer normalizer = normalizers.get(name);
+				double value_raw = record.getValue(name_raw).getDouble();
 				double value_nrm = normalizer.normalize(value_raw);
-				rcStates.setValue(name_nrm, value_nrm);
+				record.setValue(name_nrm, value_nrm);
 			}
-			rcStates.setValue(DB.FIELD_STATES_NORMALIZED, "Y");
+			record.setValue(DB.FIELD_STATES_NORMALIZED, "Y");
+			concurrents.add(new Record.Update(record, persistor));
 
 			/* Update. */
-			states.getPersistor().update(rcStates);
+			if (concurrents.size() >= 100) {
+				ForkJoinPool.commonPool().invokeAll(concurrents);
+				concurrents.clear();
+			}
 		}
 		iter.close();
+		if (!concurrents.isEmpty()) {
+			ForkJoinPool.commonPool().invokeAll(concurrents);
+			concurrents.clear();
+		}
+		
+		/* Normalize candles. */
+		String pattern = stats.getPeriod().getTimeFmtPattern();
+		StringConverter converter = new TimeFmtConverter(new SimpleDateFormat(pattern));
+		int pad = stats.getCandlePad();
+		names = stats.getFieldNamesToNormalizeCandles();
+		persistor = stats.getTableCandles().getPersistor();
+		order = stats.getTableCandles().getPrimaryKey();
+		iter = persistor.iterator(getSelectCriteria(persistor), order);
+		while (iter.hasNext()) {
+
+			/* Check cancel requested. */
+			if (isCancelRequested()) {
+				setCancelled();
+				break;
+			}
+
+			/* Retrieve record. */
+			Record record = iter.next();
+			long time = record.getValue(DB.FIELD_BAR_TIME).getLong();
+			String timeFmt = converter.valueToString(time);
+			int size = record.getValue(DB.FIELD_CANDLE_SIZE).getInteger();
+			String sizePad = Strings.leftPad(Integer.toString(size), pad, "0");
+
+			/* Notify work. */
+			workDone++;
+			if (workDone % 10 == 0 || workDone == totalWork) {
+				StringBuilder b = new StringBuilder();
+				b.append(timeFmt);
+				b.append(" - ");
+				b.append(sizePad);
+				update(b.toString(), workDone, totalWork);
+			}
+
+			/* Fields to normalize. */
+			for (int i = 0; i < names.size(); i++) {
+				String name = names.get(i);
+				String name_raw = DB.name_suffix(name, "raw");
+				String name_nrm = DB.name_suffix(name, "nrm");
+				String name_get = name + "_" + sizePad;
+				Normalizer normalizer = normalizers.get(name_get);
+				double value_raw = record.getValue(name_raw).getDouble();
+				double value_nrm = normalizer.normalize(value_raw);
+				record.setValue(name_nrm, value_nrm);
+			}
+			concurrents.add(new Record.Update(record, persistor));
+
+			/* Update. */
+			if (concurrents.size() >= 100) {
+				ForkJoinPool.commonPool().invokeAll(concurrents);
+				concurrents.clear();
+			}
+		}
+		iter.close();
+		if (!concurrents.isEmpty()) {
+			ForkJoinPool.commonPool().invokeAll(concurrents);
+			concurrents.clear();
+		}
 	}
 
-	private Criteria getSelectCriteria() {
-		Persistor persistor = stats.getTableStates().getPersistor();
-		Field field = persistor.getField(DB.FIELD_STATES_NORMALIZED);
+	private Criteria getSelectCriteria(Persistor persistor) {
+		Field field = persistor.getField(DB.FIELD_BAR_TIME);
 		Criteria criteria = new Criteria();
-		criteria.add(Condition.fieldNE(field, new Value("Y")));
+		criteria.add(Condition.fieldGE(field, new Value(firstTimeNotNormalized)));
 		return criteria;
 	}
 }

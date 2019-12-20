@@ -122,7 +122,7 @@ public class TaskAveragesRaw extends TaskAverages {
 		FixedSizeList<Record> rcBuffer = new FixedSizeList<>(maxPeriod);
 		RecordIterator iter = tickerPersistor.iterator(null, tickerTable.getPrimaryKey());
 		Record rcPrev = null;
-		List<Callable<Void>> insertor = new ArrayList<>();
+		List<Callable<Void>> concurrents = new ArrayList<>();
 		while (iter.hasNext()) {
 
 			/* Check cancel requested. */
@@ -169,7 +169,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
 				double value = avg.getAverage(avgBuffer);
-				String name = Average.getNameAverage(avg);
+				String name = DB.name_average(avg);
 				rcStat.setValue(name, value);
 			}
 
@@ -179,28 +179,28 @@ public class TaskAveragesRaw extends TaskAverages {
 			}
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
-				String nameAverage = Average.getNameAverage(avg);
+				String nameAverage = DB.name_average(avg);
 				double prev = rcPrev.getValue(nameAverage).getDouble();
 				double curr = rcStat.getValue(nameAverage).getDouble();
 				double slope = 0;
 				if (prev != 0) {
 					slope = (curr / prev) - 1;
 				}
-				String nameSlope = Average.getNameSlope(avg, "raw");
+				String nameSlope = DB.name_slope(avg, "raw");
 				rcStat.setValue(nameSlope, slope);
 			}
 
 			/* Calculate raw spreads. */
 			for (int i = 0; i < averages.size(); i++) {
 				Average fast = averages.get(i);
-				String nameFast = Average.getNameAverage(fast);
+				String nameFast = DB.name_average(fast);
 				double avgFast = rcStat.getValue(nameFast).getDouble();
 				for (int j = i + 1; j < averages.size(); j++) {
 					Average slow = averages.get(j);
-					String nameSlow = Average.getNameAverage(slow);
+					String nameSlow = DB.name_average(slow);
 					double avgSlow = rcStat.getValue(nameSlow).getDouble();
 					double spread = (avgFast / avgSlow) - 1;
-					String nameSpread = Average.getNameSpread(fast, slow, "raw");
+					String nameSpread = DB.name_spread(fast, slow, "raw");
 					rcStat.setValue(nameSpread, spread);
 				}
 			}
@@ -212,9 +212,10 @@ public class TaskAveragesRaw extends TaskAverages {
 			}
 			
 			/* Insert. */
-			insertor.add(new Record.Insert(rcStat, statesPersistor));
+			concurrents.add(new Record.Insert(rcStat, statesPersistor));
 
 			/* Calculate candles raw values. */
+			String range, body_factor, body_pos, rel_pos, sign;
 			for (int i = 0; i < averages.size(); i++) {
 				int size = stats.getCandleSize(i);
 				int count = stats.getCandleCount(i);
@@ -232,20 +233,20 @@ public class TaskAveragesRaw extends TaskAverages {
 					rc.setValue(DB.FIELD_CANDLE_LOW, new Value(OHLC.getLow(candle)));
 					rc.setValue(DB.FIELD_CANDLE_CLOSE, new Value(OHLC.getClose(candle)));
 
-					String range = DB.FIELD_CANDLE_RANGE + "_raw";
+					range = DB.name_suffix(DB.FIELD_CANDLE_RANGE, "raw");
 					rc.setValue(range, new Value(OHLC.getRange(candle)));
-					String bodyFactor = DB.FIELD_CANDLE_BODY_FACTOR + "_raw";
-					rc.setValue(bodyFactor, new Value(OHLC.getBodyFactor(candle)));
-					String bodyPos = DB.FIELD_CANDLE_BODY_POS + "_raw";
-					rc.setValue(bodyPos, new Value(OHLC.getBodyPosition(candle)));
-					String sign = DB.FIELD_CANDLE_SIGN + "_raw";
+					body_factor = DB.name_suffix(DB.FIELD_CANDLE_BODY_FACTOR, "raw");
+					rc.setValue(body_factor, new Value(OHLC.getBodyFactor(candle)));
+					body_pos = DB.name_suffix(DB.FIELD_CANDLE_BODY_POS, "raw");
+					rc.setValue(body_pos, new Value(OHLC.getBodyPosition(candle)));
+					sign = DB.name_suffix(DB.FIELD_CANDLE_SIGN, "raw");
 					rc.setValue(sign, new Value(OHLC.getSign(candle)));
 					if (j < candles.size() - 1) {
 						Data previous = candles.get(j + 1);
-						String center = DB.FIELD_CANDLE_REL_POS + "_raw";
-						rc.setValue(center, new Value(OHLC.getRelativePositions(candle, previous)));
+						rel_pos = DB.name_suffix(DB.FIELD_CANDLE_REL_POS, "raw");
+						rc.setValue(rel_pos, new Value(OHLC.getRelativePositions(candle, previous)));
 					}
-					insertor.add(new Record.Insert(rc, candlesPersistor));
+					concurrents.add(new Record.Insert(rc, candlesPersistor));
 				}
 			}
 
@@ -253,15 +254,15 @@ public class TaskAveragesRaw extends TaskAverages {
 			rcPrev = rcStat;
 
 			/* Passed already calculated, do insert. */
-			if (insertor.size() >= 100) {
-				ForkJoinPool.commonPool().invokeAll(insertor);
-				insertor.clear();
+			if (concurrents.size() >= 100) {
+				ForkJoinPool.commonPool().invokeAll(concurrents);
+				concurrents.clear();
 			}
 		}
 		iter.close();
-		if (!insertor.isEmpty()) {
-			ForkJoinPool.commonPool().invokeAll(insertor);
-			insertor.clear();
+		if (!concurrents.isEmpty()) {
+			ForkJoinPool.commonPool().invokeAll(concurrents);
+			concurrents.clear();
 		}
 	}
 
@@ -325,7 +326,6 @@ public class TaskAveragesRaw extends TaskAverages {
 
 	/**
 	 * @return The last time of the states table.
-	 * @throws Throwable
 	 */
 	private long getLastStatesTime() throws Throwable {
 		long time = 0;

@@ -58,10 +58,14 @@ public class TimeFmtConverter implements StringConverter {
 	 */
 	@Override
 	public String valueToString(Object obj) throws ParseException {
-		if (!(obj instanceof Value)) {
-			return obj.toString();
+		if (obj instanceof Value) {
+			Value value = (Value) obj;
+			return format.format(new Timestamp(value.getLong()));
 		}
-		Value value = (Value) obj;
-		return format.format(new Timestamp(value.getLong()));
+		if (obj instanceof Long) {
+			Long value = (Long) obj;
+			return format.format(new Timestamp(value));
+		}
+		return obj.toString();
 	}
 }

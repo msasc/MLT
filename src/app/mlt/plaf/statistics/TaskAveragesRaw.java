@@ -67,7 +67,9 @@ public class TaskAveragesRaw extends TaskAverages {
 		Instrument instrument = stats.getInstrument();
 		Period period = stats.getPeriod();
 		Persistor persistor = DB.persistor_ticker(instrument, period);
-		setTotalWork(persistor.count(null));
+		long totalWork = persistor.count(null);
+		totalWork += (stats.getCandleCount() * totalWork);
+		setTotalWork(totalWork);
 		return getTotalWork();
 	}
 
@@ -116,13 +118,15 @@ public class TaskAveragesRaw extends TaskAverages {
 		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
 
 		/* Iterate ticker. */
-		int modulus = 10;
 		long workDone = 0;
 		FixedSizeList<Double> avgBuffer = new FixedSizeList<>(maxPeriod);
 		FixedSizeList<Record> rcBuffer = new FixedSizeList<>(maxPeriod);
 		RecordIterator iter = tickerPersistor.iterator(null, tickerTable.getPrimaryKey());
 		Record rcPrev = null;
 		List<Callable<Void>> concurrents = new ArrayList<>();
+		int poolSize = 200;
+		int maxConcurrent = (1 + stats.getCandleCount()) * 400;
+		ForkJoinPool pool = new ForkJoinPool(poolSize);
 		while (iter.hasNext()) {
 
 			/* Check cancel requested. */
@@ -135,22 +139,23 @@ public class TaskAveragesRaw extends TaskAverages {
 			Record rcTick = iter.next();
 			avgBuffer.add(rcTick.getValue(DB.FIELD_BAR_CLOSE).getDouble());
 			rcBuffer.add(rcTick);
+			
+			StringBuilder b = new StringBuilder();
+			b.append(rcTick.toString(DB.FIELD_BAR_TIME_FMT));
+			b.append(", ");
+			b.append(rcTick.toString(DB.FIELD_BAR_OPEN));
+			b.append(", ");
+			b.append(rcTick.toString(DB.FIELD_BAR_HIGH));
+			b.append(", ");
+			b.append(rcTick.toString(DB.FIELD_BAR_LOW));
+			b.append(", ");
+			b.append(rcTick.toString(DB.FIELD_BAR_CLOSE));
+			int index = 0;
+			
 
 			/* Notify work. */
 			workDone++;
-			if (workDone % modulus == 0 || workDone == totalWork) {
-				StringBuilder b = new StringBuilder();
-				b.append(rcTick.toString(DB.FIELD_BAR_TIME_FMT));
-				b.append(", ");
-				b.append(rcTick.toString(DB.FIELD_BAR_OPEN));
-				b.append(", ");
-				b.append(rcTick.toString(DB.FIELD_BAR_HIGH));
-				b.append(", ");
-				b.append(rcTick.toString(DB.FIELD_BAR_LOW));
-				b.append(", ");
-				b.append(rcTick.toString(DB.FIELD_BAR_CLOSE));
-				update(b.toString(), workDone, totalWork);
-			}
+			update(b.toString() + " - " + index++, workDone, totalWork);
 
 			/* If workDone < calculated - (maxPeriod * 2), do nothig. */
 			if (workDone < calculated - (maxPeriod * 2)) {
@@ -221,6 +226,10 @@ public class TaskAveragesRaw extends TaskAverages {
 				int count = stats.getCandleCount(i);
 				List<Data> candles = getCandles(size, count, rcBuffer);
 				for (int j = 0; j < candles.size(); j++) {
+					
+					/* Notify work. */
+					workDone++;
+					update(b.toString() + " - " + index++, workDone, totalWork);
 
 					Data candle = candles.get(j);
 					Record rc = candlesPersistor.getDefaultRecord();
@@ -254,16 +263,17 @@ public class TaskAveragesRaw extends TaskAverages {
 			rcPrev = rcStat;
 
 			/* Passed already calculated, do insert. */
-			if (concurrents.size() >= 100) {
-				ForkJoinPool.commonPool().invokeAll(concurrents);
+			if (concurrents.size() >= maxConcurrent) {
+				pool.invokeAll(concurrents);
 				concurrents.clear();
 			}
 		}
 		iter.close();
 		if (!concurrents.isEmpty()) {
-			ForkJoinPool.commonPool().invokeAll(concurrents);
+			pool.invokeAll(concurrents);
 			concurrents.clear();
 		}
+		pool.shutdown();
 	}
 
 	/**

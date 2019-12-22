@@ -97,7 +97,7 @@ public class PostgreSQLAdapter extends DBEngineAdapter {
 		Types type = field.getType();
 		switch (type) {
 		case BOOLEAN:
-			b.append("CHAR(1)");
+			b.append("CHAR(1) DEFAULT 'N'");
 			break;
 		case BYTEARRAY:
 			b.append("BYTEA");

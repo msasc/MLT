@@ -28,7 +28,6 @@ import javax.swing.KeyStroke;
 import com.mlt.db.FieldGroup;
 import com.mlt.db.Order;
 import com.mlt.db.Persistor;
-import com.mlt.db.PersistorDDL;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
@@ -103,6 +102,8 @@ public class ActionStatistics extends ActionRun {
 				rc.setValue(DB.FIELD_INSTRUMENT_ID, new Value(instrument.getId()));
 				rc.setValue(DB.FIELD_PERIOD_ID, new Value(period.getId()));
 				rc.setValue(DB.FIELD_PERIOD_NAME, new Value(period.toString()));
+				rc.setValue(DB.FIELD_PERIOD_UNIT_INDEX, new Value(period.getUnit().ordinal()));
+				rc.setValue(DB.FIELD_PERIOD_SIZE, new Value(period.getSize()));
 
 				/* Form. */
 				FormRecordPane form = new FormRecordPane(rc);
@@ -156,13 +157,12 @@ public class ActionStatistics extends ActionRun {
 				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
 
 				/* Do create the tables again. */
-				PersistorDDL ddl = persistor.getDDL();
 				List<Table> tables = stats.getTables();
 				for (Table table : tables) {
-					if (ddl.existsTable(table)) {
-						ddl.dropTable(table);
+					if (DB.ddl().existsTable(table)) {
+						DB.ddl().dropTable(table);
 					}
-					ddl.buildTable(table);
+					DB.ddl().buildTable(table);
 				}
 
 				/* Save the record. */
@@ -210,11 +210,10 @@ public class ActionStatistics extends ActionRun {
 				Persistor persistor = DB.persistor_statistics();
 
 				/* Drop the tables. */
-				PersistorDDL ddl = persistor.getDDL();
 				List<Table> tables = stats.getTables();
 				for (Table table : tables) {
-					if (ddl.existsTable(table)) {
-						ddl.dropTable(table);
+					if (DB.ddl().existsTable(table)) {
+						DB.ddl().dropTable(table);
 					}
 				}
 
@@ -247,6 +246,8 @@ public class ActionStatistics extends ActionRun {
 				if (rc == null) {
 					return;
 				}
+				/* Current statistics. */
+				StatisticsAverages statsPrev = StatisticsAverages.getStatistics(rc);
 				
 				/* Form. */
 				FormRecordPane form = new FormRecordPane(rc);
@@ -296,6 +297,38 @@ public class ActionStatistics extends ActionRun {
 				if (Option.isCancel(option)) {
 					return;
 				}
+				
+				/* Modified statistics. */
+				StatisticsAverages statsNext = StatisticsAverages.getStatistics(form.getRecord());
+				
+				/* Add to model. */
+				RecordSet recordSet = tableStats.getModel().getRecordSet();
+				int index = tableStats.getSelectedRow();
+				recordSet.set(index, form.getRecord());
+				
+				/* Persistor. */
+				Persistor persistor = DB.persistor_statistics();
+				persistor.update(form.getRecord());
+				
+				if (StatisticsAverages.checkAveragesModified(statsPrev, statsNext)) {
+					List<Table> tables;
+					
+					tables = statsPrev.getTables();
+					for (Table table : tables) {
+						if (DB.ddl().existsTable(table)) {
+							DB.ddl().dropTable(table);
+						}
+					}
+					
+					tables = statsNext.getTables();
+					for (Table table : tables) {
+						if (DB.ddl().existsTable(table)) {
+							DB.ddl().dropTable(table);
+						}
+						DB.ddl().buildTable(table);
+					}
+				}
+				
 
 			} catch (Exception exc) {
 				Logs.catching(exc);

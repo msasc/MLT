@@ -75,10 +75,12 @@ public class TableRecord extends Table {
 	 * @return The selected record.
 	 */
 	public Record getSelectedRecord() {
-		int viewRow = getSelectedRow();
-		if (viewRow >= 0) {
-			int modelRow = convertRowIndexToModel(viewRow);
-			return getModel().getRecordSet().get(modelRow);
+		if (!getModel().getRecordSet().isEmpty()) {
+			int viewRow = getSelectedRow();
+			if (viewRow >= 0) {
+				int modelRow = convertRowIndexToModel(viewRow);
+				return getModel().getRecordSet().get(modelRow);
+			}
 		}
 		return null;
 	}

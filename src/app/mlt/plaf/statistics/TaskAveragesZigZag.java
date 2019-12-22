@@ -28,7 +28,6 @@ import com.mlt.db.Persistor;
 import com.mlt.db.Record;
 import com.mlt.db.Value;
 import com.mlt.db.ValueMap;
-import com.mlt.desktop.Option;
 
 import app.mlt.plaf.DB;
 
@@ -44,7 +43,7 @@ public class TaskAveragesZigZag extends TaskAverages {
 	/** List persistor on table states. */
 	private ListPersistor listPersistor;
 	/** Number of bars ahead, backward or forward. */
-	private int barsAhead = 100;
+	private int barsAhead;
 	/** Alias to eval zigzag. */
 	private String alias = DB.FIELD_BAR_CLOSE;
 
@@ -59,6 +58,7 @@ public class TaskAveragesZigZag extends TaskAverages {
 		setTitle(stats.getLabel() + " - Calculate zig-zag");
 		persistor = stats.getTableStates().getPersistor();
 		listPersistor = new ListPersistor(persistor);
+		barsAhead = stats.getBarsAhead();
 	}
 
 	/**
@@ -77,26 +77,26 @@ public class TaskAveragesZigZag extends TaskAverages {
 	@Override
 	protected void compute() throws Throwable {
 		
-		/* Query option. */
-		Option option = queryOption();
-		if (option.equals("CANCEL")) {
-			throw new Exception("Calculation cancelled by user.");
-		}
-		if (option.equals("START")) {
-			ValueMap map = new ValueMap();
-			map.put(DB.FIELD_STATES_PIVOT_CALC, new Value(0));
-			map.put(DB.FIELD_STATES_REFV_CALC, new Value(0.0));
-			persistor.update(new Criteria(), map);
-		}
+		/* Reset values. */
+		ValueMap map = new ValueMap();
+		map.put(DB.FIELD_STATES_PIVOT_CALC, new Value(0));
+		map.put(DB.FIELD_STATES_REFV_CALC, new Value(0.0));
+		persistor.update(new Criteria(), map);
 		
 		/* Count. */
 		calculateTotalWork();
-
-		/* Last pivot tracked and its index. */
-		int lastPivot = 0;
-		int lastIndex = -1;
-		/* Iterate states. */
+		
+		/* Pool. */
+		int poolSize = 50;
+		int maxConcurrent = 500;
+		ForkJoinPool pool = new ForkJoinPool(poolSize);
 		List<Callable<Void>> concurrents = new ArrayList<>();
+
+		/* Previous pivot tracked and its index. */
+		int previousPivot = 0;
+		int previousIndex = -1;
+		
+		/* Iterate states. */
 		for (int i = 0; i < listPersistor.size(); i++) {
 
 			/* Check cancel requested. */
@@ -120,11 +120,20 @@ public class TaskAveragesZigZag extends TaskAverages {
 			b.append(", ");
 			b.append(rcStates.toString(DB.FIELD_BAR_CLOSE));
 			update(b.toString(), (i + 1), listPersistor.size());
-
+			
 			/* Current value to compare with. */
 			double value = rcStates.getValue(alias).getDouble();
 			rcStates.setValue(DB.FIELD_STATES_REFV_CALC, value);
-			rcStates.setValue(DB.FIELD_STATES_REFV_EDIT, value);
+
+			/* Process only if bars ahead on both sides. */
+			if (i < barsAhead || listPersistor.size() - 1 - i < barsAhead) {
+				concurrents.add(new Record.Update(rcStates, persistor));
+				if (concurrents.size() >= maxConcurrent) {
+					pool.invokeAll(concurrents);
+					concurrents.clear();
+				}
+				continue;
+			}
 
 			/* Move backward up to bars ahead or last pivot index. */
 			boolean topBackward = true;
@@ -138,7 +147,10 @@ public class TaskAveragesZigZag extends TaskAverages {
 				if (check < value) {
 					bottomBackward = false;
 				}
-				if (lastIndex >= 0 && j == lastIndex) {
+				if (!topBackward && !bottomBackward) {
+					break;
+				}
+				if (previousIndex >= 0 && j == previousIndex) {
 					break;
 				}
 			}
@@ -155,6 +167,9 @@ public class TaskAveragesZigZag extends TaskAverages {
 				if (check < value) {
 					bottomForward = false;
 				}
+				if (!topForward && !bottomForward) {
+					break;
+				}
 			}
 
 			/* Check state. */
@@ -164,42 +179,39 @@ public class TaskAveragesZigZag extends TaskAverages {
 
 			/* Set zigzag pivot. */
 			int pivot = 0;
-			/* Track pivot only if at least there are bars ahead on both sides. */
-			if (i >= barsAhead && listPersistor.size() - i > barsAhead) {
+			if ((topForward || bottomForward) && (topBackward || bottomBackward)) {
 				if (topBackward && topForward) {
 					pivot = 1;
 				}
 				if (bottomBackward && bottomForward) {
 					pivot = -1;
 				}
-			}
-			
-			/* Check that pivot, if set, is the inverse of last one. */
-			if (pivot != 0 && lastPivot != 0) {
-				if (pivot == lastPivot) {
-					pivot = 0;
+				if (previousPivot != 0) {
+					if (pivot == previousPivot) {
+						pivot = 0;
+					}
 				}
-			}
-
-			/* Update. */
-			rcStates.setValue(DB.FIELD_STATES_PIVOT_CALC, pivot);
-			rcStates.setValue(DB.FIELD_STATES_PIVOT_EDIT, pivot);
-			concurrents.add(new Record.Update(rcStates, persistor));
-			if (concurrents.size() >= 100) {
-				ForkJoinPool.commonPool().invokeAll(concurrents);
-				concurrents.clear();
 			}
 			
 			/* Register last pivot. */
 			if (pivot != 0) {
-				lastPivot = pivot;
-				lastIndex = i;
+				previousPivot = pivot;
+				previousIndex = i;
+			}
+
+			/* Update. */
+			rcStates.setValue(DB.FIELD_STATES_PIVOT_CALC, pivot);
+			concurrents.add(new Record.Update(rcStates, persistor));
+			if (concurrents.size() >= maxConcurrent) {
+				pool.invokeAll(concurrents);
+				concurrents.clear();
 			}
 		}
 		if (!concurrents.isEmpty()) {
-			ForkJoinPool.commonPool().invokeAll(concurrents);
+			pool.invokeAll(concurrents);
 			concurrents.clear();
 		}
+		pool.shutdown();
 	}
 
 }

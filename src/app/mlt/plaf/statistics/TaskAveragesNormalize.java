@@ -132,6 +132,9 @@ public class TaskAveragesNormalize extends TaskAverages {
 		/* Work tracking. */
 		long totalWork = getTotalWork();
 		long workDone = 0;
+		int poolSize = 200;
+		int maxConcurrent = (1 + stats.getCandleCount()) * 400;
+		ForkJoinPool pool = new ForkJoinPool(poolSize);
 
 		/* Normalize states. */
 		names = stats.getFieldNamesToNormalizeStates();
@@ -179,14 +182,14 @@ public class TaskAveragesNormalize extends TaskAverages {
 			concurrents.add(new Record.Update(record, persistor));
 
 			/* Update. */
-			if (concurrents.size() >= 100) {
-				ForkJoinPool.commonPool().invokeAll(concurrents);
+			if (concurrents.size() >= maxConcurrent) {
+				pool.invokeAll(concurrents);
 				concurrents.clear();
 			}
 		}
 		iter.close();
 		if (!concurrents.isEmpty()) {
-			ForkJoinPool.commonPool().invokeAll(concurrents);
+			pool.invokeAll(concurrents);
 			concurrents.clear();
 		}
 		
@@ -237,16 +240,17 @@ public class TaskAveragesNormalize extends TaskAverages {
 			concurrents.add(new Record.Update(record, persistor));
 
 			/* Update. */
-			if (concurrents.size() >= 100) {
-				ForkJoinPool.commonPool().invokeAll(concurrents);
+			if (concurrents.size() >= maxConcurrent) {
+				pool.invokeAll(concurrents);
 				concurrents.clear();
 			}
 		}
 		iter.close();
 		if (!concurrents.isEmpty()) {
-			ForkJoinPool.commonPool().invokeAll(concurrents);
+			pool.invokeAll(concurrents);
 			concurrents.clear();
 		}
+		pool.shutdown();
 	}
 
 	private Criteria getSelectCriteria(Persistor persistor) {

@@ -110,6 +110,22 @@ public class StatisticsAverages extends Statistics {
 	private static final String KEY_SLOPES = "slopes";
 	private static final String KEY_SPREADS = "spreads";
 	private static final String KEY_ZIGZAG = "zig-zag";
+	
+	public static final boolean checkAveragesModified(
+		StatisticsAverages statsPrev,
+		StatisticsAverages statsNext) {
+		if (statsPrev.averages.size() != statsNext.averages.size()) {
+			return true;
+		}
+		for (int i = 0; i < statsPrev.averages.size(); i++) {
+			Average avgPrev = statsPrev.averages.get(i);
+			Average avgNext = statsNext.averages.get(i);
+			if (!avgPrev.equals(avgNext)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	private static final String KEY_CANDLES(int size) {
 		return "candles-" + size;
@@ -815,9 +831,7 @@ public class StatisticsAverages extends Statistics {
 		@Override
 		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
 
-			/*
-			 * Build the first list of pivots visible.
-			 */
+			/* Build the first list of visible pivots. */
 			List<Pivot> pivots = new ArrayList<>();
 			for (int index = startIndex; index <= endIndex; index++) {
 				if (index < 0 || index > dataList.size()) {
@@ -830,13 +844,7 @@ public class StatisticsAverages extends Statistics {
 					pivots.add(new Pivot(pivot, value, index));
 				}
 			}
-			/*
-			 * Scan from first pivot backward and analyze if there is any other pivot before
-			 * to insert it as the first element of the list. I there is none, then scan up
-			 * to the begining tracking minimum and maximum values and indexes and create
-			 * the appropriate initial pivot.
-			 */
-			boolean anyPivotBefore = false;
+			/* Check any pivot before. */
 			int firstIndex = (!pivots.isEmpty() ? pivots.get(0).index : startIndex);
 			for (int index = firstIndex - 1; index >= 0; index--) {
 				Data data = dataList.get(index);
@@ -844,42 +852,10 @@ public class StatisticsAverages extends Statistics {
 				if (pivot != 0) {
 					double value = data.getValue(indexData);
 					pivots.add(0, new Pivot(pivot, value, index));
-					anyPivotBefore = true;
 					break;
 				}
 			}
-			if (!anyPivotBefore) {
-				double minValue = Numbers.MAX_DOUBLE;
-				double maxValue = Numbers.MIN_DOUBLE;
-				int minIndex = -1;
-				int maxIndex = -1;
-				for (int index = firstIndex - 1; index >= 0; index--) {
-					Data data = dataList.get(index);
-					double value = data.getValue(indexData);
-					if (value < minValue) {
-						minValue = value;
-						minIndex = index;
-					}
-					if (value > maxValue) {
-						maxValue = value;
-						maxIndex = index;
-					}
-				}
-				if (!pivots.isEmpty()) {
-					if (pivots.get(0).pivot == 1) {
-						pivots.add(0, new Pivot(-1, minValue, minIndex));
-					} else {
-						pivots.add(0, new Pivot(1, maxValue, maxIndex));
-					}
-				}
-			}
-			/*
-			 * Scan from last pivot forward and analyze if there is any other pivot after to
-			 * add it as the last element of the list. I there is none, then scan up to the
-			 * end tracking minimum and maximum values and indexes and create the
-			 * appropriate final pivot.
-			 */
-			boolean anyPivotAfter = false;
+			/* Check any pivot after. */
 			int lastIndex = (!pivots.isEmpty() ? pivots.get(pivots.size() - 1).index : endIndex);
 			for (int index = lastIndex + 1; index < dataList.size(); index++) {
 				Data data = dataList.get(index);
@@ -887,39 +863,11 @@ public class StatisticsAverages extends Statistics {
 				if (pivot != 0) {
 					double value = data.getValue(indexData);
 					pivots.add(new Pivot(pivot, value, index));
-					anyPivotAfter = true;
 					break;
 				}
 			}
-			if (!anyPivotAfter) {
-				double minValue = Numbers.MAX_DOUBLE;
-				double maxValue = Numbers.MIN_DOUBLE;
-				int minIndex = -1;
-				int maxIndex = -1;
-				for (int index = lastIndex + 1; index < dataList.size(); index++) {
-					Data data = dataList.get(index);
-					double value = data.getValue(indexData);
-					if (value < minValue) {
-						minValue = value;
-						minIndex = index;
-					}
-					if (value > maxValue) {
-						maxValue = value;
-						maxIndex = index;
-					}
-				}
-				if (!pivots.isEmpty()) {
-					if (pivots.get(pivots.size() - 1).pivot == 1) {
-						pivots.add(new Pivot(-1, minValue, minIndex));
-					} else {
-						pivots.add(new Pivot(1, maxValue, maxIndex));
-					}
-				}
-			}
 
-			/*
-			 * Do plot.
-			 */
+			/* Do plot. */
 			DataContext dc = getContext();
 			Path path = new Path();
 			path.setStroke(new Stroke(2.0));
@@ -1033,6 +981,17 @@ public class StatisticsAverages extends Statistics {
 	 */
 	public int getBarsAhead() {
 		return properties.getInteger("bars_ahead");
+	}
+	
+	/**
+	 * @return The total number od candles per source record.
+	 */
+	public int getCandleCount() {
+		int count = 0;
+		for (int i = 0; i < averages.size(); i++) {
+			count += getCandleCount(i);
+		}
+		return count;
 	}
 
 	/**
@@ -1770,22 +1729,30 @@ public class StatisticsAverages extends Statistics {
 		tableStates.addField(
 			DB.field_data(instrument, DB.FIELD_STATES_REFV_CALC, "Ref-val calc", "Ref value calc"));
 		tableStates.addField(
-			DB.field_data(instrument, DB.FIELD_STATES_REFV_EDIT, "Ref-val edit", "Ref value edit"));
-		tableStates.addField(
 			DB.field_integer(DB.FIELD_STATES_PIVOT_CALC, "Pivot calc", "Pivot calculated"));
-		tableStates.addField(
-			DB.field_integer(DB.FIELD_STATES_PIVOT_EDIT, "Pivot edit", "Pivot edited"));
 		tableStates.addField(
 			DB.field_integer(DB.FIELD_STATES_LABEL_CALC, "Label calc", "Label calculated pivot"));
 		tableStates.addField(
+			DB.field_boolean(DB.FIELD_STATES_LABEL_CALC_SET, "Label calc set", "Label calculated pivot set"));
+		
+		tableStates.addField(
+			DB.field_data(instrument, DB.FIELD_STATES_REFV_EDIT, "Ref-val edit", "Ref value edit"));
+		tableStates.addField(
+			DB.field_integer(DB.FIELD_STATES_PIVOT_EDIT, "Pivot edit", "Pivot edited"));
+		tableStates.addField(
 			DB.field_integer(DB.FIELD_STATES_LABEL_EDIT, "Label edit", "Label edited pivot"));
+		tableStates.addField(
+			DB.field_boolean(DB.FIELD_STATES_LABEL_EDIT_SET, "Label edit set", "Label edited pivot set"));
 
 		tableStates.getField(DB.FIELD_STATES_REFV_CALC).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_REFV_EDIT).setFieldGroup(grpLabels);
 		tableStates.getField(DB.FIELD_STATES_PIVOT_CALC).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_PIVOT_EDIT).setFieldGroup(grpLabels);
 		tableStates.getField(DB.FIELD_STATES_LABEL_CALC).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_LABEL_CALC_SET).setFieldGroup(grpLabels);
+		
+		tableStates.getField(DB.FIELD_STATES_REFV_EDIT).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_PIVOT_EDIT).setFieldGroup(grpLabels);
 		tableStates.getField(DB.FIELD_STATES_LABEL_EDIT).setFieldGroup(grpLabels);
+		tableStates.getField(DB.FIELD_STATES_LABEL_EDIT_SET).setFieldGroup(grpLabels);
 
 		/* Lists of fields. */
 		List<Field> fields;

@@ -148,11 +148,15 @@ public class DB {
 	public static final String FIELD_SERVER_TITLE = "server_title";
 
 	public static final String FIELD_STATES_LABEL_CALC = "label_calc";
-	public static final String FIELD_STATES_LABEL_EDIT = "label_edit";
+	public static final String FIELD_STATES_LABEL_CALC_SET = "label_calc_set";
 	public static final String FIELD_STATES_PIVOT_CALC = "pivot_calc";
-	public static final String FIELD_STATES_PIVOT_EDIT = "pivot_edit";
 	public static final String FIELD_STATES_REFV_CALC = "refv_calc";
+	
+	public static final String FIELD_STATES_LABEL_EDIT = "label_edit";
+	public static final String FIELD_STATES_LABEL_EDIT_SET = "label_edit_set";
+	public static final String FIELD_STATES_PIVOT_EDIT = "pivot_edit";
 	public static final String FIELD_STATES_REFV_EDIT = "refv_edit";
+	
 	public static final String FIELD_STATES_NORMALIZED = "normalized";
 	public static final String FIELD_STATES_PIVOT_SCANNED = "pivot_scanned";
 
@@ -180,6 +184,33 @@ public class DB {
 			ddl = new DBPersistorDDL(MLT.getDBEngine());
 		}
 		return ddl;
+	}
+
+	/**
+	 * 
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @return The field definition for a double value.
+	 */
+	public static Field field_boolean(String name, String header) {
+		return field_boolean(name, header, header);
+	}
+
+	/**
+	 * @param name   Field name.
+	 * @param header The field header.
+	 * @param label  The field label.
+	 * @return The field definition for a double value.
+	 */
+	public static Field field_boolean(String name, String header, String label) {
+		Field field = new Field();
+		field.setName(name);
+		field.setAlias(name);
+		field.setType(Types.BOOLEAN);
+		field.setHeader(header);
+		field.setLabel(label);
+		field.setTitle(label);
+		return field;
 	}
 
 	/**

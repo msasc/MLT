@@ -174,7 +174,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
 				double value = avg.getAverage(avgBuffer);
-				String name = DB.name_average(avg);
+				String name = stats.getNameAverage(avg);
 				rcStat.setValue(name, value);
 			}
 
@@ -184,28 +184,28 @@ public class TaskAveragesRaw extends TaskAverages {
 			}
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
-				String nameAverage = DB.name_average(avg);
+				String nameAverage = stats.getNameAverage(avg);
 				double prev = rcPrev.getValue(nameAverage).getDouble();
 				double curr = rcStat.getValue(nameAverage).getDouble();
 				double slope = 0;
 				if (prev != 0) {
 					slope = (curr / prev) - 1;
 				}
-				String nameSlope = DB.name_slope(avg, "raw");
+				String nameSlope = stats.getNameSlope(avg, "raw");
 				rcStat.setValue(nameSlope, slope);
 			}
 
 			/* Calculate raw spreads. */
 			for (int i = 0; i < averages.size(); i++) {
 				Average fast = averages.get(i);
-				String nameFast = DB.name_average(fast);
+				String nameFast = stats.getNameAverage(fast);
 				double avgFast = rcStat.getValue(nameFast).getDouble();
 				for (int j = i + 1; j < averages.size(); j++) {
 					Average slow = averages.get(j);
-					String nameSlow = DB.name_average(slow);
+					String nameSlow = stats.getNameAverage(slow);
 					double avgSlow = rcStat.getValue(nameSlow).getDouble();
 					double spread = (avgFast / avgSlow) - 1;
-					String nameSpread = DB.name_spread(fast, slow, "raw");
+					String nameSpread = stats.getNameSpread(fast, slow, "raw");
 					rcStat.setValue(nameSpread, spread);
 				}
 			}
@@ -242,17 +242,17 @@ public class TaskAveragesRaw extends TaskAverages {
 					rc.setValue(DB.FIELD_CANDLE_LOW, new Value(OHLC.getLow(candle)));
 					rc.setValue(DB.FIELD_CANDLE_CLOSE, new Value(OHLC.getClose(candle)));
 
-					range = DB.name_suffix(DB.FIELD_CANDLE_RANGE, "raw");
+					range = stats.getNameSuffix(DB.FIELD_CANDLE_RANGE, "raw");
 					rc.setValue(range, new Value(OHLC.getRange(candle)));
-					body_factor = DB.name_suffix(DB.FIELD_CANDLE_BODY_FACTOR, "raw");
+					body_factor = stats.getNameSuffix(DB.FIELD_CANDLE_BODY_FACTOR, "raw");
 					rc.setValue(body_factor, new Value(OHLC.getBodyFactor(candle)));
-					body_pos = DB.name_suffix(DB.FIELD_CANDLE_BODY_POS, "raw");
+					body_pos = stats.getNameSuffix(DB.FIELD_CANDLE_BODY_POS, "raw");
 					rc.setValue(body_pos, new Value(OHLC.getBodyPosition(candle)));
-					sign = DB.name_suffix(DB.FIELD_CANDLE_SIGN, "raw");
+					sign = stats.getNameSuffix(DB.FIELD_CANDLE_SIGN, "raw");
 					rc.setValue(sign, new Value(OHLC.getSign(candle)));
 					if (j < candles.size() - 1) {
 						Data previous = candles.get(j + 1);
-						rel_pos = DB.name_suffix(DB.FIELD_CANDLE_REL_POS, "raw");
+						rel_pos = stats.getNameSuffix(DB.FIELD_CANDLE_REL_POS, "raw");
 						rc.setValue(rel_pos, new Value(OHLC.getRelativePositions(candle, previous)));
 					}
 					concurrents.add(new Record.Insert(rc, candlesPersistor));

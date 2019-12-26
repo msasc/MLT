@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.graphic;
@@ -52,7 +57,8 @@ public class Path extends Drawing {
 	}
 
 	/**
-	 * Appends the geometry of the specified drawing object to the path, possibly connecting the new geometry to the
+	 * Appends the geometry of the specified drawing object to the path, possibly
+	 * connecting the new geometry to the
 	 * existing path segments with a line segment.
 	 *
 	 * @param drawing The drawing.
@@ -63,15 +69,25 @@ public class Path extends Drawing {
 	}
 
 	/**
-	 * Closes the current subpath by drawing a straight line back to the coordinates of the last moveTo.
+	 * Resets the path to empty.
+	 */
+	public void clear() {
+		path.reset();
+	}
+
+	/**
+	 * Closes the current subpath by drawing a straight line back to the coordinates
+	 * of the last moveTo.
 	 */
 	public void closePath() {
 		path.closePath();
 	}
 
 	/**
-	 * Adds a curved segment, defined by three new points, to the path by drawing a Bézier curve that intersects both
-	 * the current coordinates and the specified coordinates (x3,y3), using the specified points (x1,y1) and (x2,y2) as
+	 * Adds a curved segment, defined by three new points, to the path by drawing a
+	 * Bézier curve that intersects both
+	 * the current coordinates and the specified coordinates (x3,y3), using the
+	 * specified points (x1,y1) and (x2,y2) as
 	 * Bézier control points.
 	 *
 	 * @param x1 The X coordinate of the first Bézier control point.
@@ -91,6 +107,15 @@ public class Path extends Drawing {
 	@Override
 	public Shape getShape() {
 		return path;
+	}
+
+	/**
+	 * Check whether this path is empty.
+	 * 
+	 * @return A boolean.
+	 */
+	public boolean isEmpty() {
+		return path.getPathIterator(null).isDone();
 	}
 
 	/**
@@ -132,8 +157,10 @@ public class Path extends Drawing {
 	}
 
 	/**
-	 * Adds a curved segment, defined by two new points, to the path by drawing a Quadratic curve that intersects both
-	 * the current coordinates and the specified coordinates (x2,y2), using the specified point (x1,y1) as a quadratic
+	 * Adds a curved segment, defined by two new points, to the path by drawing a
+	 * Quadratic curve that intersects both
+	 * the current coordinates and the specified coordinates (x2,y2), using the
+	 * specified point (x1,y1) as a quadratic
 	 * parametric control point.
 	 *
 	 * @param x1 x coord of the quadratic control point.
@@ -143,12 +170,5 @@ public class Path extends Drawing {
 	 */
 	public void quadTo(double x1, double y1, double x2, double y2) {
 		path.quadTo(x1, y1, x2, y2);
-	}
-
-	/**
-	 * Resets the path to empty.
-	 */
-	public void reset() {
-		path.reset();
 	}
 }

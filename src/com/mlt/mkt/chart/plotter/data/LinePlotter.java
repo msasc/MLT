@@ -106,7 +106,7 @@ public class LinePlotter extends DataPlotter {
 						path.setDrawPaint(lastColor);
 						gc.draw(path);
 
-						path.reset();
+						path.clear();
 						path.setDrawPaint(color);
 						path.moveTo(lastX, lastY);
 						path.lineTo(x, y);

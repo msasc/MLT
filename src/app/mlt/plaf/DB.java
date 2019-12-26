@@ -47,7 +47,6 @@ import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
-import app.mlt.plaf.statistics.Average;
 import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**
@@ -109,17 +108,19 @@ public class DB {
 	public static final String FIELD_BAR_LOW = "low";
 	public static final String FIELD_BAR_CLOSE = "close";
 	public static final String FIELD_BAR_VOLUME = "volume";
-	public static final String FIELD_CANDLE_NORDER = "cnd_norder";
-	public static final String FIELD_CANDLE_TIME = "cnd_time";
-	public static final String FIELD_CANDLE_SIZE = "cnd_size";
-	public static final String FIELD_CANDLE_OPEN = "cnd_open";
-	public static final String FIELD_CANDLE_HIGH = "cnd_high";
-	public static final String FIELD_CANDLE_LOW = "cnd_low";
-	public static final String FIELD_CANDLE_CLOSE = "cnd_close";
+	
+	public static final String FIELD_CANDLE_NORDER = "norder";
+	public static final String FIELD_CANDLE_TIME = "time_candle";
+	public static final String FIELD_CANDLE_TIME_FMT = "time_candle_fmt";
+	public static final String FIELD_CANDLE_SIZE = "size";
+	public static final String FIELD_CANDLE_OPEN = "open";
+	public static final String FIELD_CANDLE_HIGH = "high";
+	public static final String FIELD_CANDLE_LOW = "low";
+	public static final String FIELD_CANDLE_CLOSE = "close";
 	public static final String FIELD_CANDLE_RANGE = "range";
-	public static final String FIELD_CANDLE_BODY_FACTOR = "body_factor";
-	public static final String FIELD_CANDLE_BODY_POS = "body_pos";
-	public static final String FIELD_CANDLE_REL_POS = "relpos_factor";
+	public static final String FIELD_CANDLE_BODY_FACTOR = "fbody";
+	public static final String FIELD_CANDLE_BODY_POS = "pbody";
+	public static final String FIELD_CANDLE_REL_POS = "frelpos";
 	public static final String FIELD_CANDLE_SIGN = "sign";
 
 	public static final String FIELD_INSTRUMENT_ID = "instr_id";
@@ -151,12 +152,12 @@ public class DB {
 	public static final String FIELD_STATES_LABEL_CALC_SET = "label_calc_set";
 	public static final String FIELD_STATES_PIVOT_CALC = "pivot_calc";
 	public static final String FIELD_STATES_REFV_CALC = "refv_calc";
-	
+
 	public static final String FIELD_STATES_LABEL_EDIT = "label_edit";
 	public static final String FIELD_STATES_LABEL_EDIT_SET = "label_edit_set";
 	public static final String FIELD_STATES_PIVOT_EDIT = "pivot_edit";
 	public static final String FIELD_STATES_REFV_EDIT = "refv_edit";
-	
+
 	public static final String FIELD_STATES_NORMALIZED = "normalized";
 	public static final String FIELD_STATES_PIVOT_SCANNED = "pivot_scanned";
 
@@ -369,30 +370,6 @@ public class DB {
 		return field;
 	}
 
-	public static String header_average(Average avg) {
-		return "Avg " + avg.toString();
-	}
-
-	public static String header_slope(Average avg, String suffix) {
-		return "Slope " + avg.getPeriod() + "_" + suffix;
-	}
-
-	public static String header_spread(Average fast, Average slow, String suffix) {
-		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix;
-	}
-
-	public static String label_average(Average avg) {
-		return "Average " + avg.toString();
-	}
-
-	public static String label_slope(Average avg, String suffix) {
-		return "Slope " + avg.getPeriod() + "_" + suffix + " value";
-	}
-
-	public static String label_spread(Average fast, Average slow, String suffix) {
-		return "Spread " + fast.getPeriod() + "/" + slow.getPeriod() + " " + suffix + " value";
-	}
-
 	/**
 	 * Lookup an instrument.
 	 * 
@@ -452,30 +429,6 @@ public class DB {
 		lookup.setTitle("Select the ticker");
 		Record record = lookup.lookupRecord();
 		return record;
-	}
-
-	public static String name_average(Average avg) {
-		return "average_" + avg.getPeriod();
-	}
-
-	public static String name_slope(Average avg) {
-		return "slope_" + avg.getPeriod();
-	}
-
-	public static String name_slope(Average avg, String suffix) {
-		return name_suffix(name_slope(avg), suffix);
-	}
-
-	public static String name_spread(Average fast, Average slow) {
-		return "spread_" + fast.getPeriod() + "_" + slow.getPeriod();
-	}
-
-	public static String name_spread(Average fast, Average slow, String suffix) {
-		return name_suffix(name_spread(fast, slow), suffix);
-	}
-
-	public static String name_suffix(String name, String suffix) {
-		return name + "_" + suffix;
 	}
 
 	/**
@@ -744,10 +697,8 @@ public class DB {
 		table.addField(field_double(FIELD_INSTRUMENT_TICK_VALUE, "Tick value"));
 		table.addField(field_integer(FIELD_INSTRUMENT_TICK_SCALE, "Tick scale"));
 		table.addField(field_integer(FIELD_INSTRUMENT_VOLUME_SCALE, "Volume scale"));
-		table.addField(field_string(
-			FIELD_INSTRUMENT_PRIMARY_CURRENCY, 6, "P-Currency", "Primary currency"));
-		table.addField(field_string(
-			FIELD_INSTRUMENT_SECONDARY_CURRENCY, 6, "S-Currency", "Secondary currency"));
+		table.addField(field_string(FIELD_INSTRUMENT_PRIMARY_CURRENCY, 6, "P-Currency"));
+		table.addField(field_string(FIELD_INSTRUMENT_SECONDARY_CURRENCY, 6, "S-Currency"));
 
 		table.getField(FIELD_SERVER_ID).setPrimaryKey(true);
 		table.getField(FIELD_INSTRUMENT_ID).setPrimaryKey(true);

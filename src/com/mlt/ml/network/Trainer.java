@@ -74,7 +74,10 @@ public class Trainer extends Task {
 	 * @param testPerformance  Test performance.
 	 * @return The trace.
 	 */
-	private static String trace(BigDecimal error, BigDecimal trainPerformance, BigDecimal testPerformance) {
+	private static String trace(
+		BigDecimal error,
+		BigDecimal trainPerformance,
+		BigDecimal testPerformance) {
 		StringBuilder b = new StringBuilder();
 		b.append("(");
 		b.append(error);
@@ -433,9 +436,11 @@ public class Trainer extends Task {
 					maxTestPerformance = testPerformance;
 				}
 				calculateTrainPerformance(testMatches, testSize);
-				bestTrace = new Trace(Numbers.getBigDecimal(0,
-					errorDecimals), testMatches, testSize, testPerformance, testMatches, testSize,
-					testPerformance);
+				bestTrace =
+					new Trace(Numbers.getBigDecimal(0,
+						errorDecimals), testMatches, testSize, testPerformance, testMatches,
+						testSize,
+						testPerformance);
 			}
 		}
 
@@ -592,12 +597,12 @@ public class Trainer extends Task {
 				msg.append(")");
 			}
 			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, msg.toString());
-			
+
 			/* Commute scan flat. */
 			scanFlat = !scanFlat;
 		}
 	}
-	
+
 	/**
 	 * Return the list of files with the path, root and extension.
 	 * 
@@ -683,8 +688,9 @@ public class Trainer extends Task {
 	 * @param error  The error.
 	 */
 	private void pushTrace(List<Trace> traces, BigDecimal error) {
-		Trace trace = new Trace(error, trainMatches, trainSize, trainPerformance, testMatches,
-			testSize, testPerformance);
+		Trace trace =
+			new Trace(error, trainMatches, trainSize, trainPerformance, testMatches,
+				testSize, testPerformance);
 		if (bestTrace == null) {
 			bestTrace = trace;
 		} else {
@@ -844,13 +850,9 @@ public class Trainer extends Task {
 		if (patternSourceTraining == null) {
 			throw new IllegalStateException("The training pattern source must be set");
 		}
-		if (patternSourceTest == null) {
-			throw new IllegalStateException("The test pattern source must be set");
-		}
 		if (saveNetworkData) {
 			if (filePath == null) {
-				throw new IllegalStateException(
-					"The file path is required to save the network data");
+				throw new IllegalStateException("The file path is required to save the network data");
 			}
 			File path = new File(filePath);
 			if (!path.exists()) {
@@ -865,6 +867,15 @@ public class Trainer extends Task {
 			}
 			if (fileExtension == null) {
 				fileExtension = "dat";
+			}
+		}
+		
+		/* Check shuffle supported. */
+		if (shuffle) {
+			try {
+				patternSourceTraining.shuffle();
+			} catch (Exception exc) {
+				shuffle = false;
 			}
 		}
 	}

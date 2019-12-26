@@ -26,20 +26,25 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Function;
 
 import javax.swing.Icon;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
+import com.mlt.db.Condition;
+import com.mlt.db.Criteria;
 import com.mlt.db.Field;
 import com.mlt.db.FieldGroup;
 import com.mlt.db.ListPersistor;
+import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
+import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 import com.mlt.desktop.Option;
@@ -74,6 +79,8 @@ import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Period;
 import com.mlt.mkt.data.PlotData;
 import com.mlt.mkt.data.info.DataInfo;
+import com.mlt.ml.data.DefaultPattern;
+import com.mlt.ml.data.Pattern;
 import com.mlt.ml.function.Normalizer;
 import com.mlt.util.Formats;
 import com.mlt.util.HTML;
@@ -82,6 +89,7 @@ import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
 import com.mlt.util.Properties;
 import com.mlt.util.StringConverter;
+import com.mlt.util.Strings;
 import com.mlt.util.xml.parser.Parser;
 import com.mlt.util.xml.parser.ParserHandler;
 import com.mlt.util.xml.writer.XMLAttribute;
@@ -106,11 +114,13 @@ import app.mlt.plaf.MLT;
  */
 public class StatisticsAverages extends Statistics {
 
+	private static final Function<Integer, String> KEY_CANDLES = size -> "candles-" + size;
+	private static final String KEY_LABELS = "labels";
 	private static final String KEY_PRICES_AND_AVERAGES = "prices_and_averages";
 	private static final String KEY_SLOPES = "slopes";
 	private static final String KEY_SPREADS = "spreads";
 	private static final String KEY_ZIGZAG = "zig-zag";
-	
+
 	public static final boolean checkAveragesModified(
 		StatisticsAverages statsPrev,
 		StatisticsAverages statsNext) {
@@ -127,8 +137,43 @@ public class StatisticsAverages extends Statistics {
 		return false;
 	}
 
-	private static final String KEY_CANDLES(int size) {
-		return "candles-" + size;
+	/**
+	 * @param name The field name with underline separators.
+	 * @return A suitable header.
+	 */
+	private static String getHeader(String name) {
+		String[] tokens = Strings.parse(name, "_");
+		tokens[0] = Strings.capitalize(tokens[0]);
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < tokens.length; i++) {
+			if (i > 0) {
+				b.append(" ");
+			}
+			b.append(tokens[i]);
+		}
+		return b.toString();
+	}
+
+	/**
+	 * Return statistics averages from a statistics record.
+	 * 
+	 * @param rc The statistics definition record.
+	 * @return The statistics object.
+	 */
+	public static StatisticsAverages getStatistics(Record rc) throws Exception {
+
+		/* Instrument and period. */
+		Instrument instrument = DB.to_instrument(rc.getValue(DB.FIELD_INSTRUMENT_ID).getString());
+		Period period = DB.to_period(rc.getValue(DB.FIELD_PERIOD_ID).getString());
+
+		/* Statistics averages. */
+		StatisticsAverages stats = new StatisticsAverages(instrument, period);
+		stats.setId(rc.getValue(DB.FIELD_STATISTICS_ID).getString());
+		stats.setKey(rc.getValue(DB.FIELD_STATISTICS_KEY).getString());
+		stats.setParameters(rc.getValue(DB.FIELD_STATISTICS_PARAMS).getString());
+
+		return stats;
+
 	}
 
 	/**
@@ -156,6 +201,85 @@ public class StatisticsAverages extends Statistics {
 				Icon icon = Icons.getIcon(Icons.APP_16x16_CHART);
 				MLT.getTabbedPane().addTab(key, icon, text, text, chart);
 
+				MLT.getStatusBar().removeProgress(key);
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
+	 * Browse the statistics candles.
+	 */
+	class ActionBrowseCandles extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				String key = getTabKey("CANDLES-BROWSE");
+				String text = getTabText("Candles");
+
+				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
+
+				ListPersistor persistor = new ListPersistor(getTableCandles().getPersistor());
+				persistor.setCacheSize(40000);
+				persistor.setPageSize(100);
+
+				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
+				model.addColumn(DB.FIELD_BAR_TIME_FMT);
+				model.addColumn(DB.FIELD_CANDLE_SIZE);
+				model.addColumn(DB.FIELD_CANDLE_NORDER);
+
+				model.addColumn(DB.FIELD_CANDLE_OPEN);
+				model.addColumn(DB.FIELD_CANDLE_HIGH);
+				model.addColumn(DB.FIELD_CANDLE_LOW);
+				model.addColumn(DB.FIELD_CANDLE_CLOSE);
+
+				String range, body_factor, body_pos, rel_pos, sign;
+
+				/* Raw values. */
+				range = getNameSuffix(DB.FIELD_CANDLE_RANGE, "raw");
+				body_factor = getNameSuffix(DB.FIELD_CANDLE_BODY_FACTOR, "raw");
+				body_pos = getNameSuffix(DB.FIELD_CANDLE_BODY_POS, "raw");
+				rel_pos = getNameSuffix(DB.FIELD_CANDLE_REL_POS, "raw");
+				sign = getNameSuffix(DB.FIELD_CANDLE_SIGN, "raw");
+				model.addColumn(range);
+				model.addColumn(body_factor);
+				model.addColumn(body_pos);
+				model.addColumn(rel_pos);
+				model.addColumn(sign);
+
+				/* Normalized values. */
+				range = getNameSuffix(DB.FIELD_CANDLE_RANGE, "nrm");
+				body_factor = getNameSuffix(DB.FIELD_CANDLE_BODY_FACTOR, "nrm");
+				body_pos = getNameSuffix(DB.FIELD_CANDLE_BODY_POS, "nrm");
+				rel_pos = getNameSuffix(DB.FIELD_CANDLE_REL_POS, "nrm");
+				sign = getNameSuffix(DB.FIELD_CANDLE_SIGN, "nrm");
+				model.addColumn(range);
+				model.addColumn(body_factor);
+				model.addColumn(body_pos);
+				model.addColumn(rel_pos);
+				model.addColumn(sign);
+
+				model.setRecordSet(new DataRecordSet(persistor));
+
+				TableRecord table = new TableRecord(true);
+				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
+				table.setModel(model);
+				table.setSelectedRow(0);
+				table.setPopupMenuProvider(new MenuStates(table));
+
+				TablePane tablePane = new TablePane(table);
+
+				IconGrid iconGrid = new IconGrid();
+				iconGrid.setSize(16, 16);
+				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
+
+				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
 				MLT.getStatusBar().removeProgress(key);
 
 			} catch (Exception exc) {
@@ -469,6 +593,17 @@ public class StatisticsAverages extends Statistics {
 					option.setAction(l -> container.addPlotData(getPlotDataSpreads(), true));
 					popup.add(option.getMenuItem());
 				}
+				if (!container.containsPlotData(KEY_LABELS)) {
+					Option option = new Option();
+					option.setKey(KEY_LABELS);
+					option.setText("Calculated labels and pivots");
+					option.setToolTip("Calculated labels and pivots");
+					option.setOptionGroup(Group.CONFIGURE);
+					option.setDefaultClose(false);
+					option.setCloseWindow(false);
+					option.setAction(l -> container.addPlotData(getPlotDataLabels(), true));
+					popup.add(option.getMenuItem());
+				}
 				if (container.containsPlotData(KEY_PRICES_AND_AVERAGES)) {
 					PlotData plotData = container.getPlotData(KEY_PRICES_AND_AVERAGES);
 					PlotterZigZag zz = new PlotterZigZag();
@@ -503,9 +638,9 @@ public class StatisticsAverages extends Statistics {
 				for (int i = 1; i < averages.size(); i++) {
 					int size = getCandleSize(i);
 					int count = getCandleCount(i);
-					if (!container.containsPlotData(KEY_CANDLES(size))) {
+					if (!container.containsPlotData(KEY_CANDLES.apply(size))) {
 						Option option = new Option();
-						option.setKey(KEY_CANDLES(size));
+						option.setKey(KEY_CANDLES.apply(size));
 						option.setText("Add candles pane of size " + size);
 						option.setToolTip("Add candles pane of size " + size);
 						option.setOptionGroup(Group.CONFIGURE);
@@ -518,7 +653,7 @@ public class StatisticsAverages extends Statistics {
 				}
 				for (int i = 1; i < averages.size(); i++) {
 					int size = getCandleSize(i);
-					if (container.containsPlotData(KEY_CANDLES(size))) {
+					if (container.containsPlotData(KEY_CANDLES.apply(size))) {
 						Option option = new Option();
 						option.setKey("toggle-plot-all-candles");
 						if (plotAllCandles) {
@@ -657,6 +792,69 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Pivot structure.
+	 */
+	static class Pivot {
+
+		static List<Pivot> getPivots(
+			DataList dataList,
+			int startIndex,
+			int endIndex,
+			int indexPivot,
+			int indexData) {
+
+			/* Build the first list of visible pivots. */
+			List<Pivot> pivots = new ArrayList<>();
+			for (int index = startIndex; index <= endIndex; index++) {
+				if (index < 0 || index > dataList.size()) {
+					continue;
+				}
+				Data data = dataList.get(index);
+				double pivot = data.getValue(indexPivot);
+				if (pivot != 0) {
+					double value = data.getValue(indexData);
+					pivots.add(new Pivot(pivot, value, index));
+				}
+			}
+			/* Check any pivot before. */
+			int firstIndex = (!pivots.isEmpty() ? pivots.get(0).index : startIndex);
+			for (int index = firstIndex - 1; index >= 0; index--) {
+				Data data = dataList.get(index);
+				double pivot = data.getValue(indexPivot);
+				if (pivot != 0) {
+					double value = data.getValue(indexData);
+					pivots.add(0, new Pivot(pivot, value, index));
+					break;
+				}
+			}
+			/* Check any pivot after. */
+			int lastIndex = (!pivots.isEmpty() ? pivots.get(pivots.size() - 1).index : endIndex);
+			for (int index = lastIndex + 1; index < dataList.size(); index++) {
+				Data data = dataList.get(index);
+				double pivot = data.getValue(indexPivot);
+				if (pivot != 0) {
+					double value = data.getValue(indexData);
+					pivots.add(new Pivot(pivot, value, index));
+					break;
+				}
+			}
+
+			return pivots;
+		}
+
+		double pivot;
+		double value;
+		int index;
+
+		Pivot(double pivot, double value, int index) {
+			this.pivot = pivot;
+			this.value = value;
+			this.index = index;
+		}
+
+	}
+
+	/**
 	 * Candle plotter for the states data list. This plotter will plot the first
 	 * candle of the iter-averages candles, that is, for instance, 5 periods candle,
 	 * 20 periods candle, etc.
@@ -672,7 +870,7 @@ public class StatisticsAverages extends Statistics {
 		int indexClose;
 
 		PlotterCandles(int size, int count) {
-			super(KEY_CANDLES(size));
+			super(KEY_CANDLES.apply(size));
 
 			this.size = size;
 			this.count = count;
@@ -800,74 +998,130 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Label and pivot plotter.
+	 */
+	class PlotterLabels extends DataPlotter {
+
+		int indexPivot;
+		int indexData;
+		int indexLabel;
+		int indexLabelSet;
+
+		Color colorNotSet = Color.BLACK;
+		Color colorLong = new Color(32, 160, 32);
+		Color colorShort = new Color(160, 32, 32);
+		Color colorOut = Color.LIGHT_GRAY;
+
+		public PlotterLabels() {
+			super(KEY_LABELS);
+		}
+
+		@Override
+		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
+
+			DataContext dc = getContext();
+
+			/* Draw paths. */
+			List<Path> paths = new ArrayList<>();
+			double x, y;
+			Path path = null;
+			for (int index = startIndex; index <= endIndex; index++) {
+
+				if (index < 0 || index >= dataList.size()) {
+					continue;
+				}
+
+				Data data = dataList.get(index);
+				double value = data.getValue(indexData);
+				double label = data.getValue(indexLabel);
+				boolean labelSet = data.getValue(indexLabelSet) != 0;
+				x = dc.getCenterCoordinateX(dc.getCoordinateX(index));
+				y = dc.getCoordinateY(value);
+
+				if (index > 0 && index > startIndex) {
+					double previousLabel = dataList.get(index - 1).getValue(indexLabel);
+					boolean previousSet = dataList.get(index - 1).getValue(indexLabelSet) != 0;
+					if (path != null && (labelSet != previousSet || label != previousLabel)) {
+						path.lineTo(x, y);
+						paths.add(path);
+						path = null;
+					}
+				}
+
+				if (path == null) {
+					path = new Path();
+					path.setStroke(new Stroke(2.0));
+					path.addHint(RenderingHints.KEY_ANTIALIASING,
+						RenderingHints.VALUE_ANTIALIAS_ON);
+					if (labelSet) {
+						if (label == 1) {
+							path.setDrawPaint(colorLong);
+						} else if (label == -1) {
+							path.setDrawPaint(colorShort);
+						} else {
+							path.setDrawPaint(colorOut);
+						}
+					} else {
+						path.setStroke(new Stroke(
+							1.0,
+							Stroke.CAP_BUTT,
+							Stroke.JOIN_MITER, 1,
+							new double[] { 2 }, 0));
+						path.setDrawPaint(colorNotSet);
+					}
+					path.moveTo(x, y);
+				} else {
+					path.lineTo(x, y);
+				}
+			}
+			if (path != null) {
+				paths.add(path);
+			}
+
+			/* Draw. */
+			paths.forEach(p -> ctx.draw(p));
+
+			/* Draw pivots. */
+			List<Pivot> pivots =
+				Pivot.getPivots(dataList, startIndex, endIndex, indexPivot, indexData);
+
+			path = new Path();
+			path.setStroke(new Stroke(2.0));
+			path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			path.setDrawPaint(Color.BLACK);
+			for (int i = 0; i < pivots.size(); i++) {
+				Pivot pivot = pivots.get(i);
+				x = dc.getCenterCoordinateX(dc.getCoordinateX(pivot.index));
+				y = dc.getCoordinateY(pivot.value);
+				if (i == 0) {
+					path.moveTo(x, y);
+				} else {
+					path.lineTo(x, y);
+				}
+			}
+			ctx.draw(path);
+		}
+
+	}
+
+	/**
 	 * Zig-zag data plotter for the states data list.
 	 */
 	class PlotterZigZag extends DataPlotter {
-
-		class Pivot {
-			double pivot;
-			double value;
-			int index;
-
-			Pivot(double pivot, double value, int index) {
-				this.pivot = pivot;
-				this.value = value;
-				this.index = index;
-			}
-
-		}
 
 		int indexPivot;
 		int indexData;
 
 		PlotterZigZag() {
 			super(KEY_ZIGZAG);
-
-			indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT_CALC);
-			indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV_CALC);
-			setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
 		}
 
 		@Override
 		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
 
-			/* Build the first list of visible pivots. */
-			List<Pivot> pivots = new ArrayList<>();
-			for (int index = startIndex; index <= endIndex; index++) {
-				if (index < 0 || index > dataList.size()) {
-					continue;
-				}
-				Data data = dataList.get(index);
-				double pivot = data.getValue(indexPivot);
-				if (pivot != 0) {
-					double value = data.getValue(indexData);
-					pivots.add(new Pivot(pivot, value, index));
-				}
-			}
-			/* Check any pivot before. */
-			int firstIndex = (!pivots.isEmpty() ? pivots.get(0).index : startIndex);
-			for (int index = firstIndex - 1; index >= 0; index--) {
-				Data data = dataList.get(index);
-				double pivot = data.getValue(indexPivot);
-				if (pivot != 0) {
-					double value = data.getValue(indexData);
-					pivots.add(0, new Pivot(pivot, value, index));
-					break;
-				}
-			}
-			/* Check any pivot after. */
-			int lastIndex = (!pivots.isEmpty() ? pivots.get(pivots.size() - 1).index : endIndex);
-			for (int index = lastIndex + 1; index < dataList.size(); index++) {
-				Data data = dataList.get(index);
-				double pivot = data.getValue(indexPivot);
-				if (pivot != 0) {
-					double value = data.getValue(indexData);
-					pivots.add(new Pivot(pivot, value, index));
-					break;
-				}
-			}
+			List<Pivot> pivots =
+				Pivot.getPivots(dataList, startIndex, endIndex, indexPivot, indexData);
 
-			/* Do plot. */
 			DataContext dc = getContext();
 			Path path = new Path();
 			path.setStroke(new Stroke(2.0));
@@ -886,28 +1140,6 @@ public class StatisticsAverages extends Statistics {
 			}
 			ctx.draw(path);
 		}
-	}
-
-	/**
-	 * Return statistics averages from a statistics record.
-	 * 
-	 * @param rc The statistics definition record.
-	 * @return The statistics object.
-	 */
-	public static StatisticsAverages getStatistics(Record rc) throws Exception {
-
-		/* Instrument and period. */
-		Instrument instrument = DB.to_instrument(rc.getValue(DB.FIELD_INSTRUMENT_ID).getString());
-		Period period = DB.to_period(rc.getValue(DB.FIELD_PERIOD_ID).getString());
-
-		/* Statistics averages. */
-		StatisticsAverages stats = new StatisticsAverages(instrument, period);
-		stats.setId(rc.getValue(DB.FIELD_STATISTICS_ID).getString());
-		stats.setKey(rc.getValue(DB.FIELD_STATISTICS_KEY).getString());
-		stats.setParameters(rc.getValue(DB.FIELD_STATISTICS_PARAMS).getString());
-
-		return stats;
-
 	}
 
 	/** Properties. */
@@ -982,7 +1214,7 @@ public class StatisticsAverages extends Statistics {
 	public int getBarsAhead() {
 		return properties.getInteger("bars_ahead");
 	}
-	
+
 	/**
 	 * @return The total number od candles per source record.
 	 */
@@ -1008,18 +1240,6 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @return The pad for candles size in names.
-	 */
-	public int getCandlePad() {
-		int maxSize = Numbers.MIN_INTEGER;
-		for (int i = 0; i < averages.size(); i++) {
-			int size = getCandleSize(i);
-			maxSize = Math.max(maxSize, size);
-		}
-		return Numbers.getDigits(maxSize);
-	}
-
-	/**
 	 * @param index Index of average.
 	 * @return Size of candles.
 	 */
@@ -1040,10 +1260,9 @@ public class StatisticsAverages extends Statistics {
 			fields = new ArrayList<>();
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
-				String name = DB.name_average(avg);
-				String header = DB.header_average(avg);
-				String label = DB.label_average(avg);
-				Field field = DB.field_double(name, header, label);
+				String name = getNameAverage(avg);
+				String header = getHeader(name);
+				Field field = DB.field_double(name, header);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
@@ -1064,14 +1283,13 @@ public class StatisticsAverages extends Statistics {
 		List<Field> fields = (List<Field>) properties.getObject("fields_slopes_" + suffix);
 		if (fields == null) {
 			fields = new ArrayList<>();
-			String name, header, label;
+			String name, header;
 			Field field;
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
-				name = DB.name_slope(avg, suffix);
-				header = DB.header_slope(avg, suffix);
-				label = DB.label_slope(avg, suffix);
-				field = DB.field_double(name, header, label);
+				name = getNameSlope(avg, suffix);
+				header = getHeader(name);
+				field = DB.field_double(name, header);
 				field.setStringConverter(getNumberConverter(8));
 				fields.add(field);
 			}
@@ -1092,16 +1310,15 @@ public class StatisticsAverages extends Statistics {
 		List<Field> fields = (List<Field>) properties.getObject("fields_spreads_" + suffix);
 		if (fields == null) {
 			fields = new ArrayList<>();
-			String name, header, label;
+			String name, header;
 			Field field;
 			for (int i = 0; i < averages.size(); i++) {
 				Average fast = averages.get(i);
 				for (int j = i + 1; j < averages.size(); j++) {
 					Average slow = averages.get(j);
-					name = DB.name_spread(fast, slow, suffix);
-					header = DB.header_spread(fast, slow, suffix);
-					label = DB.label_spread(fast, slow, suffix);
-					field = DB.field_double(name, header, label);
+					name = getNameSpread(fast, slow, suffix);
+					header = getHeader(name);
+					field = DB.field_double(name, header);
 					field.setStringConverter(getNumberConverter(8));
 					fields.add(field);
 				}
@@ -1191,6 +1408,96 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @param avg The average.
+	 * @return The field name.
+	 */
+	public String getNameAverage(Average avg) {
+		return "average_" + getPadded(avg.getPeriod());
+	}
+
+	/**
+	 * @param size The size
+	 * @param name The name of the field (range, body_factor...)
+	 * @return The field name.
+	 */
+	public String getNameCandle(int size, String name) {
+		return getNameCandle(size, -1, name);
+	}
+
+	/**
+	 * @param size  The size
+	 * @param index The index.
+	 * @param name  The name of the field (range, body_factor...)
+	 * @return The field name.
+	 */
+	public String getNameCandle(int size, int index, String name) {
+		StringBuilder b = new StringBuilder();
+		b.append("candle_");
+		b.append(getPadded(size));
+		if (index >= 0) {
+			b.append("_");
+			b.append(getPadded(index));
+		}
+		return getNameSuffix(b.toString(), name);
+	}
+
+	/**
+	 * @param avg The average.
+	 * @return The field name.
+	 */
+	public String getNameSlope(Average avg) {
+		return "slope_" + getPadded(avg.getPeriod());
+	}
+
+	/**
+	 * @param avg    The average.
+	 * @param suffix The suffix.
+	 * @return The field name.
+	 */
+	public String getNameSlope(Average avg, String suffix) {
+		return getNameSuffix(getNameSlope(avg), suffix);
+	}
+
+	/**
+	 * @param fast   Fast average.
+	 * @param slow   Slow average.
+	 * @param suffix Suffix.
+	 * @return the field name.
+	 */
+	public String getNameSpread(Average fast, Average slow, String suffix) {
+		return getNameSuffix(getNameSpread(fast, slow), suffix);
+	}
+
+	/**
+	 * @param fast Fast average.
+	 * @param slow Slow average.
+	 * @return the field name.
+	 */
+	public String getNameSpread(Average fast, Average slow) {
+		StringBuilder b = new StringBuilder();
+		b.append("spread_");
+		b.append(getPadded(fast.getPeriod()));
+		b.append("_");
+		b.append(getPadded(slow.getPeriod()));
+		return b.toString();
+	}
+
+	/**
+	 * @param name   The name.
+	 * @param suffix The suffix.
+	 * @return The suffixed name if the suffix is not null.
+	 */
+	public String getNameSuffix(String name, String suffix) {
+		StringBuilder b = new StringBuilder();
+		b.append(name);
+		if (suffix != null && !suffix.isEmpty()) {
+			b.append("_");
+			b.append(suffix);
+		}
+		return b.toString();
+	}
+
+	/**
 	 * @return The map of normalizers.
 	 */
 	public HashMap<String, Normalizer> getNormalizers() throws PersistorException {
@@ -1255,6 +1562,16 @@ public class StatisticsAverages extends Statistics {
 		optionBrowseRanges.setSortIndex(2);
 		options.add(optionBrowseRanges);
 
+		/* Browse candles. */
+		Option optionBrowseCandles = new Option();
+		optionBrowseCandles.setKey("BROWSE-CANDLES");
+		optionBrowseCandles.setText("Browse candles");
+		optionBrowseCandles.setToolTip("Browse candle values");
+		optionBrowseCandles.setAction(new ActionBrowseCandles());
+		optionBrowseCandles.setOptionGroup(new Option.Group("BROWSE", 2));
+		optionBrowseCandles.setSortIndex(3);
+		options.add(optionBrowseCandles);
+
 		/* Chart states. */
 		Option optionCharStates = new Option();
 		optionCharStates.setKey("CHART-STATES");
@@ -1266,6 +1583,14 @@ public class StatisticsAverages extends Statistics {
 		options.add(optionCharStates);
 
 		return options;
+	}
+
+	/**
+	 * @param number The number, size or period.
+	 * @return The padded string.
+	 */
+	private String getPadded(int number) {
+		return Strings.leftPad(Integer.toString(number), getPeriodPad(), "0");
 	}
 
 	/**
@@ -1324,6 +1649,69 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @param rc A statistics averages record.
+	 * @return The training pattern.
+	 */
+	public Pattern getPattern(Record rc, boolean calculated) {
+		DefaultPattern pattern = (DefaultPattern) rc.getProperties().getObject("PATTERN");
+		if (pattern != null) {
+			return pattern;
+		}
+
+		/* Just one output value, the label. */
+		String labelAlias = calculated ? DB.FIELD_STATES_LABEL_CALC : DB.FIELD_STATES_LABEL_EDIT;
+		double[] outputValues =
+			new double[] {
+				rc.getValue(labelAlias).getDouble()
+			};
+
+		/* Input list. */
+		List<Field> fields;
+		List<Double> inputList = new ArrayList<>();
+
+		/* Slopes of averages. */
+		fields = getFieldListSlopes("nrm");
+		for (Field field : fields) {
+			inputList.add(rc.getValue(field.getAlias()).getDouble());
+		}
+
+		/* Spreads of averages. */
+		fields = getFieldListSpreads("nrm");
+		for (Field field : fields) {
+			inputList.add(rc.getValue(field.getAlias()).getDouble());
+		}
+
+		/* Candles. */
+		RecordSet rs = null;
+		try {
+			long time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
+			rs = getRecordSetCandles(time);
+		} catch (Exception exc) {
+			return null;
+		}
+		String range = getNameSuffix(DB.FIELD_CANDLE_RANGE, "nrm");
+		String body_factor = getNameSuffix(DB.FIELD_CANDLE_BODY_FACTOR, "nrm");
+		String body_pos = getNameSuffix(DB.FIELD_CANDLE_BODY_POS, "nrm");
+		String rel_pos = getNameSuffix(DB.FIELD_CANDLE_REL_POS, "nrm");
+		String sign = getNameSuffix(DB.FIELD_CANDLE_SIGN, "nrm");
+		for (int i = 0; i < rs.size(); i++) {
+			Record rcCnd = rs.get(i);
+			inputList.add(rcCnd.getValue(range).getDouble());
+			inputList.add(rcCnd.getValue(body_factor).getDouble());
+			inputList.add(rcCnd.getValue(body_pos).getDouble());
+			inputList.add(rcCnd.getValue(rel_pos).getDouble());
+			inputList.add(rcCnd.getValue(sign).getDouble());
+		}
+
+		/* Inout values. */
+		double[] inputValues = Lists.toDoubleArray(inputList);
+
+		pattern = new DefaultPattern(inputValues, outputValues, 0);
+		rc.getProperties().setObject("PATTERN", pattern);
+		return pattern;
+	}
+
+	/**
 	 * @return The percentage for calculated labels.
 	 */
 	public double getPercentCalc() {
@@ -1338,16 +1726,24 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @return The pad for periods (and sizes and orders) in names.
+	 */
+	public int getPeriodPad() {
+		return Numbers.getDigits(averages.get(averages.size() - 1).getPeriod());
+	}
+
+	/**
 	 * @param size  The size of the candles.
 	 * @param count The number of candles.
 	 * @return The plot data for candles of the given size.
 	 */
 	private PlotData getPlotDataCandles(int size, int count) {
 
-		/* Data info and data list. */
+		String name = KEY_CANDLES.apply(size);
+
 		DataInfo info = new DataInfo(new CandlesFormatter(size, count));
 		info.setInstrument(getInstrument());
-		info.setName(KEY_CANDLES(size));
+		info.setName(name);
 		info.setDescription("Candles size " + size);
 		info.setPeriod(getPeriod());
 		DataListSource dataList =
@@ -1355,7 +1751,34 @@ public class StatisticsAverages extends Statistics {
 
 		dataList.addPlotter(new PlotterCandles(size, count));
 
-		PlotData plotData = new PlotData(KEY_CANDLES(size));
+		PlotData plotData = new PlotData(name);
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
+	 * @return The plot data for labels.
+	 */
+	private PlotData getPlotDataLabels() {
+
+		DataInfo info = new DataInfo();
+		info.setInstrument(getInstrument());
+		info.setName(KEY_LABELS);
+		info.setDescription("Calculated labels and pivots");
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getStatesListPersistor(), getStatesDataConverter());
+
+		PlotterLabels plotter = new PlotterLabels();
+		plotter.indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT_CALC);
+		plotter.indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV_CALC);
+		plotter.indexLabel = getStatesDataConverter().getIndex(DB.FIELD_STATES_LABEL_CALC);
+		plotter.indexLabelSet = getStatesDataConverter().getIndex(DB.FIELD_STATES_LABEL_CALC_SET);
+		plotter.setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
+		dataList.addPlotter(plotter);
+
+		PlotData plotData = new PlotData(KEY_LABELS);
 		plotData.add(dataList);
 
 		return plotData;
@@ -1393,7 +1816,11 @@ public class StatisticsAverages extends Statistics {
 		}
 
 		/* Pivot. */
-		dataList.addPlotter(new PlotterZigZag());
+		PlotterZigZag plotter = new PlotterZigZag();
+		plotter.indexPivot = getStatesDataConverter().getIndex(DB.FIELD_STATES_PIVOT_CALC);
+		plotter.indexData = getStatesDataConverter().getIndex(DB.FIELD_STATES_REFV_CALC);
+		plotter.setIndex(getStatesDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
+		dataList.addPlotter(plotter);
 
 		PlotData plotData = new PlotData(KEY_PRICES_AND_AVERAGES);
 		plotData.add(dataList);
@@ -1460,6 +1887,19 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @param time States time.
+	 * @return The record set of candles.
+	 */
+	private RecordSet getRecordSetCandles(long time) throws Exception {
+		Persistor ps = getTableCandles().getPersistor();
+		Field field_time = ps.getField(DB.FIELD_CANDLE_TIME);
+		Criteria criteria = new Criteria();
+		criteria.add(Condition.fieldEQ(field_time, new Value(time)));
+		Order order = getTableCandles().getPrimaryKey();
+		return ps.select(criteria, order);
+	}
+
+	/**
 	 * @return The states converter to data structure.
 	 */
 	private DataConverter getStatesDataConverter() {
@@ -1480,9 +1920,11 @@ public class StatisticsAverages extends Statistics {
 
 		List<Field> fields;
 
-		/* Pivot and reference value. */
+		/* Pivots, reference values and labels. */
 		list.add(table.getFieldIndex(DB.FIELD_STATES_PIVOT_CALC));
 		list.add(table.getFieldIndex(DB.FIELD_STATES_REFV_CALC));
+		list.add(table.getFieldIndex(DB.FIELD_STATES_LABEL_CALC));
+		list.add(table.getFieldIndex(DB.FIELD_STATES_LABEL_CALC_SET));
 
 		/* Averages. */
 		fields = getFieldListAverages();
@@ -1543,77 +1985,90 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Return the table with candles detail.
-	 * 
 	 * @return The table with candles detail.
 	 */
 	public Table getTableCandles() {
 
-		Table tableCandles = (Table) properties.getObject("table_candles");
-		if (tableCandles != null) {
-			return tableCandles;
+		Table table = (Table) properties.getObject("table_candles");
+		if (table != null) {
+			return table;
 		}
 
-		tableCandles = new Table();
+		table = new Table();
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
 		String name = DB.name_ticker(instrument, period, getTableNameSuffix("cnd"));
 
-		tableCandles.setSchema(DB.schema_server());
-		tableCandles.setName(name);
+		table.setSchema(DB.schema_server());
+		table.setName(name);
 
 		/* Key, time parent, size and order. */
-		tableCandles.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time parent"));
-		tableCandles.addField(DB.field_integer(DB.FIELD_CANDLE_SIZE, "Size"));
-		tableCandles.addField(DB.field_integer(DB.FIELD_CANDLE_NORDER, "Order"));
+		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time parent"));
+		table.addField(
+			DB.field_timeFmt(period, DB.FIELD_BAR_TIME, DB.FIELD_BAR_TIME_FMT, "Time fmt"));
+		table.addField(DB.field_integer(DB.FIELD_CANDLE_SIZE, "Size"));
+		table.addField(DB.field_integer(DB.FIELD_CANDLE_NORDER, "Order"));
 
 		/* Time, open high, low close candle. */
-		tableCandles.addField(DB.field_long(DB.FIELD_CANDLE_TIME, "Time"));
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_OPEN, "Open"));
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_HIGH, "High"));
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_LOW, "Low"));
-		tableCandles.addField(DB.field_double(DB.FIELD_CANDLE_CLOSE, "Close"));
+		table.addField(DB.field_long(DB.FIELD_CANDLE_TIME, "Time"));
+		table.addField(DB.field_timeFmt(
+			period, DB.FIELD_CANDLE_TIME, DB.FIELD_CANDLE_TIME_FMT, "Candle Time fmt"));
+
+		table.addField(DB.field_data(instrument, DB.FIELD_CANDLE_OPEN, "Open"));
+		table.addField(DB.field_data(instrument, DB.FIELD_CANDLE_HIGH, "High"));
+		table.addField(DB.field_data(instrument, DB.FIELD_CANDLE_LOW, "Low"));
+		table.addField(DB.field_data(instrument, DB.FIELD_CANDLE_CLOSE, "Close"));
 
 		String range, body_factor, body_pos, rel_pos, sign;
 
 		/* Raw values. */
-		range = DB.name_suffix(DB.FIELD_CANDLE_RANGE, "raw");
-		body_factor = DB.name_suffix(DB.FIELD_CANDLE_BODY_FACTOR, "raw");
-		body_pos = DB.name_suffix(DB.FIELD_CANDLE_BODY_POS, "raw");
-		rel_pos = DB.name_suffix(DB.FIELD_CANDLE_REL_POS, "raw");
-		sign = DB.name_suffix(DB.FIELD_CANDLE_SIGN, "raw");
-		tableCandles.addField(DB.field_double(range, "Range raw"));
-		tableCandles.addField(DB.field_double(body_factor, "Body factor raw"));
-		tableCandles.addField(DB.field_double(body_pos, "Body pos raw"));
-		tableCandles.addField(DB.field_double(rel_pos, "Rel pos raw"));
-		tableCandles.addField(DB.field_double(sign, "Sign raw"));
+		range = getNameSuffix(DB.FIELD_CANDLE_RANGE, "raw");
+		body_factor = getNameSuffix(DB.FIELD_CANDLE_BODY_FACTOR, "raw");
+		body_pos = getNameSuffix(DB.FIELD_CANDLE_BODY_POS, "raw");
+		rel_pos = getNameSuffix(DB.FIELD_CANDLE_REL_POS, "raw");
+		sign = getNameSuffix(DB.FIELD_CANDLE_SIGN, "raw");
+		table.addField(DB.field_double(range, getHeader(range)));
+		table.addField(DB.field_double(body_factor, getHeader(body_factor)));
+		table.addField(DB.field_double(body_pos, getHeader(body_pos)));
+		table.addField(DB.field_double(rel_pos, getHeader(rel_pos)));
+		table.addField(DB.field_double(sign, getHeader(sign)));
+		table.getField(range).setStringConverter(getNumberConverter(8));
+		table.getField(body_factor).setStringConverter(getNumberConverter(8));
+		table.getField(body_pos).setStringConverter(getNumberConverter(8));
+		table.getField(rel_pos).setStringConverter(getNumberConverter(8));
+		table.getField(sign).setStringConverter(getNumberConverter(8));
 
 		/* Normalized values. */
-		range = DB.name_suffix(DB.FIELD_CANDLE_RANGE, "nrm");
-		body_factor = DB.name_suffix(DB.FIELD_CANDLE_BODY_FACTOR, "nrm");
-		body_pos = DB.name_suffix(DB.FIELD_CANDLE_BODY_POS, "nrm");
-		rel_pos = DB.name_suffix(DB.FIELD_CANDLE_REL_POS, "nrm");
-		sign = DB.name_suffix(DB.FIELD_CANDLE_SIGN, "nrm");
-		tableCandles.addField(DB.field_double(range, "Range nrm"));
-		tableCandles.addField(DB.field_double(body_factor, "Body factor nrm"));
-		tableCandles.addField(DB.field_double(body_pos, "Body pos nrm"));
-		tableCandles.addField(DB.field_double(rel_pos, "Rel pos nrm"));
-		tableCandles.addField(DB.field_double(sign, "Sign nrm"));
+		range = getNameSuffix(DB.FIELD_CANDLE_RANGE, "nrm");
+		body_factor = getNameSuffix(DB.FIELD_CANDLE_BODY_FACTOR, "nrm");
+		body_pos = getNameSuffix(DB.FIELD_CANDLE_BODY_POS, "nrm");
+		rel_pos = getNameSuffix(DB.FIELD_CANDLE_REL_POS, "nrm");
+		sign = getNameSuffix(DB.FIELD_CANDLE_SIGN, "nrm");
+		table.addField(DB.field_double(range, getHeader(range)));
+		table.addField(DB.field_double(body_factor, getHeader(body_factor)));
+		table.addField(DB.field_double(body_pos, getHeader(body_pos)));
+		table.addField(DB.field_double(rel_pos, getHeader(rel_pos)));
+		table.addField(DB.field_double(sign, getHeader(sign)));
+		table.getField(range).setStringConverter(getNumberConverter(8));
+		table.getField(body_factor).setStringConverter(getNumberConverter(8));
+		table.getField(body_pos).setStringConverter(getNumberConverter(8));
+		table.getField(rel_pos).setStringConverter(getNumberConverter(8));
+		table.getField(sign).setStringConverter(getNumberConverter(8));
 
 		/* Primary key. */
-		tableCandles.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
-		tableCandles.getField(DB.FIELD_CANDLE_SIZE).setPrimaryKey(true);
-		tableCandles.getField(DB.FIELD_CANDLE_NORDER).setPrimaryKey(true);
+		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
+		table.getField(DB.FIELD_CANDLE_SIZE).setPrimaryKey(true);
+		table.getField(DB.FIELD_CANDLE_NORDER).setPrimaryKey(true);
 
-		View view = tableCandles.getSimpleView(tableCandles.getPrimaryKey());
-		tableCandles.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
-		return tableCandles;
+		View view = table.getSimpleView(table.getPrimaryKey());
+		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+
+		properties.setObject("table_candles", table);
+		return table;
 	}
 
 	/**
-	 * Return the table name suffix.
-	 * 
 	 * @param suffix Last suffix.
 	 * @return The table name suffix.
 	 */
@@ -1628,45 +2083,119 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Return the ranges table to calculate value means and standard deviations.
-	 * 
-	 * @return The ranges table.
+	 * @return The table with patterns.
+	 */
+	public Table getTablePatterns() {
+
+		Table table = (Table) properties.getObject("table_patterns");
+		if (table != null) {
+			return table;
+		}
+
+		table = new Table();
+
+		Instrument instrument = getInstrument();
+		Period period = getPeriod();
+		String tableName = DB.name_ticker(instrument, period, getTableNameSuffix("ptn"));
+
+		table.setSchema(DB.schema_server());
+		table.setName(tableName);
+
+		/* Time, primary key. */
+		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
+		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
+
+		/* Labels, calculated and edited. */
+		table.addField(DB.field_integer(DB.FIELD_STATES_LABEL_CALC, "L-calc", "Label calc"));
+		table.addField(DB.field_integer(DB.FIELD_STATES_LABEL_EDIT, "L-edit", "Label edit"));
+
+		Field field;
+
+		/* Slopes of averages, normalized. */
+		for (int i = 0; i < averages.size(); i++) {
+			Average avg = averages.get(i);
+			String name = getNameSlope(avg);
+			field = DB.field_double(name, getHeader(name));
+			field.setStringConverter(getNumberConverter(8));
+			table.addField(field);
+		}
+
+		/* Spreads within averages, normalized. */
+		for (int i = 0; i < averages.size(); i++) {
+			Average fast = averages.get(i);
+			for (int j = i + 1; j < averages.size(); j++) {
+				Average slow = averages.get(j);
+				String name = getNameSpread(fast, slow);
+				field = DB.field_double(name, getHeader(name));
+				field.setStringConverter(getNumberConverter(8));
+				table.addField(field);
+			}
+		}
+
+		/* Candles. */
+		String[] names =
+			new String[] {
+				DB.FIELD_CANDLE_RANGE,
+				DB.FIELD_CANDLE_BODY_FACTOR,
+				DB.FIELD_CANDLE_BODY_POS,
+				DB.FIELD_CANDLE_REL_POS,
+				DB.FIELD_CANDLE_SIGN
+			};
+		for (int i = 0; i < averages.size(); i++) {
+			int size = getCandleSize(i);
+			int count = getCandleCount(i);
+			for (int j = 0; j < count; j++) {
+				for (String name : names) {
+					name = getNameCandle(size, j, name);
+					field = DB.field_double(name, getHeader(name));
+					field.setStringConverter(getNumberConverter(8));
+					table.addField(field);
+				}
+			}
+		}
+
+		properties.setObject("table_patterns", table);
+		return table;
+	}
+
+	/**
+	 * @return The ranges table to calculate value means and standard deviations.
 	 */
 	public Table getTableRanges() {
 
-		Table tableRanges = (Table) properties.getObject("table_ranges");
-		if (tableRanges != null) {
-			return tableRanges;
+		Table table = (Table) properties.getObject("table_ranges");
+		if (table != null) {
+			return table;
 		}
 
-		tableRanges = new Table();
+		table = new Table();
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
 		String name = DB.name_ticker(instrument, period, getTableNameSuffix("rng"));
 
-		tableRanges.setSchema(DB.schema_server());
-		tableRanges.setName(name);
+		table.setSchema(DB.schema_server());
+		table.setName(name);
 
-		tableRanges.addField(DB.field_string(DB.FIELD_RANGE_NAME, 60, "Name"));
-		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum"));
-		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum"));
-		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average"));
-		tableRanges.addField(DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev"));
+		table.addField(DB.field_string(DB.FIELD_RANGE_NAME, 60, "Name"));
+		table.addField(DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum"));
+		table.addField(DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum"));
+		table.addField(DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average"));
+		table.addField(DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev"));
 
-		tableRanges.getField(DB.FIELD_RANGE_MINIMUM).setDisplayDecimals(8);
-		tableRanges.getField(DB.FIELD_RANGE_MAXIMUM).setDisplayDecimals(8);
-		tableRanges.getField(DB.FIELD_RANGE_AVERAGE).setDisplayDecimals(8);
-		tableRanges.getField(DB.FIELD_RANGE_STDDEV).setDisplayDecimals(8);
+		table.getField(DB.FIELD_RANGE_MINIMUM).setDisplayDecimals(8);
+		table.getField(DB.FIELD_RANGE_MAXIMUM).setDisplayDecimals(8);
+		table.getField(DB.FIELD_RANGE_AVERAGE).setDisplayDecimals(8);
+		table.getField(DB.FIELD_RANGE_STDDEV).setDisplayDecimals(8);
 
 		/* Primary key. */
-		tableRanges.getField(DB.FIELD_RANGE_NAME).setPrimaryKey(true);
+		table.getField(DB.FIELD_RANGE_NAME).setPrimaryKey(true);
 
-		View view = tableRanges.getComplexView(tableRanges.getPrimaryKey());
-		tableRanges.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+		View view = table.getComplexView(table.getPrimaryKey());
+		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
-		properties.setObject("table_ranges", tableRanges);
-		return tableRanges;
+		properties.setObject("table_ranges", table);
+		return table;
 	}
 
 	/**
@@ -1678,81 +2207,81 @@ public class StatisticsAverages extends Statistics {
 		tables.add(getTableRanges());
 		tables.add(getTableStates());
 		tables.add(getTableCandles());
+		tables.add(getTablePatterns());
 		return tables;
 	}
 
 	/**
-	 * Return the states (all parameters) table.
-	 * 
-	 * @return The table.
+	 * @return The states table.
 	 */
 	public Table getTableStates() {
 
-		Table tableStates = (Table) properties.getObject("table_states");
-		if (tableStates != null) {
-			return tableStates;
+		Table table = (Table) properties.getObject("table_states");
+		if (table != null) {
+			return table;
 		}
 
-		tableStates = new Table();
+		table = new Table();
 
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
 		String name = DB.name_ticker(instrument, period, getTableNameSuffix("src"));
 
-		tableStates.setSchema(DB.schema_server());
-		tableStates.setName(name);
+		table.setSchema(DB.schema_server());
+		table.setName(name);
 
 		/* Time, open, high, low, close. */
-		tableStates.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
+		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
 
-		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_OPEN, "Open"));
-		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_HIGH, "High"));
-		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_LOW, "Low"));
-		tableStates.addField(DB.field_data(instrument, DB.FIELD_BAR_CLOSE, "Close"));
+		table.addField(DB.field_data(instrument, DB.FIELD_BAR_OPEN, "Open"));
+		table.addField(DB.field_data(instrument, DB.FIELD_BAR_HIGH, "High"));
+		table.addField(DB.field_data(instrument, DB.FIELD_BAR_LOW, "Low"));
+		table.addField(DB.field_data(instrument, DB.FIELD_BAR_CLOSE, "Close"));
 
-		tableStates.addField(
+		table.addField(
 			DB.field_timeFmt(period, DB.FIELD_BAR_TIME, DB.FIELD_BAR_TIME_FMT, "Time fmt"));
 
 		int ndx = 0;
 		FieldGroup grpData = new FieldGroup(ndx++, "data", "Data");
-		tableStates.getField(DB.FIELD_BAR_TIME).setFieldGroup(grpData);
-		tableStates.getField(DB.FIELD_BAR_OPEN).setFieldGroup(grpData);
-		tableStates.getField(DB.FIELD_BAR_HIGH).setFieldGroup(grpData);
-		tableStates.getField(DB.FIELD_BAR_LOW).setFieldGroup(grpData);
-		tableStates.getField(DB.FIELD_BAR_CLOSE).setFieldGroup(grpData);
-		tableStates.getField(DB.FIELD_BAR_TIME_FMT).setFieldGroup(grpData);
+		table.getField(DB.FIELD_BAR_TIME).setFieldGroup(grpData);
+		table.getField(DB.FIELD_BAR_OPEN).setFieldGroup(grpData);
+		table.getField(DB.FIELD_BAR_HIGH).setFieldGroup(grpData);
+		table.getField(DB.FIELD_BAR_LOW).setFieldGroup(grpData);
+		table.getField(DB.FIELD_BAR_CLOSE).setFieldGroup(grpData);
+		table.getField(DB.FIELD_BAR_TIME_FMT).setFieldGroup(grpData);
 
 		/*
 		 * Calculated pivot (High=1, None=0, Low=-1) and Label (Long=1, Out=0, Short=-1)
 		 */
 		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
-		tableStates.addField(
-			DB.field_data(instrument, DB.FIELD_STATES_REFV_CALC, "Ref-val calc", "Ref value calc"));
-		tableStates.addField(
-			DB.field_integer(DB.FIELD_STATES_PIVOT_CALC, "Pivot calc", "Pivot calculated"));
-		tableStates.addField(
-			DB.field_integer(DB.FIELD_STATES_LABEL_CALC, "Label calc", "Label calculated pivot"));
-		tableStates.addField(
-			DB.field_boolean(DB.FIELD_STATES_LABEL_CALC_SET, "Label calc set", "Label calculated pivot set"));
-		
-		tableStates.addField(
-			DB.field_data(instrument, DB.FIELD_STATES_REFV_EDIT, "Ref-val edit", "Ref value edit"));
-		tableStates.addField(
-			DB.field_integer(DB.FIELD_STATES_PIVOT_EDIT, "Pivot edit", "Pivot edited"));
-		tableStates.addField(
-			DB.field_integer(DB.FIELD_STATES_LABEL_EDIT, "Label edit", "Label edited pivot"));
-		tableStates.addField(
-			DB.field_boolean(DB.FIELD_STATES_LABEL_EDIT_SET, "Label edit set", "Label edited pivot set"));
 
-		tableStates.getField(DB.FIELD_STATES_REFV_CALC).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_PIVOT_CALC).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_LABEL_CALC).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_LABEL_CALC_SET).setFieldGroup(grpLabels);
-		
-		tableStates.getField(DB.FIELD_STATES_REFV_EDIT).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_PIVOT_EDIT).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_LABEL_EDIT).setFieldGroup(grpLabels);
-		tableStates.getField(DB.FIELD_STATES_LABEL_EDIT_SET).setFieldGroup(grpLabels);
+		table.addField(
+			DB.field_data(instrument, DB.FIELD_STATES_REFV_CALC, "V-calc", "Ref value calc"));
+		table.addField(
+			DB.field_integer(DB.FIELD_STATES_PIVOT_CALC, "P-calc", "Pivot calculated"));
+		table.addField(
+			DB.field_integer(DB.FIELD_STATES_LABEL_CALC, "L-calc", "Label calculated pivot"));
+		table.addField(
+			DB.field_integer(DB.FIELD_STATES_LABEL_CALC_SET, "LC-set", "Label calculated set"));
+
+		table.addField(
+			DB.field_data(instrument, DB.FIELD_STATES_REFV_EDIT, "V-edit", "Ref value edit"));
+		table.addField(
+			DB.field_integer(DB.FIELD_STATES_PIVOT_EDIT, "P-edit", "Pivot edited"));
+		table.addField(
+			DB.field_integer(DB.FIELD_STATES_LABEL_EDIT, "L-edit", "Label edited pivot"));
+		table.addField(
+			DB.field_integer(DB.FIELD_STATES_LABEL_EDIT_SET, "LE-set", "Label edited set"));
+
+		table.getField(DB.FIELD_STATES_REFV_CALC).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_STATES_PIVOT_CALC).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_STATES_LABEL_CALC).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_STATES_LABEL_CALC_SET).setFieldGroup(grpLabels);
+
+		table.getField(DB.FIELD_STATES_REFV_EDIT).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_STATES_PIVOT_EDIT).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_STATES_LABEL_EDIT).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_STATES_LABEL_EDIT_SET).setFieldGroup(grpLabels);
 
 		/* Lists of fields. */
 		List<Field> fields;
@@ -1762,7 +2291,7 @@ public class StatisticsAverages extends Statistics {
 		fields = getFieldListAverages();
 		for (Field field : fields) {
 			field.setFieldGroup(grpAverages);
-			tableStates.addField(field);
+			table.addField(field);
 		}
 
 		/* Slopes of averages: raw. */
@@ -1770,7 +2299,7 @@ public class StatisticsAverages extends Statistics {
 		fields = getFieldListSlopes("raw");
 		for (Field field : fields) {
 			field.setFieldGroup(grpSlopesRaw);
-			tableStates.addField(field);
+			table.addField(field);
 		}
 
 		/* Spreads within averages: raw. */
@@ -1778,7 +2307,7 @@ public class StatisticsAverages extends Statistics {
 		fields = getFieldListSpreads("raw");
 		for (Field field : fields) {
 			field.setFieldGroup(grpSpreadsRaw);
-			tableStates.addField(field);
+			table.addField(field);
 		}
 
 		/* Slopes of averages: normalized. */
@@ -1786,7 +2315,7 @@ public class StatisticsAverages extends Statistics {
 		fields = getFieldListSlopes("nrm");
 		for (Field field : fields) {
 			field.setFieldGroup(grpSlopesNrm);
-			tableStates.addField(field);
+			table.addField(field);
 		}
 
 		/* Spreads within averages: normalized. */
@@ -1794,26 +2323,26 @@ public class StatisticsAverages extends Statistics {
 		fields = getFieldListSpreads("nrm");
 		for (Field field : fields) {
 			field.setFieldGroup(grpSpreadsNrm);
-			tableStates.addField(field);
+			table.addField(field);
 		}
 
 		/* Control flags. */
 		FieldGroup grpControls = new FieldGroup(ndx++, "controls", "Controls");
 		Field normalized = DB.field_string(DB.FIELD_STATES_NORMALIZED, 1, "Nrm", "Normalized");
 		normalized.setFieldGroup(grpControls);
-		tableStates.addField(normalized);
+		table.addField(normalized);
 		Field pivotScanned =
 			DB.field_string(DB.FIELD_STATES_PIVOT_SCANNED, 1, "Scn", "Pivot scanned");
 		pivotScanned.setFieldGroup(grpControls);
-		tableStates.addField(pivotScanned);
+		table.addField(pivotScanned);
 
-		tableStates.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
+		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
 
-		View view = tableStates.getComplexView(tableStates.getPrimaryKey());
-		tableStates.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+		View view = table.getComplexView(table.getPrimaryKey());
+		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 
-		properties.setObject("table_states", tableStates);
-		return tableStates;
+		properties.setObject("table_states", table);
+		return table;
 	}
 
 	/**

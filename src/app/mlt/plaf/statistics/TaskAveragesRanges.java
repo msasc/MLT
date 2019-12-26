@@ -29,7 +29,6 @@ import com.mlt.db.Table;
 import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
-import com.mlt.util.Strings;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
@@ -98,7 +97,7 @@ public class TaskAveragesRanges extends TaskAverages {
 
 			/* Retrieve values. */
 			String name = names.get(i);
-			String name_raw = DB.name_suffix(name, "raw");
+			String name_raw = stats.getNameSuffix(name, "raw");
 			workDone += 1;
 			update(name_raw, workDone, totalWork);
 			Record rcView = getDataStates(name_raw);
@@ -122,7 +121,6 @@ public class TaskAveragesRanges extends TaskAverages {
 
 		/* Normalize candles. */
 		names = stats.getFieldNamesToNormalizeCandles();
-		int pad = stats.getCandlePad();
 		List<Average> avgs = stats.getAverages();
 		for (int i = 0; i < avgs.size(); i++) {
 
@@ -137,8 +135,8 @@ public class TaskAveragesRanges extends TaskAverages {
 
 				/* Retrieve values. */
 				String name = names.get(j);
-				String name_raw = DB.name_suffix(name, "raw");
-				String name_pad = name + "_" + Strings.leftPad(Integer.toString(size), pad, "0");
+				String name_raw = stats.getNameSuffix(name, "raw");
+				String name_rng = stats.getNameCandle(size, name);
 				workDone += 1;
 				update(name_raw, workDone, totalWork);
 
@@ -149,7 +147,7 @@ public class TaskAveragesRanges extends TaskAverages {
 				double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
 
 				Record record = ranges.getDefaultRecord();
-				record.setValue(DB.FIELD_RANGE_NAME, name_pad);
+				record.setValue(DB.FIELD_RANGE_NAME, name_rng);
 				record.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
 				record.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
 				record.setValue(DB.FIELD_RANGE_AVERAGE, average);

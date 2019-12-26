@@ -22,12 +22,6 @@ package com.mlt.ml.data;
 public interface PatternSource {
 	
 	/**
-	 * Add a pattern.
-	 * @param pattern
-	 */
-	void add(Pattern pattern);
-	
-	/**
 	 * Create data.
 	 */
 	void clear();

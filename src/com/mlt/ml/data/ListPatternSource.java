@@ -56,14 +56,6 @@ public class ListPatternSource implements PatternSource {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void add(Pattern pattern) {
-		patterns.add(pattern);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	public void clear() {
 		patterns.clear();
 	}

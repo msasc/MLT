@@ -171,8 +171,8 @@ public class TaskAveragesNormalize extends TaskAverages {
 			/* Fields to normalize. */
 			for (int i = 0; i < names.size(); i++) {
 				String name = names.get(i);
-				String name_raw = DB.name_suffix(name, "raw");
-				String name_nrm = DB.name_suffix(name, "nrm");
+				String name_raw = stats.getNameSuffix(name, "raw");
+				String name_nrm = stats.getNameSuffix(name, "nrm");
 				Normalizer normalizer = normalizers.get(name);
 				double value_raw = record.getValue(name_raw).getDouble();
 				double value_nrm = normalizer.normalize(value_raw);
@@ -196,7 +196,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 		/* Normalize candles. */
 		String pattern = stats.getPeriod().getTimeFmtPattern();
 		StringConverter converter = new TimeFmtConverter(new SimpleDateFormat(pattern));
-		int pad = stats.getCandlePad();
+		int pad = stats.getPeriodPad();
 		names = stats.getFieldNamesToNormalizeCandles();
 		persistor = stats.getTableCandles().getPersistor();
 		order = stats.getTableCandles().getPrimaryKey();
@@ -229,9 +229,9 @@ public class TaskAveragesNormalize extends TaskAverages {
 			/* Fields to normalize. */
 			for (int i = 0; i < names.size(); i++) {
 				String name = names.get(i);
-				String name_raw = DB.name_suffix(name, "raw");
-				String name_nrm = DB.name_suffix(name, "nrm");
-				String name_get = name + "_" + sizePad;
+				String name_raw = stats.getNameSuffix(name, "raw");
+				String name_nrm = stats.getNameSuffix(name, "nrm");
+				String name_get = stats.getNameCandle(size, name);
 				Normalizer normalizer = normalizers.get(name_get);
 				double value_raw = record.getValue(name_raw).getDouble();
 				double value_nrm = normalizer.normalize(value_raw);

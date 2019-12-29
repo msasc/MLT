@@ -17,6 +17,8 @@
 
 package app.mlt.plaf.statistics;
 
+import java.awt.Color;
+import java.awt.RenderingHints;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,10 +29,8 @@ import org.xml.sax.SAXException;
 import com.mlt.db.Field;
 import com.mlt.db.FieldGroup;
 import com.mlt.db.ListPersistor;
-import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.Record;
-import com.mlt.db.RecordIterator;
 import com.mlt.db.Relation;
 import com.mlt.db.Table;
 import com.mlt.db.View;
@@ -44,12 +44,21 @@ import com.mlt.desktop.control.PopupMenuProvider;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
 import com.mlt.desktop.control.TableRecordModel;
+import com.mlt.desktop.control.Canvas.Context;
 import com.mlt.desktop.control.table.SelectionMode;
 import com.mlt.desktop.converters.NumberScaleConverter;
+import com.mlt.desktop.graphic.Path;
+import com.mlt.desktop.graphic.Stroke;
 import com.mlt.desktop.icon.IconGrid;
+import com.mlt.mkt.chart.DataContext;
+import com.mlt.mkt.chart.plotter.DataPlotter;
+import com.mlt.mkt.data.Data;
+import com.mlt.mkt.data.DataConverter;
+import com.mlt.mkt.data.DataList;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
+import com.mlt.util.Lists;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
 import com.mlt.util.Properties;
@@ -67,10 +76,12 @@ import app.mlt.plaf.MLT;
  */
 public class StatisticsAverages extends Statistics {
 
+	private static final String KEY_ZIGZAG = "zig-zag";
+
 	/**
-	 * Browse raw values.
+	 * Browse the ranges table.
 	 */
-	class ActionBrowseRaw extends ActionRun {
+	class ActionBrowseRanges extends ActionRun {
 
 		/**
 		 * {@inheritDoc}
@@ -78,12 +89,62 @@ public class StatisticsAverages extends Statistics {
 		@Override
 		public void run() {
 			try {
-				String key = getTabPaneKey("STATS-BROWSE");
-				String text = getTabPaneText("States");
+				String key = getTabPaneKey("STATS-RANGES");
+				String text = getTabPaneText("Ranges");
+
+				Persistor persistor = getTableRanges().getPersistor();
+
+				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
+				model.addColumn(DB.FIELD_RANGE_NAME);
+				model.addColumn(DB.FIELD_RANGE_MINIMUM);
+				model.addColumn(DB.FIELD_RANGE_MAXIMUM);
+				model.addColumn(DB.FIELD_RANGE_AVERAGE);
+				model.addColumn(DB.FIELD_RANGE_STDDEV);
+
+				model.setRecordSet(persistor.select(null));
+
+				TableRecord table = new TableRecord(true);
+				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
+				table.setModel(model);
+				table.setSelectedRow(0);
+
+				TablePane tablePane = new TablePane(table);
+
+				IconGrid iconGrid = new IconGrid();
+				iconGrid.setSize(16, 16);
+				iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
+
+				MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", tablePane);
+
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
+		}
+	}
+
+	/**
+	 * Browse raw or normalized values.
+	 */
+	class ActionBrowseView extends ActionRun {
+
+		boolean normalized;
+
+		private ActionBrowseView(boolean normalized) {
+			this.normalized = normalized;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				String key = getTabPaneKey("STATS-BROWSE-" + (normalized ? "NRM" : "RAW"));
+				String text = getTabPaneText(normalized ? "Normalized values" : "Raw values");
 
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
-				View view = getViewRaw();
+				View view = getView(normalized, true, true, true, true);
 				ListPersistor persistor = new ListPersistor(view.getPersistor(), view.getOrderBy());
 				persistor.setCacheSize(10000);
 				persistor.setPageSize(100);
@@ -130,6 +191,9 @@ public class StatisticsAverages extends Statistics {
 			TaskFrame frame = new TaskFrame();
 			frame.setTitle(getLabel());
 			frame.addTasks(new TaskAveragesRaw(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
+			frame.addTasks(new TaskAveragesPivots(StatisticsAverages.this));
 			frame.show();
 		}
 
@@ -157,7 +221,7 @@ public class StatisticsAverages extends Statistics {
 	/**
 	 * Parameters.
 	 */
-	public static class Parameters {
+	static class Parameters {
 		/** List of averages. */
 		public List<Average> averages;
 		/** Bars ahead to calculate pivots. */
@@ -171,7 +235,7 @@ public class StatisticsAverages extends Statistics {
 	/**
 	 * Parameters handler.
 	 */
-	private static class ParametersHandler extends ParserHandler {
+	static class ParametersHandler extends ParserHandler {
 
 		/** List of averages. */
 		List<Average> averages = new ArrayList<>();
@@ -262,6 +326,59 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Pivot structure.
+	 */
+	static class Pivot {
+
+		double pivot;
+		double value;
+		int index;
+
+		Pivot(double pivot, double value, int index) {
+			this.pivot = pivot;
+			this.value = value;
+			this.index = index;
+		}
+	}
+
+	/**
+	 * Zig-zag data plotter for the states data list.
+	 */
+	class PlotterPivots extends DataPlotter {
+
+		int indexPivot;
+		int indexData;
+
+		PlotterPivots() {
+			super(KEY_ZIGZAG);
+		}
+
+		@Override
+		public void plot(Context ctx, DataList dataList, int startIndex, int endIndex) {
+
+			List<Pivot> pivots = getPivots(dataList, startIndex, endIndex, indexPivot, indexData);
+
+			DataContext dc = getContext();
+			Path path = new Path();
+			path.setStroke(new Stroke(2.0));
+			path.addHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			path.setDrawPaint(Color.BLACK);
+			double x, y;
+			for (int i = 0; i < pivots.size(); i++) {
+				Pivot pivot = pivots.get(i);
+				x = dc.getCenterCoordinateX(dc.getCoordinateX(pivot.index));
+				y = dc.getCoordinateY(pivot.value);
+				if (i == 0) {
+					path.moveTo(x, y);
+				} else {
+					path.lineTo(x, y);
+				}
+			}
+			ctx.draw(path);
+		}
+	}
+
+	/**
 	 * @param statsPrev Previous statistics.
 	 * @param statsNext Next statistics.
 	 * @return A boolean indicating whether the averages has been modified between
@@ -300,6 +417,52 @@ public class StatisticsAverages extends Statistics {
 			b.append(tokens[i]);
 		}
 		return b.toString();
+	}
+
+	private static List<Pivot> getPivots(
+		DataList dataList,
+		int startIndex,
+		int endIndex,
+		int indexPivot,
+		int indexData) {
+
+		/* Build the first list of visible pivots. */
+		List<Pivot> pivots = new ArrayList<>();
+		for (int index = startIndex; index <= endIndex; index++) {
+			if (index < 0 || index > dataList.size()) {
+				continue;
+			}
+			Data data = dataList.get(index);
+			double pivot = data.getValue(indexPivot);
+			if (pivot != 0) {
+				double value = data.getValue(indexData);
+				pivots.add(new Pivot(pivot, value, index));
+			}
+		}
+		/* Check any pivot before. */
+		int firstIndex = (!pivots.isEmpty() ? pivots.get(0).index : startIndex);
+		for (int index = firstIndex - 1; index >= 0; index--) {
+			Data data = dataList.get(index);
+			double pivot = data.getValue(indexPivot);
+			if (pivot != 0) {
+				double value = data.getValue(indexData);
+				pivots.add(0, new Pivot(pivot, value, index));
+				break;
+			}
+		}
+		/* Check any pivot after. */
+		int lastIndex = (!pivots.isEmpty() ? pivots.get(pivots.size() - 1).index : endIndex);
+		for (int index = lastIndex + 1; index < dataList.size(); index++) {
+			Data data = dataList.get(index);
+			double pivot = data.getValue(indexPivot);
+			if (pivot != 0) {
+				double value = data.getValue(indexData);
+				pivots.add(new Pivot(pivot, value, index));
+				break;
+			}
+		}
+
+		return pivots;
 	}
 
 	/**
@@ -409,6 +572,74 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @return The chart converter to data structure.
+	 */
+	private DataConverter getChartDataConverter() {
+		DataConverter dataConverter = (DataConverter) properties.getObject("data_converter");
+		if (dataConverter != null) {
+			return dataConverter;
+		}
+
+		View view = getView(true, true, true, true, false);
+		List<Integer> list = new ArrayList<>();
+
+		/* Open, high, low, close. */
+		list.add(view.getFieldIndex(DB.FIELD_BAR_OPEN));
+		list.add(view.getFieldIndex(DB.FIELD_BAR_HIGH));
+		list.add(view.getFieldIndex(DB.FIELD_BAR_LOW));
+		list.add(view.getFieldIndex(DB.FIELD_BAR_CLOSE));
+
+		List<Field> fields;
+
+		/* Pivots, reference values and labels. */
+		list.add(view.getFieldIndex(DB.FIELD_STATES_PIVOT_CALC));
+		list.add(view.getFieldIndex(DB.FIELD_STATES_REFV_CALC));
+		list.add(view.getFieldIndex(DB.FIELD_STATES_LABEL_CALC));
+		list.add(view.getFieldIndex(DB.FIELD_STATES_LABEL_CALC_SET));
+
+		/* Averages. */
+		fields = getFieldListAverages();
+		for (Field field : fields) {
+			int index = view.getFieldIndex(field.getAlias());
+			list.add(index);
+		}
+
+		/* Slopes normalized. */
+		fields = getFieldListSlopes();
+		for (Field field : fields) {
+			int index = view.getFieldIndex(field.getAlias());
+			list.add(index);
+		}
+
+		/* Spreads normalized. */
+		fields = getFieldListSpreads();
+		for (Field field : fields) {
+			int index = view.getFieldIndex(field.getAlias());
+			list.add(index);
+		}
+
+		int[] indexes = Lists.toIntegerArray(list);
+		Record masterRecord = view.getDefaultRecord();
+		dataConverter = new DataConverter(masterRecord, indexes);
+
+		properties.setObject("data_converter", dataConverter);
+		return dataConverter;
+	}
+
+	/**
+	 * @return The chart list persistor.
+	 */
+	private ListPersistor getChartListPersistor() {
+		ListPersistor persistor = (ListPersistor) properties.getObject("data_persistor");
+		if (persistor == null) {
+			View view = getView(true, true, true, true, false);
+			persistor = new ListPersistor(view.getPersistor());
+			properties.setObject("data_persistor", persistor);
+		}
+		return persistor;
+	}
+
+	/**
 	 * @return The list of average fields.
 	 */
 	public List<Field> getFieldListAverages() {
@@ -421,6 +652,17 @@ public class StatisticsAverages extends Statistics {
 			Field field = DB.field_double(name, header);
 			field.setStringConverter(new NumberScaleConverter(8));
 			fields.add(field);
+		}
+		return fields;
+	}
+
+	/**
+	 * @return The list with all candle fields.
+	 */
+	public List<Field> getFieldListCandles() {
+		List<Field> fields = new ArrayList<>();
+		for (int i = 0; i < getParameters().averages.size(); i++) {
+			fields.addAll(getFieldListCandles(i));
 		}
 		return fields;
 	}
@@ -504,24 +746,6 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @return The last time of the states table.
-	 */
-	long getLastSourcesTime() throws Throwable {
-		long time = 0;
-		Persistor persistor = getTableSources().getPersistor();
-		Field ftime = persistor.getField(DB.FIELD_BAR_TIME);
-		Order order = new Order();
-		order.add(ftime, false);
-		RecordIterator iter = persistor.iterator(null, order);
-		if (iter.hasNext()) {
-			Record rc = iter.next();
-			time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
-		}
-		iter.close();
-		return time;
-	}
-
-	/**
 	 * @param avg The average.
 	 * @return The name.
 	 */
@@ -574,26 +798,47 @@ public class StatisticsAverages extends Statistics {
 	@Override
 	public List<Option> getOptions() {
 		List<Option> options = new ArrayList<>();
+		Option option;
 
 		/* Calculate the statistics. */
-		Option optionCalculate = new Option();
-		optionCalculate.setKey("CALCULATE");
-		optionCalculate.setText("Calculate");
-		optionCalculate.setToolTip("Calculate all statistics values");
-		optionCalculate.setAction(new ActionCalculate());
-		optionCalculate.setOptionGroup(new Option.Group("CALCULATE", 1));
-		optionCalculate.setSortIndex(1);
-		options.add(optionCalculate);
+		option = new Option();
+		option.setKey("CALCULATE");
+		option.setText("Calculate");
+		option.setToolTip("Calculate all statistics values");
+		option.setAction(new ActionCalculate());
+		option.setOptionGroup(new Option.Group("CALCULATE", 1));
+		option.setSortIndex(1);
+		options.add(option);
 
 		/* Browse source and raw values. */
-		Option optionBrowseStats = new Option();
-		optionBrowseStats.setKey("BROWSE-RAW");
-		optionBrowseStats.setText("Browse raw values");
-		optionBrowseStats.setToolTip("Browse source and raw values");
-		optionBrowseStats.setAction(new ActionBrowseRaw());
-		optionBrowseStats.setOptionGroup(new Option.Group("BROWSE", 2));
-		optionBrowseStats.setSortIndex(1);
-		options.add(optionBrowseStats);
+		option = new Option();
+		option.setKey("BROWSE-RAW");
+		option.setText("Browse raw values");
+		option.setToolTip("Browse source and raw values");
+		option.setAction(new ActionBrowseView(false));
+		option.setOptionGroup(new Option.Group("BROWSE", 2));
+		option.setSortIndex(1);
+		options.add(option);
+
+		/* Browse ranges. */
+		option = new Option();
+		option.setKey("BROWSE-RANGES");
+		option.setText("Browse ranges");
+		option.setToolTip("Browse ranges minimum, maximum, average and standard deviation");
+		option.setAction(new ActionBrowseRanges());
+		option.setOptionGroup(new Option.Group("BROWSE", 3));
+		option.setSortIndex(1);
+		options.add(option);
+
+		/* Browse source and normalized values. */
+		option = new Option();
+		option.setKey("BROWSE-NRM");
+		option.setText("Browse normalized values");
+		option.setToolTip("Browse source and normalized values");
+		option.setAction(new ActionBrowseView(true));
+		option.setOptionGroup(new Option.Group("BROWSE", 4));
+		option.setSortIndex(1);
+		options.add(option);
 
 		return options;
 	}
@@ -919,21 +1164,51 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @return The view to borwse raw values.
+	 * @param normalized Normalized / raw values.
+	 * @param averages   Show averages.
+	 * @param slopes     Show slopes.
+	 * @param spreads    Show spreads.
+	 * @param candles    Show candles.
+	 * @return The view.
 	 */
-	public View getViewRaw() {
+	public View getView(
+		boolean normalized,
+		boolean averages,
+		boolean slopes,
+		boolean spreads,
+		boolean candles) {
 		View view = new View();
-		view.setName("view-" + getLabel());
+		StringBuilder b = new StringBuilder();
+		b.append(getLabel());
+		b.append("-view");
+		if (averages) {
+			b.append("-avgs");
+		}
+		if (normalized) {
+			b.append("-nrm");
+		} else {
+			b.append("-raw");
+		}
+		if (slopes) {
+			b.append("-slopes");
+		}
+		if (spreads) {
+			b.append("-spreads");
+		}
+		if (candles) {
+			b.append("-candles");
+		}
+		view.setName(b.toString());
 
 		Table tableSrc = getTableSources();
-		Table tableRaw = getTableRaw();
+		Table tableRel = (normalized ? getTableNormalized() : getTableRaw());
 
 		view.setMasterTable(tableSrc);
 
 		Relation relRaw = new Relation();
 		relRaw.setLocalTable(tableSrc);
-		relRaw.setForeignTable(tableRaw);
-		relRaw.add(tableSrc.getField(DB.FIELD_BAR_TIME), tableRaw.getField(DB.FIELD_BAR_TIME));
+		relRaw.setForeignTable(tableRel);
+		relRaw.add(tableSrc.getField(DB.FIELD_BAR_TIME), tableRel.getField(DB.FIELD_BAR_TIME));
 		view.addRelation(relRaw);
 
 		view.addField(tableSrc.getField(DB.FIELD_BAR_TIME));
@@ -943,28 +1218,33 @@ public class StatisticsAverages extends Statistics {
 		view.addField(tableSrc.getField(DB.FIELD_BAR_LOW));
 		view.addField(tableSrc.getField(DB.FIELD_BAR_CLOSE));
 
-		List<Field> fields;
+		List<Field> fields = null;
 
-		fields = getFieldListAverages();
-		for (Field field : fields) {
-			view.addField(tableSrc.getField(field.getAlias()));
-		}
-
-		fields = getFieldListSlopes();
-		for (Field field : fields) {
-			view.addField(tableRaw.getField(field.getAlias()));
-		}
-
-		fields = getFieldListSpreads();
-		for (Field field : fields) {
-			view.addField(tableRaw.getField(field.getAlias()));
-		}
-
-		List<Average> averages = getParameters().averages;
-		for (int i = 0; i < averages.size(); i++) {
-			fields = getFieldListCandles(i);
+		if (averages) {
+			fields = getFieldListAverages();
 			for (Field field : fields) {
-				view.addField(tableRaw.getField(field.getAlias()));
+				view.addField(tableSrc.getField(field.getAlias()));
+			}
+		}
+
+		if (slopes) {
+			fields = getFieldListSlopes();
+			for (Field field : fields) {
+				view.addField(tableRel.getField(field.getAlias()));
+			}
+		}
+
+		if (spreads) {
+			fields = getFieldListSpreads();
+			for (Field field : fields) {
+				view.addField(tableRel.getField(field.getAlias()));
+			}
+		}
+
+		if (candles) {
+			fields = getFieldListCandles();
+			for (Field field : fields) {
+				view.addField(tableRel.getField(field.getAlias()));
 			}
 		}
 

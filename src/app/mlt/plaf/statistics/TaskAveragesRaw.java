@@ -104,20 +104,20 @@ public class TaskAveragesRaw extends TaskAverages {
 		long totalWork = getTotalWork();
 		long workDone = 0;
 
+		/* Nothing pending to calculate. */
+		if (totalWork <= 0) {
+			return;
+		}
+
 		/* Pool. */
 		List<Callable<Void>> concurrents = new ArrayList<>();
-		int poolSize = 100;
+		int poolSize = 50;
 		int maxConcurrent = 1000;
 		ForkJoinPool pool = new ForkJoinPool(poolSize);
 		List<Average> averages = stats.getParameters().averages;
 		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
 		FixedSizeList<Double> avgBuffer = new FixedSizeList<>(maxPeriod);
 		FixedSizeList<Record> rcBuffer = new FixedSizeList<>(maxPeriod);
-
-		/* Nothing pending to calculate. */
-		if (totalWork <= 0) {
-			return;
-		}
 
 		/* Iterate ticker. */
 		Record rcSrcPrev = null;
@@ -299,9 +299,27 @@ public class TaskAveragesRaw extends TaskAverages {
 	 */
 	private Criteria getCriteriaTicker() throws Throwable {
 		Field ftime = persistorTicker.getField(DB.FIELD_BAR_TIME);
-		Value vtime = new Value(stats.getLastSourcesTime());
+		Value vtime = new Value(getLastSourcesTime());
 		Criteria criteria = new Criteria();
 		criteria.add(Condition.fieldGT(ftime, vtime));
 		return criteria;
 	}
+	
+	/**
+	 * @return The last time of the sources (and raw) table.
+	 */
+	private long getLastSourcesTime() throws Throwable {
+		long time = 0;
+		Field ftime = persistorSources.getField(DB.FIELD_BAR_TIME);
+		Order order = new Order();
+		order.add(ftime, false);
+		RecordIterator iter = persistorSources.iterator(null, order);
+		if (iter.hasNext()) {
+			Record rc = iter.next();
+			time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
+		}
+		iter.close();
+		return time;
+	}
+
 }

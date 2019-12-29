@@ -120,7 +120,7 @@ public class AddCheck extends Statement {
 		b.append("ALTER TABLE ");
 		b.append(getTable().getNameSchema());
 		b.append(" ADD CONSTRAINT ");
-		b.append(getConstraintName(getTable(), getTable().getFieldIndex(getField())));
+		b.append(getConstraintName(getTable(), getTable().getFieldIndex(getField().getAlias())));
 		b.append(" CHECK (");
 		if (getField().getPossibleValues().isEmpty()) {
 			boolean and = false;

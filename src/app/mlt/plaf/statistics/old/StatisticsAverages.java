@@ -1873,21 +1873,21 @@ public class StatisticsAverages extends Statistics {
 		/* Averages. */
 		fields = getFieldListAverages();
 		for (Field field : fields) {
-			int index = table.getFieldIndex(field);
+			int index = table.getFieldIndex(field.getAlias());
 			list.add(index);
 		}
 
 		/* Slopes normalized. */
 		fields = getFieldListSlopes("nrm");
 		for (Field field : fields) {
-			int index = table.getFieldIndex(field);
+			int index = table.getFieldIndex(field.getAlias());
 			list.add(index);
 		}
 
 		/* Spreads normalized. */
 		fields = getFieldListSpreads("nrm");
 		for (Field field : fields) {
-			int index = table.getFieldIndex(field);
+			int index = table.getFieldIndex(field.getAlias());
 			list.add(index);
 		}
 

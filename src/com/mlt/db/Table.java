@@ -400,16 +400,6 @@ public class Table {
 	}
 
 	/**
-	 * Get a field index.
-	 *
-	 * @return The field index or -1 if not found.
-	 * @param field The field.
-	 */
-	public int getFieldIndex(Field field) {
-		return getFieldIndex(field.getAlias());
-	}
-
-	/**
 	 * Returns the fields, for use in the friend class Cursor.
 	 *
 	 * @return The field list.

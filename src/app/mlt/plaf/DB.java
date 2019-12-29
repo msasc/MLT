@@ -47,7 +47,7 @@ import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
-import app.mlt.plaf.statistics.StatisticsAverages;
+import app.mlt.plaf.statistics.old.StatisticsAverages;
 
 /**
  * Statically centralizes access to lookups, persistors, records, recordsets,
@@ -108,7 +108,7 @@ public class DB {
 	public static final String FIELD_BAR_LOW = "low";
 	public static final String FIELD_BAR_CLOSE = "close";
 	public static final String FIELD_BAR_VOLUME = "volume";
-	
+
 	public static final String FIELD_CANDLE_NORDER = "norder";
 	public static final String FIELD_CANDLE_TIME = "time_candle";
 	public static final String FIELD_CANDLE_TIME_FMT = "time_candle_fmt";
@@ -122,6 +122,13 @@ public class DB {
 	public static final String FIELD_CANDLE_BODY_POS = "pbody";
 	public static final String FIELD_CANDLE_REL_POS = "frelpos";
 	public static final String FIELD_CANDLE_SIGN = "sign";
+	public static final String[] CANDLE_NAMES = new String[] {
+		FIELD_CANDLE_RANGE,
+		FIELD_CANDLE_BODY_FACTOR,
+		FIELD_CANDLE_BODY_POS,
+		FIELD_CANDLE_REL_POS,
+		FIELD_CANDLE_SIGN
+	};
 
 	public static final String FIELD_INSTRUMENT_ID = "instr_id";
 	public static final String FIELD_INSTRUMENT_DESC = "instr_desc";
@@ -347,6 +354,25 @@ public class DB {
 		field.setHeader(header);
 		field.setLabel(label);
 		field.setTitle(label);
+		return field;
+	}
+
+	/**
+	 * @param period      The period.
+	 * @param nameTime    The time name.
+	 * @param header      The header.
+	 * @return The field field definition for the formatted time.
+	 */
+	public static Field field_timeFmt(
+		Period period,
+		String nameTime,
+		String header) {
+		String nameTimeFmt = nameTime + "_fmt";
+		Field field = field_long(nameTimeFmt, header);
+		field.setPersistent(false);
+		field.setCalculator(new FieldValue(nameTime));
+		String pattern = period.getTimeFmtPattern();
+		field.setStringConverter(new TimeFmtConverter(new SimpleDateFormat(pattern)));
 		return field;
 	}
 

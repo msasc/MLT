@@ -190,7 +190,7 @@ public class Select extends Statement {
 				b.append(relateExplicit(getView().getMasterTable(), getView().getRelations()));
 
 				// WHERE clause if there is a filter
-				if (getFilter() != null) {
+				if (getFilter() != null && !getFilter().isEmpty()) {
 					b.append(" WHERE ");
 					b.append(getFilter().toSQL());
 				}

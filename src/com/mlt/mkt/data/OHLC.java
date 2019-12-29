@@ -144,7 +144,7 @@ public class OHLC {
 	 * @param dataPrev The previous data candlestick.
 	 * @return The relative position of two consecutive candles.
 	 */
-	public static double getRelativePositions(Data dataCurr, Data dataPrev) {
+	public static double getRelativePosition(Data dataCurr, Data dataPrev) {
 		double current = getWeightedClosePrice(dataCurr);
 		double previous = getWeightedClosePrice(dataPrev);
 		double factor = (current / previous) - 1;

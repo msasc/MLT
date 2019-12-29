@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf.statistics.old;
 
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Record;

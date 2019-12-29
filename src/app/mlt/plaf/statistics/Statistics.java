@@ -105,7 +105,9 @@ public abstract class Statistics {
 	 * 
 	 * @return The statistics legend or summary.
 	 */
-	public abstract String getLegend();
+	public String getLegend() {
+		return "";
+	}
 
 	/**
 	 * Return the list of options associated with the statistics. These options are
@@ -114,14 +116,6 @@ public abstract class Statistics {
 	 * @return The list of options associated with the statistics.
 	 */
 	public abstract List<Option> getOptions();
-
-	/**
-	 * Return a string that stores internal parameter values to be restored later,
-	 * generally in an XML format.
-	 * 
-	 * @return The internal parameters as a string.
-	 */
-	public abstract String getParameters();
 
 	/**
 	 * Return the parameters description in a more readable form.

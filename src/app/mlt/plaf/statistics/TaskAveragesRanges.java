@@ -54,7 +54,7 @@ public class TaskAveragesRanges extends TaskAverages {
 		fields = new ArrayList<>();
 		fields.addAll(stats.getFieldListSlopes());
 		fields.addAll(stats.getFieldListSpreads());
-		int size = stats.getParameters().averages.size();
+		int size = stats.getAverages().size();
 		for (int i = 0; i < size; i++) {
 			fields.addAll(stats.getFieldListCandles(i));
 		}

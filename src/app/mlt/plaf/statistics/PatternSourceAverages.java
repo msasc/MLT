@@ -15,9 +15,10 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics.old;
+package app.mlt.plaf.statistics;
 
 import com.mlt.db.ListPersistor;
+import com.mlt.db.Persistor;
 import com.mlt.db.Record;
 import com.mlt.ml.data.Pattern;
 import com.mlt.ml.data.PatternSource;
@@ -43,7 +44,8 @@ public class PatternSourceAverages implements PatternSource {
 	 */
 	public PatternSourceAverages(StatisticsAverages stats, boolean calculated) {
 		this.stats = stats;
-		this.persistor = new ListPersistor(stats.getTableStates().getPersistor());
+		Persistor viewPersistor = stats.getView(true, false, true, true, true).getPersistor();
+		this.persistor = new ListPersistor(viewPersistor);
 		this.calculated = calculated;
 	}
 

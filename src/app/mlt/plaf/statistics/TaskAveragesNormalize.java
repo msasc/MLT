@@ -20,8 +20,6 @@ package app.mlt.plaf.statistics;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ForkJoinPool;
 
 import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
@@ -36,6 +34,7 @@ import com.mlt.db.Table;
 import com.mlt.db.Value;
 import com.mlt.desktop.Option;
 import com.mlt.ml.function.Normalizer;
+import com.mlt.task.Concurrent;
 
 import app.mlt.plaf.DB;
 
@@ -89,12 +88,12 @@ public class TaskAveragesNormalize extends TaskAverages {
 			}
 			DB.ddl().buildTable(table);
 		}
-		
+
 		/* Count and retrieve pending total work. */
 		calculateTotalWork();
 		long totalWork = getTotalWork();
 		long workDone = 0;
-		
+
 		/* Nothing pending to calculate. */
 		if (totalWork <= 0) {
 			return;
@@ -113,12 +112,9 @@ public class TaskAveragesNormalize extends TaskAverages {
 			normalizers.add(map.get(field.getAlias()));
 		}
 
-		/* Pool. */
-		List<Callable<Void>> concurrents = new ArrayList<>();
-		int poolSize = 50;
-		int maxConcurrent = 500;
-		ForkJoinPool pool = new ForkJoinPool(poolSize);
-		
+		/* Concurrent pool. */
+		Concurrent concurrent = new Concurrent(50, 500);
+
 		/* Iterate raw values. */
 		Order order = persistorRaw.getView().getMasterTable().getPrimaryKey();
 		RecordIterator iter = persistorRaw.iterator(getCriteriaRaw(), order);
@@ -129,14 +125,14 @@ public class TaskAveragesNormalize extends TaskAverages {
 				setCancelled();
 				break;
 			}
-			
+
 			/* Retrieve record. */
 			Record rcRaw = iter.next();
-			
+
 			/* Notify work done. */
 			workDone++;
 			update(rcRaw.toString(DB.FIELD_BAR_TIME_FMT), workDone, totalWork);
-			
+
 			/* Nprmalized record. */
 			Record rcNrm = persistorNrm.getDefaultRecord();
 			rcNrm.setValue(DB.FIELD_BAR_TIME, rcRaw.getValue(DB.FIELD_BAR_TIME));
@@ -147,22 +143,12 @@ public class TaskAveragesNormalize extends TaskAverages {
 				double valueNrm = normalizer.normalize(valueRaw);
 				rcNrm.setValue(alias, valueNrm);
 			}
-			
-			/* Queue insert. */
-			concurrents.add(new Record.Insert(rcNrm, persistorNrm));
 
-			/* Passed already calculated, do insert. */
-			if (concurrents.size() >= maxConcurrent) {
-				pool.invokeAll(concurrents);
-				concurrents.clear();
-			}
+			/* Queue insert. */
+			concurrent.add(new Record.Insert(rcNrm, persistorNrm));
 		}
 		iter.close();
-		if (!concurrents.isEmpty()) {
-			pool.invokeAll(concurrents);
-			concurrents.clear();
-		}
-		pool.shutdown();
+		concurrent.end();
 	}
 
 	/**
@@ -193,7 +179,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 		iter.close();
 		return time;
 	}
-	
+
 	/**
 	 * @return The map of normalizers.
 	 */

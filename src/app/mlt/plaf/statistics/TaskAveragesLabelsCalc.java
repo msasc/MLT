@@ -15,12 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics.old;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ForkJoinPool;
+package app.mlt.plaf.statistics;
 
 import com.mlt.db.Criteria;
 import com.mlt.db.ListPersistor;
@@ -28,6 +23,7 @@ import com.mlt.db.Persistor;
 import com.mlt.db.Record;
 import com.mlt.db.Value;
 import com.mlt.db.ValueMap;
+import com.mlt.task.Concurrent;
 
 import app.mlt.plaf.DB;
 
@@ -52,7 +48,7 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 		super(stats);
 		setId("averages-label-calc");
 		setTitle(stats.getLabel() + " - Labels on calculated pivots");
-		persistor = stats.getTableStates().getPersistor();
+		persistor = stats.getTableSources().getPersistor();
 		listPersistor = new ListPersistor(persistor);
 	}
 
@@ -74,18 +70,15 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 
 		/* Reset values. */
 		ValueMap map = new ValueMap();
-		map.put(DB.FIELD_STATES_LABEL_CALC, new Value(0));
-		map.put(DB.FIELD_STATES_LABEL_CALC_SET, new Value(0));
+		map.put(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
+		map.put(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(0));
 		persistor.update(new Criteria(), map);
 		
 		/* Count. */
 		calculateTotalWork();
 
-		/* Pool. */
-		int poolSize = 50;
-		int maxConcurrent = 500;
-		ForkJoinPool pool = new ForkJoinPool(poolSize);
-		List<Callable<Void>> concurrents = new ArrayList<>();
+		/* Concurrent manager. */
+		Concurrent concurrent = new Concurrent(50, 500);
 
 		/* Iterate states. */
 		double percentCalc = stats.getPercentCalc();
@@ -114,21 +107,21 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 			update(b.toString(), (i + 1), listPersistor.size());
 
 			/* If not a pivot, continue. */
-			int pivot = rc.getValue(DB.FIELD_STATES_PIVOT_CALC).getInteger();
+			int pivot = rc.getValue(DB.FIELD_SOURCES_PIVOT_CALC).getInteger();
 			if (pivot == 0) {
 				continue;
 			}
 			int index = i;
-			double value = rc.getValue(DB.FIELD_STATES_REFV_CALC).getDouble();
-			rc.setValue(DB.FIELD_STATES_LABEL_CALC, new Value(0));
-			rc.setValue(DB.FIELD_STATES_LABEL_CALC_SET, new Value(1));
-			concurrents.add(new Record.Update(rc, persistor));
+			double value = rc.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
+			rc.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
+			rc.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+			concurrent.add(new Record.Update(rc, persistor));
 
 			/* Analyze previous. */
 			int indexPrev = -1;
 			for (int j = i - 1; j >= 0; j--) {
 				Record rcTmp = listPersistor.getRecord(j);
-				int pivotTmp = rcTmp.getValue(DB.FIELD_STATES_PIVOT_CALC).getInteger();
+				int pivotTmp = rcTmp.getValue(DB.FIELD_SOURCES_PIVOT_CALC).getInteger();
 				if (pivotTmp != 0) {
 					indexPrev = j;
 					break;
@@ -138,33 +131,33 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 				indexPrev = 0;
 			}
 			Record rcPrev = listPersistor.getRecord(indexPrev);
-			double valuePrev = rcPrev.getValue(DB.FIELD_STATES_REFV_CALC).getDouble();
+			double valuePrev = rcPrev.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
 			double evalPrev = Math.abs(value - valuePrev) * percentCalc / 100;
 			boolean labelPrevSet = false;
 			for (int j = indexPrev; j < index; j++) {
 				Record rcTmp = listPersistor.getRecord(j);
 				if (!labelPrevSet) {
-					double valueTmp = rcTmp.getValue(DB.FIELD_STATES_REFV_CALC).getDouble();
+					double valueTmp = rcTmp.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
 					if (Math.abs(value - valueTmp) <= evalPrev) {
-						rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC, new Value(0));
-						rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC_SET, new Value(1));
-						concurrents.add(new Record.Update(rcTmp, persistor));
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+						concurrent.add(new Record.Update(rcTmp, persistor));
 						labelPrevSet = true;
 					}
 				} else {
-					rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC, new Value(0));
-					rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC_SET, new Value(1));
-					concurrents.add(new Record.Update(rcTmp, persistor));
+					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
+					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+					concurrent.add(new Record.Update(rcTmp, persistor));
 				}
 			}
-			if (rcPrev.getValue(DB.FIELD_STATES_LABEL_CALC_SET).getInteger() != 0) {
+			if (rcPrev.getValue(DB.FIELD_SOURCES_LABEL_CALC_SET).getInteger() != 0) {
 				int labelPrev = (pivot == 1 ? 1 : -1);
 				for (int j = indexPrev; j < index; j++) {
 					Record rcTmp = listPersistor.getRecord(j);
-					if (rcTmp.getValue(DB.FIELD_STATES_LABEL_CALC_SET).getInteger() == 0) {
-						rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC, new Value(labelPrev));
-						rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC_SET, new Value(1));
-						concurrents.add(new Record.Update(rcTmp, persistor));
+					if (rcTmp.getValue(DB.FIELD_SOURCES_LABEL_CALC_SET).getInteger() == 0) {
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(labelPrev));
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+						concurrent.add(new Record.Update(rcTmp, persistor));
 					}
 				}
 			}
@@ -173,7 +166,7 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 			int indexNext = -1;
 			for (int j = i + 1; j < listPersistor.size(); j++) {
 				Record rcTmp = listPersistor.getRecord(j);
-				int pivotTmp = rcTmp.getValue(DB.FIELD_STATES_PIVOT_CALC).getInteger();
+				int pivotTmp = rcTmp.getValue(DB.FIELD_SOURCES_PIVOT_CALC).getInteger();
 				if (pivotTmp != 0) {
 					indexNext = j;
 					break;
@@ -183,41 +176,27 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 				indexNext = listPersistor.size() - 1;
 			}
 			Record rcNext = listPersistor.getRecord(indexNext);
-			double valueNext = rcNext.getValue(DB.FIELD_STATES_REFV_CALC).getDouble();
+			double valueNext = rcNext.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
 			double evalNext = Math.abs(value - valueNext) * percentCalc / 100;
 			boolean labelNextSet = false;
 			for (int j = indexPrev; j > index; j--) {
 				Record rcTmp = listPersistor.getRecord(j);
 				if (!labelNextSet) {
-					double valueTmp = rcTmp.getValue(DB.FIELD_STATES_REFV_CALC).getDouble();
+					double valueTmp = rcTmp.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
 					if (Math.abs(value - valueTmp) <= evalNext) {
-						rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC, new Value(0));
-						rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC_SET, new Value(1));
-						concurrents.add(new Record.Update(rcTmp, persistor));
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+						concurrent.add(new Record.Update(rcTmp, persistor));
 						labelNextSet = true;
 					}
 				} else {
-					rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC, new Value(0));
-					rcTmp.setValue(DB.FIELD_STATES_LABEL_CALC_SET, new Value(1));
-					concurrents.add(new Record.Update(rcTmp, persistor));
+					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
+					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+					concurrent.add(new Record.Update(rcTmp, persistor));
 				}
 			}
-			if (concurrents.size() >= maxConcurrent) {
-				pool.invokeAll(concurrents);
-				concurrents.clear();
-			}
-			
-			if (concurrents.size() >= maxConcurrent) {
-				pool.invokeAll(concurrents);
-				concurrents.clear();
-			}
-
 		}
-		if (!concurrents.isEmpty()) {
-			pool.invokeAll(concurrents);
-			concurrents.clear();
-		}
-		pool.shutdown();
+		concurrent.end();
 	}
 
 }

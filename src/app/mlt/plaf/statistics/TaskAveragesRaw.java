@@ -19,8 +19,6 @@ package app.mlt.plaf.statistics;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ForkJoinPool;
 
 import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
@@ -36,6 +34,7 @@ import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Period;
+import com.mlt.task.Concurrent;
 import com.mlt.util.FixedSizeList;
 import com.mlt.util.Numbers;
 
@@ -109,12 +108,11 @@ public class TaskAveragesRaw extends TaskAverages {
 			return;
 		}
 
-		/* Pool. */
-		List<Callable<Void>> concurrents = new ArrayList<>();
-		int poolSize = 50;
-		int maxConcurrent = 1000;
-		ForkJoinPool pool = new ForkJoinPool(poolSize);
-		List<Average> averages = stats.getParameters().averages;
+		/* Concurrent pool. */
+		Concurrent concurrent = new Concurrent(50, 500);
+		
+		/* Buffers. */
+		List<Average> averages = stats.getAverages();
 		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
 		FixedSizeList<Double> avgBuffer = new FixedSizeList<>(maxPeriod);
 		FixedSizeList<Record> rcBuffer = new FixedSizeList<>(maxPeriod);
@@ -229,22 +227,11 @@ public class TaskAveragesRaw extends TaskAverages {
 			rcSrcPrev = rcSrc;
 
 			/* Queue insert. */
-			concurrents.add(new Record.Insert(rcSrc, persistorSources));
-			concurrents.add(new Record.Insert(rcRaw, persistorRaw));
-
-			/* Passed already calculated, do insert. */
-			if (concurrents.size() >= maxConcurrent) {
-				pool.invokeAll(concurrents);
-				concurrents.clear();
-			}
+			concurrent.add(new Record.Insert(rcSrc, persistorSources));
+			concurrent.add(new Record.Insert(rcRaw, persistorRaw));
 		}
 		iter.close();
-		if (!concurrents.isEmpty()) {
-			pool.invokeAll(concurrents);
-			concurrents.clear();
-		}
-		pool.shutdown();
-
+		concurrent.end();
 	}
 
 	/**

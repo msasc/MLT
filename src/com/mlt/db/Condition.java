@@ -1174,7 +1174,7 @@ public class Condition {
 		if (isLiteral()) {
 			throw new IllegalStateException();
 		}
-		int index = record.getFieldList().getFieldIndex(field);
+		int index = record.getFieldList().getFieldIndex(field.getAlias());
 		if (index < 0) {
 			return false;
 		}

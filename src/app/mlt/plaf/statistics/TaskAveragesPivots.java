@@ -17,17 +17,13 @@
 
 package app.mlt.plaf.statistics;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ForkJoinPool;
-
 import com.mlt.db.Criteria;
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Persistor;
 import com.mlt.db.Record;
 import com.mlt.db.Value;
 import com.mlt.db.ValueMap;
+import com.mlt.task.Concurrent;
 
 import app.mlt.plaf.DB;
 
@@ -58,7 +54,7 @@ public class TaskAveragesPivots extends TaskAverages {
 		setTitle(stats.getLabel() + " - Calculate zig-zag pivots");
 		persistor = stats.getTableSources().getPersistor();
 		listPersistor = new ListPersistor(persistor);
-		barsAhead = stats.getParameters().barsAhead;
+		barsAhead = stats.getBarsAhead();
 	}
 
 	/**
@@ -79,18 +75,15 @@ public class TaskAveragesPivots extends TaskAverages {
 		
 		/* Reset values. */
 		ValueMap map = new ValueMap();
-		map.put(DB.FIELD_STATES_PIVOT_CALC, new Value(0));
-		map.put(DB.FIELD_STATES_REFV_CALC, new Value(0.0));
+		map.put(DB.FIELD_SOURCES_PIVOT_CALC, new Value(0));
+		map.put(DB.FIELD_SOURCES_REFV_CALC, new Value(0.0));
 		persistor.update(new Criteria(), map);
 		
 		/* Count. */
 		calculateTotalWork();
 		
-		/* Pool. */
-		int poolSize = 50;
-		int maxConcurrent = 500;
-		ForkJoinPool pool = new ForkJoinPool(poolSize);
-		List<Callable<Void>> concurrents = new ArrayList<>();
+		/* Concurrent pool. */
+		Concurrent concurrent = new Concurrent(50, 500);
 
 		/* Previous pivot tracked and its index. */
 		int previousPivot = 0;
@@ -123,15 +116,11 @@ public class TaskAveragesPivots extends TaskAverages {
 			
 			/* Current value to compare with. */
 			double value = rcSrc.getValue(alias).getDouble();
-			rcSrc.setValue(DB.FIELD_STATES_REFV_CALC, value);
+			rcSrc.setValue(DB.FIELD_SOURCES_REFV_CALC, value);
 
 			/* Process only if bars ahead on both sides. */
 			if (i < barsAhead || listPersistor.size() - 1 - i < barsAhead) {
-				concurrents.add(new Record.Update(rcSrc, persistor));
-				if (concurrents.size() >= maxConcurrent) {
-					pool.invokeAll(concurrents);
-					concurrents.clear();
-				}
+				concurrent.add(new Record.Update(rcSrc, persistor));
 				continue;
 			}
 
@@ -200,18 +189,10 @@ public class TaskAveragesPivots extends TaskAverages {
 			}
 
 			/* Update. */
-			rcSrc.setValue(DB.FIELD_STATES_PIVOT_CALC, pivot);
-			concurrents.add(new Record.Update(rcSrc, persistor));
-			if (concurrents.size() >= maxConcurrent) {
-				pool.invokeAll(concurrents);
-				concurrents.clear();
-			}
+			rcSrc.setValue(DB.FIELD_SOURCES_PIVOT_CALC, pivot);
+			concurrent.add(new Record.Update(rcSrc, persistor));
 		}
-		if (!concurrents.isEmpty()) {
-			pool.invokeAll(concurrents);
-			concurrents.clear();
-		}
-		pool.shutdown();
+		concurrent.end();
 	}
 
 }

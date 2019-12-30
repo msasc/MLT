@@ -26,10 +26,11 @@ import java.util.List;
 import com.mlt.db.Field;
 import com.mlt.db.Record;
 import com.mlt.db.Value;
+import com.mlt.util.Lists;
 
 /**
  * Converter from record to timed data and vice versa. The general contract is
- * that field 0 is the time.
+ * that field 0 is the time, although it can be set.
  *
  * @author Miquel Sas
  */
@@ -56,6 +57,8 @@ public class DataConverter {
 
 	/** Master or default record. */
 	private Record masterRecord;
+	/** Index of time field. */
+	private int indexTime = 0;
 	/** The indexes of the value fields. */
 	private int[] indexes;
 	/** Indexes map. */
@@ -69,25 +72,15 @@ public class DataConverter {
 	 * @param masterRecord The master record.
 	 */
 	public DataConverter(Record masterRecord) {
-		this.masterRecord = masterRecord;
-		int length = 0;
-		for (int i = 1; i < masterRecord.size(); i++) {
-			Field field = masterRecord.getField(i);
-			if (field.isDouble()) {
-				length++;
-			}
-		}
-		indexes = new int[length];
-		mapIndexes = new HashMap<>();
-		int index = 0;
+		List<Integer> indexList = new ArrayList<>();
 		for (int i = 1; i < masterRecord.size(); i++) {
 			Field field = masterRecord.getField(i);
 			if (field.isDouble() && field.isPersistent()) {
-				indexes[index] = i;
-				mapIndexes.put(field.getAlias(), index);
-				index++;
+				indexList.add(i);
 			}
 		}
+		int[] indexes = Lists.toIntegerArray(indexList);
+		setup(masterRecord, 0, indexes);
 	}
 
 	/**
@@ -97,17 +90,18 @@ public class DataConverter {
 	 * @param indexes      Indexes to map.
 	 */
 	public DataConverter(Record masterRecord, int... indexes) {
-		this.masterRecord = masterRecord;
-		this.indexes = indexes;
-		this.mapIndexes = new HashMap<>();
-		for (int i = 0; i < indexes.length; i++) {
-			int index = indexes[i];
-			if (index <= 0 || index >= masterRecord.size()) {
-				throw new IllegalArgumentException("Invalid index " + index);
-			}
-			String alias = masterRecord.getField(index).getAlias();
-			mapIndexes.put(alias, i);
-		}
+		setup(masterRecord, 0, indexes);
+	}
+
+	/**
+	 * Generic constructor, indicating the indexes.
+	 * 
+	 * @param masterRecord Master record.
+	 * @param indexTime    Index of the time field.
+	 * @param indexes      Indexes of value fields to map.
+	 */
+	public DataConverter(Record masterRecord, int indexTime, int... indexes) {
+		setup(masterRecord, indexTime, indexes);
 	}
 
 	/**
@@ -181,7 +175,7 @@ public class DataConverter {
 	 * @return The data.
 	 */
 	public Data getData(Record record) {
-		long time = record.getValue(0).getLong();
+		long time = record.getValue(indexTime).getLong();
 		double[] values = new double[indexes.length];
 		for (int i = 0; i < indexes.length; i++) {
 			values[i] = record.getValue(indexes[i]).getDouble();
@@ -240,7 +234,7 @@ public class DataConverter {
 	 */
 	public Record getRecord(Data data) {
 		Record record = Record.copy(masterRecord);
-		record.setValue(0, new Value(data.getTime()));
+		record.setValue(indexTime, new Value(data.getTime()));
 		for (int i = 0; i < indexes.length; i++) {
 			double value = data.getValue(i);
 			int index = indexes[i];
@@ -278,5 +272,27 @@ public class DataConverter {
 			}
 		}
 		return record;
+	}
+
+	/**
+	 * Setup the converter.
+	 * 
+	 * @param masterRecord Master record.
+	 * @param indexTime    Index of time field.
+	 * @param indexes      Indexes of value fields to map.
+	 */
+	private void setup(Record masterRecord, int indexTime, int... indexes) {
+		this.masterRecord = masterRecord;
+		this.indexTime = indexTime;
+		this.indexes = indexes;
+		this.mapIndexes = new HashMap<>();
+		for (int i = 0; i < indexes.length; i++) {
+			int index = indexes[i];
+			if (index <= 0 || index >= masterRecord.size()) {
+				throw new IllegalArgumentException("Invalid index " + index);
+			}
+			String alias = masterRecord.getField(index).getAlias();
+			mapIndexes.put(alias, i);
+		}
 	}
 }

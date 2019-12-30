@@ -62,6 +62,7 @@ import com.mlt.util.Logs;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
+import app.mlt.plaf.statistics.Average;
 import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**
@@ -70,6 +71,30 @@ import app.mlt.plaf.statistics.StatisticsAverages;
  * @author Miquel Sas
  */
 public class ActionStatistics extends ActionRun {
+
+	/**
+	 * @param statsPrev Previous statistics.
+	 * @param statsNext Next statistics.
+	 * @return A boolean indicating whether the averages has been modified between
+	 *         two parameters.
+	 */
+	static final boolean checkAveragesModified(
+		StatisticsAverages statsPrev,
+		StatisticsAverages statsNext) {
+		List<Average> avgsPrev = statsPrev.getAverages();
+		List<Average> avgsNext = statsNext.getAverages();
+		if (avgsPrev.size() != avgsNext.size()) {
+			return true;
+		}
+		for (int i = 0; i < avgsPrev.size(); i++) {
+			Average avgPrev = avgsPrev.get(i);
+			Average avgNext = avgsNext.get(i);
+			if (!avgPrev.equals(avgNext)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	/**
 	 * Create a new statistics.
@@ -310,7 +335,7 @@ public class ActionStatistics extends ActionRun {
 				Persistor persistor = DB.persistor_statistics();
 				persistor.update(form.getRecord());
 				
-				if (StatisticsAverages.checkAveragesModified(statsPrev, statsNext)) {
+				if (ActionStatistics.checkAveragesModified(statsPrev, statsNext)) {
 					List<Table> tables;
 					
 					tables = statsPrev.getTables();

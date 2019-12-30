@@ -44,7 +44,7 @@ public class CacheMap<K, V> implements Map<K, V> {
 	/** Cache size. Less equal than zero, no cache. */
 	private int cacheSize = 50000;
 	/** Cache factor: 0.5, removes half of the cache. */
-	private double cacheFactor = 0.5;
+	private double cacheFactor = 0.2;
 
 	/**
 	 * Constructor.

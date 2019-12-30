@@ -47,7 +47,7 @@ import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
-import app.mlt.plaf.statistics.old.StatisticsAverages;
+import app.mlt.plaf.statistics.StatisticsAverages;
 
 /**
  * Statically centralizes access to lookups, persistors, records, recordsets,
@@ -109,14 +109,6 @@ public class DB {
 	public static final String FIELD_BAR_CLOSE = "close";
 	public static final String FIELD_BAR_VOLUME = "volume";
 
-	public static final String FIELD_CANDLE_NORDER = "norder";
-	public static final String FIELD_CANDLE_TIME = "time_candle";
-	public static final String FIELD_CANDLE_TIME_FMT = "time_candle_fmt";
-	public static final String FIELD_CANDLE_SIZE = "size";
-	public static final String FIELD_CANDLE_OPEN = "open";
-	public static final String FIELD_CANDLE_HIGH = "high";
-	public static final String FIELD_CANDLE_LOW = "low";
-	public static final String FIELD_CANDLE_CLOSE = "close";
 	public static final String FIELD_CANDLE_RANGE = "range";
 	public static final String FIELD_CANDLE_BODY_FACTOR = "fbody";
 	public static final String FIELD_CANDLE_BODY_POS = "pbody";
@@ -155,18 +147,15 @@ public class DB {
 	public static final String FIELD_SERVER_NAME = "server_name";
 	public static final String FIELD_SERVER_TITLE = "server_title";
 
-	public static final String FIELD_STATES_LABEL_CALC = "label_calc";
-	public static final String FIELD_STATES_LABEL_CALC_SET = "label_calc_set";
-	public static final String FIELD_STATES_PIVOT_CALC = "pivot_calc";
-	public static final String FIELD_STATES_REFV_CALC = "refv_calc";
+	public static final String FIELD_SOURCES_LABEL_CALC = "label_calc";
+	public static final String FIELD_SOURCES_LABEL_CALC_SET = "label_calc_set";
+	public static final String FIELD_SOURCES_PIVOT_CALC = "pivot_calc";
+	public static final String FIELD_SOURCES_REFV_CALC = "refv_calc";
 
-	public static final String FIELD_STATES_LABEL_EDIT = "label_edit";
-	public static final String FIELD_STATES_LABEL_EDIT_SET = "label_edit_set";
-	public static final String FIELD_STATES_PIVOT_EDIT = "pivot_edit";
-	public static final String FIELD_STATES_REFV_EDIT = "refv_edit";
-
-	public static final String FIELD_STATES_NORMALIZED = "normalized";
-	public static final String FIELD_STATES_PIVOT_SCANNED = "pivot_scanned";
+	public static final String FIELD_SOURCES_LABEL_EDIT = "label_edit";
+	public static final String FIELD_SOURCES_LABEL_EDIT_SET = "label_edit_set";
+	public static final String FIELD_SOURCES_PIVOT_EDIT = "pivot_edit";
+	public static final String FIELD_SOURCES_REFV_EDIT = "refv_edit";
 
 	public static final String FIELD_STATISTICS_ID = "stats_id";
 	public static final String FIELD_STATISTICS_KEY = "stats_key";

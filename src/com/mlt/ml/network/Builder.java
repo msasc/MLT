@@ -22,7 +22,7 @@ package com.mlt.ml.network;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mlt.ml.network.function.Activation;
+import com.mlt.ml.function.Activation;
 import com.mlt.ml.network.nodes.ActivationNode;
 import com.mlt.ml.network.nodes.AdditionNode;
 import com.mlt.ml.network.nodes.BiasNode;

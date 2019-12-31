@@ -188,6 +188,25 @@ public class ParserHandler {
 	}
 
 	/**
+	 * Set a path if not already set, and the attribute.
+	 * 
+	 * @param path   The path.
+	 * @param name   The attribute name.
+	 * @param type   The attribute type.
+	 * @param values Comma separated list of possible values.
+	 */
+	public void set(String path, String name, String type, String values) {
+		if (!paths.keySet().contains(path)) {
+			paths.put(path, new ArrayList<>());
+		}
+		PathAttribute attribute = new PathAttribute(name, type, values);
+		List<PathAttribute> attributes = paths.get(path);
+		if (!attributes.contains(attribute)) {
+			attributes.add(attribute);
+		}
+	}
+
+	/**
 	 * Validate that the path is a valid path and the attributes correspond to the
 	 * accepted attributes.
 	 * 

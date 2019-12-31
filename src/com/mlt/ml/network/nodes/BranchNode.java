@@ -23,7 +23,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mlt.ml.network.function.Collector;
+import com.mlt.ml.function.Collector;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 

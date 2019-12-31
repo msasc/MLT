@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.mlt.ml.network.function.Activation;
+import com.mlt.ml.function.Activation;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 

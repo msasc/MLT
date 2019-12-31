@@ -17,8 +17,8 @@
 
 package com.mlt.ml.network.nodes;
 
-import com.mlt.ml.network.function.collector.CollectorAddition;
-import com.mlt.ml.network.function.collector.CollectorTransfer;
+import com.mlt.ml.function.collector.CollectorAddition;
+import com.mlt.ml.function.collector.CollectorTransfer;
 
 /**
  * A branch addition node.

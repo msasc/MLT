@@ -17,10 +17,10 @@
 
 package com.mlt.ml.network.nodes;
 
+import com.mlt.ml.function.Collector;
+import com.mlt.ml.function.collector.CollectorAddition;
+import com.mlt.ml.function.collector.CollectorTransfer;
 import com.mlt.ml.network.Edge;
-import com.mlt.ml.network.function.Collector;
-import com.mlt.ml.network.function.collector.CollectorAddition;
-import com.mlt.ml.network.function.collector.CollectorTransfer;
 
 /**
  * A node that has a single input edge and several output edges, all with the

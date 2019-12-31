@@ -196,6 +196,12 @@ public class Trainer extends Task {
 	 * performance.
 	 */
 	private static final String LABEL_PROCESSING = "LABEL-PROCESSING";
+	/** Option new file. */
+	private static final String OPTION_NEW_FILE = "NEW-FILE";
+	/** Option use existing. */
+	private static final String OPTION_USE_EXISTING = "USE-EXISTING";
+	/** Option cancel. */
+	private static final String OPTION_CANCEL = "CANCEL";
 	/**
 	 * Label to inform of an additional process like saving or calculating
 	 * performance.
@@ -341,6 +347,36 @@ public class Trainer extends Task {
 	}
 
 	/**
+	 * @return The file option.
+	 */
+	private Option getFileOption() {
+
+		Option newFile = new Option();
+		newFile.setKey(OPTION_NEW_FILE);
+		newFile.setText("Create a new file");
+		newFile.setCloseWindow(true);
+
+		Option useExisting = new Option();
+		useExisting.setKey(OPTION_USE_EXISTING);
+		useExisting.setText("Use an existing file");
+		useExisting.setCloseWindow(true);
+
+		Option cancel = new Option();
+		cancel.setKey(OPTION_CANCEL);
+		cancel.setText("Cancel");
+		cancel.setDefaultClose(true);
+		cancel.setCloseWindow(true);
+
+		Alert alert = new Alert();
+		alert.setTitle("Network file");
+		alert.setText("Please select the network file");
+		alert.setOptions(newFile, useExisting, cancel);
+
+		Option result = alert.show();
+		return result;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -364,29 +400,12 @@ public class Trainer extends Task {
 			} else {
 
 				/* Check whether to create a new file or use an existing file. */
-				Option newFile = new Option();
-				newFile.setKey("NEW-FILE");
-				newFile.setText("Create a new file");
-				newFile.setCloseWindow(true);
-				Option useExisting = new Option();
-				useExisting.setKey("USE-EXISTING");
-				useExisting.setText("Use an existing file");
-				useExisting.setCloseWindow(true);
-				Option cancel = new Option();
-				cancel.setKey("CANCEL");
-				cancel.setText("Cancel");
-				cancel.setDefaultClose(true);
-				cancel.setCloseWindow(true);
-				Alert alert = new Alert();
-				alert.setTitle("Network file");
-				alert.setText("Please select the network file");
-				alert.setOptions(newFile, useExisting, cancel);
-				Option result = alert.show();
-				if (result.equals(cancel)) {
+				Option option = getFileOption();
+				if (option.equals(OPTION_CANCEL)) {
 					setCancelled();
 					return;
 				}
-				if (result.equals(newFile)) {
+				if (option.equals(OPTION_NEW_FILE)) {
 					file = getNewFile(files);
 				} else {
 					FileChooser chooser = new FileChooser(new File(filePath));
@@ -425,7 +444,7 @@ public class Trainer extends Task {
 		List<Trace> traceScore = new ArrayList<>();
 
 		if (restored) {
-			/* Calculate test performance. */
+			/* Calculate test performance if applicable. */
 			if (patternSourceTest != null) {
 				calculateTestPerformance();
 				if (isCancelled()) {
@@ -437,8 +456,12 @@ public class Trainer extends Task {
 				}
 				calculateTrainPerformance(testMatches, testSize);
 				bestTrace =
-					new Trace(Numbers.getBigDecimal(0,
-						errorDecimals), testMatches, testSize, testPerformance, testMatches,
+					new Trace(
+						Numbers.getBigDecimal(0, errorDecimals),
+						testMatches,
+						testSize,
+						testPerformance,
+						testMatches,
 						testSize,
 						testPerformance);
 			}
@@ -464,7 +487,9 @@ public class Trainer extends Task {
 			int[] patternIndexes = new int[patternSourceTraining.size()];
 
 			if (scanFlat) {
-				if (shuffle) patternSourceTraining.shuffle();
+				if (shuffle) {
+					patternSourceTraining.shuffle();
+				}
 				for (int i = 0; i < patternIndexes.length; i++) {
 					patternIndexes[i] = i;
 				}
@@ -545,8 +570,8 @@ public class Trainer extends Task {
 
 			/* Calculate iteration (training) performance. */
 			calculateTrainPerformance(matches, patternSourceTraining.size());
-			if (maxTrainPerformance == null
-				|| trainPerformance.compareTo(maxTrainPerformance) > 0) {
+			if (maxTrainPerformance == null ||
+				trainPerformance.compareTo(maxTrainPerformance) > 0) {
 				maxTrainPerformance = trainPerformance;
 				save = (maxTestPerformance == null);
 			}
@@ -558,16 +583,16 @@ public class Trainer extends Task {
 				if (isCancelled()) {
 					break;
 				}
-				if (maxTestPerformance == null
-					|| testPerformance.compareTo(maxTestPerformance) > 0) {
+				if (maxTestPerformance == null ||
+					testPerformance.compareTo(maxTestPerformance) > 0) {
 					maxTestPerformance = testPerformance;
 					save = true;
 				}
 			}
 
 			if (saveNetworkData && save) {
-				updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING,
-					"Saving the network data...");
+				updateStatusLabel(
+					STATUS_PROCESSING, LABEL_PROCESSING, "Saving the network data...");
 				save();
 				clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
 			}
@@ -832,6 +857,13 @@ public class Trainer extends Task {
 	}
 
 	/**
+	 * @param performanceDecimals The performance decimals.
+	 */
+	public void setPerformanceDecimals(int performanceDecimals) {
+		this.performanceDecimals = performanceDecimals;
+	}
+
+	/**
 	 * Set whether network data should be saved/restored.
 	 * 
 	 * @param saveNetworkData A boolean.
@@ -852,7 +884,8 @@ public class Trainer extends Task {
 		}
 		if (saveNetworkData) {
 			if (filePath == null) {
-				throw new IllegalStateException("The file path is required to save the network data");
+				throw new IllegalStateException(
+					"The file path is required to save the network data");
 			}
 			File path = new File(filePath);
 			if (!path.exists()) {
@@ -869,7 +902,7 @@ public class Trainer extends Task {
 				fileExtension = "dat";
 			}
 		}
-		
+
 		/* Check shuffle supported. */
 		if (shuffle) {
 			try {

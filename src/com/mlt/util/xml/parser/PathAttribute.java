@@ -40,6 +40,8 @@ class PathAttribute {
 	String type;
 	/** Required flag. */
 	boolean required = true;
+	/** Optional possible comma separated values. */
+	String values;
 
 	/**
 	 * Constructor.
@@ -75,6 +77,32 @@ class PathAttribute {
 	}
 
 	/**
+	 * Constructor.
+	 * 
+	 * @param name   Name.
+	 * @param type   Type.
+	 * @param values Possible comma separated values.
+	 */
+	PathAttribute(String name, String type, String values) {
+		super();
+		if (name == null) {
+			throw new NullPointerException();
+		}
+		if (type == null) {
+			throw new NullPointerException();
+		}
+		if (!Strings.in(type, TYPES)) {
+			throw new IllegalArgumentException("Invalid type: " + type);
+		}
+		if (values == null) {
+			throw new NullPointerException();
+		}
+		this.name = name;
+		this.type = type;
+		this.values = values;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -98,6 +126,21 @@ class PathAttribute {
 		/* Just the name present. */
 		if (type.equals("name") && (value == null || value.isEmpty())) {
 			return;
+		}
+		/* Check possible values. */
+		if (values != null) {
+			String[] tokens = Strings.parse(values, ",");
+			boolean ok = false;
+			for (int i = 0; i < tokens.length; i++) {
+				if (tokens[i].trim().equals(value)) {
+					ok = true;
+					break;
+				}
+			}
+			if (!ok) {
+				throw new SAXException(
+					"Attribute " + name + " must be in the list of values: " + values);
+			}
 		}
 		/* String. */
 		if (type.equals("string") && value != null) {
@@ -136,7 +179,8 @@ class PathAttribute {
 					try {
 						array[i] = Integer.parseInt(elements[i]);
 					} catch (NumberFormatException exc) {
-						throw new SAXException("Attribute " + name + " is not a well formed integer array.");
+						throw new SAXException(
+							"Attribute " + name + " is not a well formed integer array.");
 					}
 				}
 			}

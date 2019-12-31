@@ -39,6 +39,7 @@ import com.mlt.db.Relation;
 import com.mlt.db.Table;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
+import com.mlt.desktop.Alert;
 import com.mlt.desktop.Option;
 import com.mlt.desktop.Option.Group;
 import com.mlt.desktop.TaskFrame;
@@ -73,6 +74,11 @@ import com.mlt.mkt.data.PlotData;
 import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.ml.data.DefaultPattern;
 import com.mlt.ml.data.Pattern;
+import com.mlt.ml.function.Activation;
+import com.mlt.ml.function.activation.ActivationSoftMax;
+import com.mlt.ml.network.Builder;
+import com.mlt.ml.network.Network;
+import com.mlt.ml.network.Trainer;
 import com.mlt.util.Formats;
 import com.mlt.util.Lists;
 import com.mlt.util.Logs;
@@ -84,6 +90,7 @@ import com.mlt.util.xml.parser.ParserHandler;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
+import app.mlt.plaf.statistics.StatisticsAverages.NetworkDef.Layer;
 
 /**
  * Statistics built on a list of averages.
@@ -216,6 +223,7 @@ public class StatisticsAverages extends Statistics {
 			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesPivots(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesLabelsCalc(StatisticsAverages.this));
+			frame.addTasks(getTrainer());
 			frame.show();
 		}
 
@@ -514,6 +522,21 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Basic network definition.
+	 */
+	static class NetworkDef {
+
+		static class Layer {
+			String type;
+			int size;
+			Activation activation;
+		}
+
+		String key;
+		List<Layer> layers = new ArrayList<>();
+	}
+
+	/**
 	 * Parameters handler.
 	 */
 	static class ParametersHandler extends ParserHandler {
@@ -526,6 +549,8 @@ public class StatisticsAverages extends Statistics {
 		double percentCalc;
 		/** Percentage for edited labels. */
 		double percentEdit;
+		/** Network definition. */
+		NetworkDef networkDef;
 
 		/**
 		 * Constructor.
@@ -536,12 +561,16 @@ public class StatisticsAverages extends Statistics {
 			/* Setup valid paths. */
 			set("statistics");
 			set("statistics/averages");
-			set("statistics/averages/average", "type", "string");
+			set("statistics/averages/average", "type", "string", "WMA, SMA");
 			set("statistics/averages/average", "period", "integer");
 			set("statistics/averages/average", "smooths", "integer-array", false);
 			set("statistics/zig-zag", "bars-ahead", "integer");
 			set("statistics/label-calc", "percent", "double");
 			set("statistics/label-edit", "percent", "double");
+			set("statistics/network", "key", "string");
+			set("statistics/network/layer", "size", "integer", true);
+			set("statistics/network/layer", "activation", "string",
+				"BipolarSigmoid, ReLU, Sigmoid, SoftMax, TANH");
 		}
 
 		/**
@@ -600,7 +629,23 @@ public class StatisticsAverages extends Statistics {
 					}
 				}
 
+				/* Validate and retrieve network definition. */
+				if (path.equals("statistics/network")) {
+					String key = getString(attributes, "key");
+					networkDef = new NetworkDef();
+					networkDef.key = key;
+				}
+				if (path.equals("statistics/network/layer")) {
+					Activation activation = Activation.get(getString(attributes, "activation"));
+					int size = getInteger(attributes, "size");
+					Layer layer = new Layer();
+					layer.activation = activation;
+					layer.size = size;
+					networkDef.layers.add(layer);
+				}
+
 			} catch (Exception exc) {
+				Alert.error(exc.getMessage());
 				throw new SAXException(exc.getMessage(), exc);
 			}
 		}
@@ -925,6 +970,14 @@ public class StatisticsAverages extends Statistics {
 		return b.toString();
 	}
 
+	/**
+	 * @param dataList   The data list.
+	 * @param startIndex Start index.
+	 * @param endIndex   End index.
+	 * @param indexPivot Pivot index.
+	 * @param indexData  Data index.
+	 * @return The list of pivots.
+	 */
 	private static List<Pivot> getPivots(
 		DataList dataList,
 		int startIndex,
@@ -1005,6 +1058,8 @@ public class StatisticsAverages extends Statistics {
 	private double percentEdit;
 	/** Plot all candles flag. */
 	private boolean plotAllCandles = true;
+	/** network definition. */
+	private NetworkDef networkDef;
 
 	/**
 	 * @param instrument The instrument.
@@ -1164,7 +1219,7 @@ public class StatisticsAverages extends Statistics {
 		}
 		return persistor;
 	}
-	
+
 //	private DataConverter getDataConverter(
 //		String key,
 //		FieldList fieldList,
@@ -1414,7 +1469,8 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @param rc A statistics averages record.
+	 * @param rc         The record with source and normalized values.
+	 * @param calculated A boolean indicating if the label is calculated or edited.
 	 * @return The training pattern.
 	 */
 	Pattern getPattern(Record rc, boolean calculated) {
@@ -1422,7 +1478,17 @@ public class StatisticsAverages extends Statistics {
 		if (pattern != null) {
 			return pattern;
 		}
-		
+		double[] inputValues = getPatternInputValues(rc);
+		double[] outputValues = getPatternOutputValues(rc, calculated);
+		pattern = new DefaultPattern(inputValues, outputValues, 0);
+		rc.getProperties().setObject("PATTERN", pattern);
+		return pattern;
+	}
+
+	/**
+	 * @return The list of pattern fields.
+	 */
+	List<Field> getPatternFields() {
 		@SuppressWarnings("unchecked")
 		List<Field> fields = (List<Field>) properties.getObject("pattern_fields");
 		if (fields == null) {
@@ -1432,20 +1498,53 @@ public class StatisticsAverages extends Statistics {
 			fields.addAll(getFieldListCandles());
 			properties.setObject("pattern_fields", fields);
 		}
+		return fields;
+	}
+
+	/**
+	 * @param rc The record with source and normalized values.
+	 * @return The input values.
+	 */
+	double[] getPatternInputValues(Record rc) {
+		List<Field> fields = getPatternFields();
 		double[] inputValues = new double[fields.size()];
 		for (int i = 0; i < fields.size(); i++) {
 			inputValues[i] = rc.getValue(fields.get(i).getAlias()).getDouble();
 		}
-		double[] outputValues = new double[1];
-		if (calculated) {
-			outputValues[0] = rc.getValue(DB.FIELD_SOURCES_LABEL_CALC).getDouble();
-		} else {
-			outputValues[0] = rc.getValue(DB.FIELD_SOURCES_LABEL_EDIT).getDouble();
-		}
+		return inputValues;
+	}
 
-		pattern = new DefaultPattern(inputValues, outputValues, 0);
-		rc.getProperties().setObject("PATTERN", pattern);
-		return pattern;
+	/**
+	 * @return The pattern input size.
+	 */
+	int getPatternInputSize() {
+		return getPatternFields().size();
+	}
+
+	/**
+	 * @param rc         The record with source and normalized values.
+	 * @param calculated A boolean indicating if the label is calculated or edited.
+	 * @return The output values.
+	 */
+	double[] getPatternOutputValues(Record rc, boolean calculated) {
+		double[] outputValues = new double[3];
+		int label;
+		if (calculated) {
+			label = rc.getValue(DB.FIELD_SOURCES_LABEL_CALC).getInteger();
+		} else {
+			label = rc.getValue(DB.FIELD_SOURCES_LABEL_EDIT).getInteger();
+		}
+		outputValues[0] = (label == -1 ? 1 : 0);
+		outputValues[1] = (label == 0 ? 1 : 0);
+		outputValues[2] = (label == 1 ? 1 : 0);
+		return outputValues;
+	}
+
+	/**
+	 * @return The pattern output size.
+	 */
+	int getPatternOutputSize() {
+		return 3;
 	}
 
 	/**
@@ -1605,20 +1704,6 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @param suffix Last suffix.
-	 * @return The table name suffix.
-	 */
-	private String getTableNameSuffix(String suffix) {
-		StringBuilder b = new StringBuilder();
-		b.append(getId());
-		b.append("_");
-		b.append(getKey());
-		b.append("_");
-		b.append(suffix);
-		return b.toString().toLowerCase();
-	}
-
-	/**
 	 * @return The percentage to set calculated labels.
 	 */
 	double getPercentCalc() {
@@ -1630,6 +1715,20 @@ public class StatisticsAverages extends Statistics {
 	 */
 	double getPercentEdit() {
 		return percentEdit;
+	}
+
+	/**
+	 * @param suffix Last suffix.
+	 * @return The table name suffix.
+	 */
+	private String getTableNameSuffix(String suffix) {
+		StringBuilder b = new StringBuilder();
+		b.append(getId());
+		b.append("_");
+		b.append(getKey());
+		b.append("_");
+		b.append(suffix);
+		return b.toString().toLowerCase();
 	}
 
 	/**
@@ -1903,6 +2002,66 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * @return The he trainer to train the network..
+	 */
+	Trainer getTrainer() {
+
+		Trainer trainer = new Trainer();
+		trainer.setEpochs(500);
+		trainer.setSaveNetworkData(true);
+
+		Network network = new Network();
+
+		StringBuilder name = new StringBuilder();
+		name.append(Strings.replace(
+			DB.name_ticker(
+				getInstrument(),
+				getPeriod(),
+				getTableNameSuffix(networkDef.key)),
+			"_", "-"));
+		
+		name.append("-" + getPatternInputSize());
+		for (int i = 0; i < networkDef.layers.size(); i++) {
+			name.append("-" + networkDef.layers.get(i).size);
+		}
+		name.append("-" + getPatternOutputSize());
+		
+		network.setName(name.toString());
+
+		int inputSize, outputSize, index;
+		Activation activation;
+		for (int i = 0; i < networkDef.layers.size(); i++) {
+			inputSize = -1;
+			if (i == 0) {
+				inputSize = getPatternInputSize();
+			} else {
+				inputSize = networkDef.layers.get(i - 1).size;
+			}
+			outputSize = networkDef.layers.get(i).size;
+			activation = networkDef.layers.get(i).activation;
+			index = i;
+			network.addBranch(Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
+		}
+		inputSize = networkDef.layers.get(networkDef.layers.size() - 1).size;
+		outputSize = getPatternOutputSize();
+		activation = new ActivationSoftMax();
+		index = networkDef.layers.size();
+		network.addBranch(Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
+		
+		trainer.setNetwork(network);
+		trainer.setPatternSourceTraining(new PatternSourceAverages(this,  true));
+		
+		trainer.setFilePath("res/network/");
+		trainer.setFileRoot(network.getName());
+		trainer.setFileExtension("dat");
+
+		trainer.setTitle(network.getName());
+		trainer.setPerformanceDecimals(4);
+
+		return trainer;
+	}
+
+	/**
 	 * @param normalized Normalized / raw values.
 	 * @param averages   Show averages.
 	 * @param slopes     Show slopes.
@@ -2010,6 +2169,7 @@ public class StatisticsAverages extends Statistics {
 		barsAhead = handler.barsAhead;
 		percentCalc = handler.percentCalc;
 		percentEdit = handler.percentEdit;
+		networkDef = handler.networkDef;
 	}
 
 	/**

@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.mlt.ml.function.Activation;
+import com.mlt.ml.function.Collector;
 import com.mlt.util.IO;
 import com.mlt.util.Properties;
 
@@ -41,7 +43,7 @@ import com.mlt.util.Properties;
  *
  * @author Miquel Sas
  */
-public abstract class Node implements Persistent {
+public abstract class Node {
 
 	/** List of input edges. */
 	protected List<Edge> inputEdges = new ArrayList<>();
@@ -321,17 +323,41 @@ public abstract class Node implements Persistent {
 				properties.setString(key, IO.readString(is));
 				continue;
 			}
-			/* Persistent. */
-			if (type.equals("Persistent")) {
+			/* Activation. */
+			if (type.equals("Activation")) {
 				String className = IO.readString(is);
-				Persistent persistent = null;
+				Activation activation = null;
 				try {
-					persistent = (Persistent) Class.forName(className).newInstance();
+					activation = (Activation) Class.forName(className).newInstance();
 				} catch (Exception exc) {
 					throw new IOException(exc);
 				}
-				persistent.restore(is);
-				properties.setObject(key, persistent);
+				properties.setObject(key, activation);
+				continue;
+			}
+			/* Collector. */
+			if (type.equals("Collector")) {
+				String className = IO.readString(is);
+				Collector collector = null;
+				try {
+					collector = (Collector) Class.forName(className).newInstance();
+				} catch (Exception exc) {
+					throw new IOException(exc);
+				}
+				properties.setObject(key, collector);
+				continue;
+			}
+			/* Node. */
+			if (type.equals("Node")) {
+				String className = IO.readString(is);
+				Node node = null;
+				try {
+					node = (Node) Class.forName(className).newInstance();
+				} catch (Exception exc) {
+					throw new IOException(exc);
+				}
+				node.restoreProperties(is);
+				properties.setObject(key, node);
 				continue;
 			}
 			throw new IllegalStateException("Invalid type: " + type);
@@ -417,11 +443,27 @@ public abstract class Node implements Persistent {
 				IO.writeString(os, (String) value);
 				continue;
 			}
-			/* Persistent. */
-			if (value instanceof Persistent) {
+			/* Activation. */
+			if (value instanceof Activation) {
 				IO.writeString(os, key);
-				IO.writeString(os, "Persistent");
+				IO.writeString(os, "Activation");
 				IO.writeString(os, value.getClass().getName());
+				continue;
+			}
+			/* Collector. */
+			if (value instanceof Collector) {
+				IO.writeString(os, key);
+				IO.writeString(os, "Collector");
+				IO.writeString(os, value.getClass().getName());
+				continue;
+			}
+			/* Node. */
+			if (value instanceof Node) {
+				Node node = (Node) value;
+				IO.writeString(os, key);
+				IO.writeString(os, "Node");
+				IO.writeString(os, node.getClass().getName());
+				node.saveProperties(os);
 				continue;
 			}
 			throw new IllegalStateException("Invalid value type: " + value.getClass().getName());
@@ -445,4 +487,19 @@ public abstract class Node implements Persistent {
 		String id = getName();
 		return (!id.isEmpty() ? id : super.toString());
 	}
+	/**
+	 * Restore from an input stream.
+	 * 
+	 * @param is The input stream.
+	 * @throws IOException
+	 */
+	public abstract void restore(InputStream is) throws IOException;
+
+	/**
+	 * Save to an output stream.
+	 * 
+	 * @param os The output stream.
+	 * @throws IOException
+	 */
+	public abstract void save(OutputStream os) throws IOException;
 }

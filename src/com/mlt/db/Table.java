@@ -682,4 +682,12 @@ public class Table {
 		return view;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String toString() {
+		return getAlias();
+	}
+
 }

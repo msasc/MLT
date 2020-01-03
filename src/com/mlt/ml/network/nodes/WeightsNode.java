@@ -25,6 +25,7 @@ import java.util.Random;
 import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
+import com.mlt.ml.network.nodes.optimizers.SGDOptimizer;
 
 /**
  * A matrix of weights node.
@@ -35,7 +36,6 @@ public class WeightsNode extends Node {
 
 	/** Matrix of weights (in-out). */
 	private double[][] weights;
-
 	/** Cached input deltas, to be accessed concurrently. */
 	private double[] inputDeltas;
 	/** Cached input values, to be accessed concurrently. */
@@ -44,16 +44,18 @@ public class WeightsNode extends Node {
 	private double[] outputDeltas;
 	/** Cached output values, to be accessed concurrently. */
 	private double[] outputValues;
+	/** Input size. */
+	private int inputSize;
+	/** Output size. */
+	private int outputSize;
+
+	/** Weights optimizer. */
+	private WeightsNodeOptimizer optimizer;
 
 	/** Backward function. */
 	private RangeFunction backwardFunction;
 	/** Forward function. */
 	private RangeFunction forwardFunction;
-
-	/** Input size. */
-	private int inputSize;
-	/** Output size. */
-	private int outputSize;
 
 	/**
 	 * Constructor used to restore.
@@ -74,6 +76,7 @@ public class WeightsNode extends Node {
 		setName(name);
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
+		this.optimizer = new SGDOptimizer(inputSize, outputSize);
 	}
 
 	/**
@@ -116,6 +119,7 @@ public class WeightsNode extends Node {
 		}
 		inputValues = inputEdges.get(0).getForwardData();
 		outputDeltas = outputEdges.get(0).getBackwardData();
+		optimizer.set(weights, inputDeltas, inputValues, outputDeltas, outputValues);
 		backwardFunction.process();
 		pushBackward(inputDeltas);
 	}
@@ -127,19 +131,7 @@ public class WeightsNode extends Node {
 	 * @param end   Input end index.
 	 */
 	private void backward(int start, int end) {
-		for (int in = start; in <= end; in++) {
-			double input = inputValues[in];
-			double inputDelta = 0;
-			for (int out = 0; out < outputSize; out++) {
-				double weight = weights[in][out];
-				double outputDelta = outputDeltas[out];
-				inputDelta += (weight * outputDelta);
-				/* Weight delta with a fixed eta or learning rate. */
-				double weightDelta = 0.01 * outputDelta * input;
-				weights[in][out] += weightDelta;
-			}
-			inputDeltas[in] = inputDelta;
-		}
+		optimizer.backward(start, end);
 	}
 
 	/**
@@ -194,10 +186,12 @@ public class WeightsNode extends Node {
 		/* Validate. */
 		if (inputEdges.size() == 0) throw new IllegalStateException("Input edges empty");
 		if (inputEdges.size() > 1) throw new IllegalStateException("More than one input edge");
-		if (inputEdges.get(0).getSize() != inputSize) throw new IllegalStateException("Invalid input edge size");
+		if (inputEdges.get(0)
+			.getSize() != inputSize) throw new IllegalStateException("Invalid input edge size");
 		if (outputEdges.size() == 0) throw new IllegalStateException("Output edges empty");
 		if (outputEdges.size() > 1) throw new IllegalStateException("More than one output edge");
-		if (outputEdges.get(0).getSize() != outputSize) throw new IllegalStateException("Invalid output edge size");
+		if (outputEdges.get(0)
+			.getSize() != outputSize) throw new IllegalStateException("Invalid output edge size");
 		/* Initialize. */
 		weights = new double[inputSize][outputSize];
 		initializeVectorsAndFunctions();

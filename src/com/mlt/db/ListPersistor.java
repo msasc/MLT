@@ -563,7 +563,7 @@ public class ListPersistor implements Persistor {
 	 */
 	@Override
 	public Field getField(String alias) {
-		return getField(alias);
+		return persistor.getField(alias);
 	}
 
 	/**
@@ -651,6 +651,13 @@ public class ListPersistor implements Persistor {
 		OrderKey lower = getFirstRecord().getPrimaryKey();
 		OrderKey upper = getLastRecord().getPrimaryKey();
 		return getOrderKey(lower, upper, factor);
+	}
+
+	/**
+	 * @return The page size.
+	 */
+	public int getPageSize() {
+		return pageSize;
 	}
 
 	/**
@@ -980,6 +987,14 @@ public class ListPersistor implements Persistor {
 	}
 
 	/**
+	 * Reset this list persistor by clearing limits and cache.
+	 */
+	public void reset() {
+		clearCache();
+		clearLimits();
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -1029,6 +1044,7 @@ public class ListPersistor implements Persistor {
 	 * @param globalCriteria The global criteria that applies to all data acceses.
 	 */
 	public void setGlobalCriteria(Criteria globalCriteria) {
+		reset();
 		this.globalCriteria = globalCriteria;
 	}
 

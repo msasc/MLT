@@ -51,8 +51,10 @@ public class ActivationSoftMax implements Activation {
 			outputs[i] = p;
 			div += p;
 		}
-		for (int i = 0; i < length; i++) {
-			outputs[i] /= div;
+		if (div != 0) {
+			for (int i = 0; i < length; i++) {
+				outputs[i] /= div;
+			}
 		}
 	}
 

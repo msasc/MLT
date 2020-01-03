@@ -133,7 +133,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 			workDone++;
 			update(rcRaw.toString(DB.FIELD_BAR_TIME_FMT), workDone, totalWork);
 
-			/* Nprmalized record. */
+			/* Normalized record. */
 			Record rcNrm = persistorNrm.getDefaultRecord();
 			rcNrm.setValue(DB.FIELD_BAR_TIME, rcRaw.getValue(DB.FIELD_BAR_TIME));
 			for (int i = 0; i < aliases.size(); i++) {

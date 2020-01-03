@@ -217,16 +217,6 @@ public class FieldList implements Iterable<Field> {
 	}
 
 	/**
-	 * Get a field index.
-	 *
-	 * @return The field index or -1 if not found.
-	 * @param field The field.
-	 */
-	public int getFieldIndex(Field field) {
-		return getFieldIndex(field.getAlias());
-	}
-
-	/**
 	 * Returns the internal list of fields.
 	 *
 	 * @return The internal list of fields.

@@ -208,6 +208,7 @@ public class View implements Comparable<Object> {
 	 * @param field The field to add.
 	 */
 	public void addField(Field field) {
+		field = new Field(field);
 		field.setView(this);
 		fields.addField(field);
 	}
@@ -515,4 +516,22 @@ public class View implements Comparable<Object> {
 		return list;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String toString() {
+		List<String> names = new ArrayList<>();
+		names.add(getMasterTable().getAlias());
+		List<Table> tables = getAllTables();
+		for (Table table : tables) {
+			String alias = table.getAlias();
+			if (!names.contains(alias)) {
+				names.add(alias);
+			}
+		}
+		return names.toString();
+	}
+
+	
 }

@@ -36,17 +36,17 @@ import java.util.Arrays;
  * @author Miquel Sas
  */
 public class Record implements Comparable<Object> {
-	
+
 	/**
 	 * Callable to delete records concurrently.
 	 */
 	public static class Delete implements Callable<Void> {
-		
+
 		private Record record;
 		private Persistor persistor;
 
 		/**
-		 * @param record The record.
+		 * @param record    The record.
 		 * @param persistor The persistor.
 		 */
 		public Delete(Record record, Persistor persistor) {
@@ -68,12 +68,12 @@ public class Record implements Comparable<Object> {
 	 * Callable to insert records concurrently.
 	 */
 	public static class Insert implements Callable<Void> {
-		
+
 		private Record record;
 		private Persistor persistor;
 
 		/**
-		 * @param record The record.
+		 * @param record    The record.
 		 * @param persistor The persistor.
 		 */
 		public Insert(Record record, Persistor persistor) {
@@ -95,12 +95,12 @@ public class Record implements Comparable<Object> {
 	 * Callable to update records concurrently.
 	 */
 	public static class Update implements Callable<Void> {
-		
+
 		private Record record;
 		private Persistor persistor;
 
 		/**
-		 * @param record The record.
+		 * @param record    The record.
 		 * @param persistor The persistor.
 		 */
 		public Update(Record record, Persistor persistor) {
@@ -133,18 +133,22 @@ public class Record implements Comparable<Object> {
 	public static void move(Record source, Record destination) {
 		for (int i = 0; i < source.size(); i++) {
 			String alias = source.getField(i).getAlias();
-			Value value = source.getValue(i);
-			Field srcfield = source.getField(alias);
-			Types srctype = srcfield.getType();
-			Field dstfield = destination.getField(alias);
-			if (dstfield != null) {
-				if (!srcfield.isCalculated() && !dstfield.isCalculated()) {
-					Types dsttype = dstfield.getType();
-					if (srctype.equals(dsttype)) {
-						destination.setValue(alias, value.getCopy());
-					}
-				}
+			int srcIndex = i;
+			int dstIndex = destination.getFieldList().getFieldIndex(alias);
+			if (dstIndex == -1) {
+				continue;
 			}
+			Field srcfield = source.getField(srcIndex);
+			Field dstfield = destination.getField(dstIndex);
+			if (!srcfield.isCalculated() && !dstfield.isCalculated()) {
+				Types srctype = srcfield.getType();
+				Types dsttype = dstfield.getType();
+				if (srctype.equals(dsttype)) {
+					Value value = source.getValue(srcIndex);
+					destination.setValue(dstIndex, value.getCopy());
+					destination.setModified(dstIndex, source.isModified(srcIndex));
+				}
+			}			
 		}
 	}
 

@@ -19,7 +19,10 @@ package app.mlt.plaf.statistics;
 
 import java.awt.Color;
 import java.awt.RenderingHints;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -73,13 +76,17 @@ import com.mlt.mkt.data.Period;
 import com.mlt.mkt.data.PlotData;
 import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.ml.data.DefaultPattern;
+import com.mlt.ml.data.ListPatternSource;
 import com.mlt.ml.data.Pattern;
+import com.mlt.ml.data.PatternSource;
 import com.mlt.ml.function.Activation;
+import com.mlt.ml.function.activation.ActivationSigmoid;
 import com.mlt.ml.function.activation.ActivationSoftMax;
 import com.mlt.ml.network.Builder;
 import com.mlt.ml.network.Network;
 import com.mlt.ml.network.Trainer;
 import com.mlt.util.Formats;
+import com.mlt.util.IO;
 import com.mlt.util.Lists;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
@@ -90,7 +97,6 @@ import com.mlt.util.xml.parser.ParserHandler;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.statistics.StatisticsAverages.NetworkDef.Layer;
 
 /**
  * Statistics built on a list of averages.
@@ -217,14 +223,36 @@ public class StatisticsAverages extends Statistics {
 		@Override
 		public void run() {
 			TaskFrame frame = new TaskFrame();
-			frame.setTitle(getLabel());
+			frame.setTitle(getLabel() + " - Calculate raw/normalized/pivots/labels");
 			frame.addTasks(new TaskAveragesRaw(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesRanges(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesNormalize(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesPivots(StatisticsAverages.this));
 			frame.addTasks(new TaskAveragesLabelsCalc(StatisticsAverages.this));
-			frame.addTasks(getTrainer());
+			frame.addTasks(new TaskAveragesPatterns(StatisticsAverages.this, true, 0.8));
 			frame.show();
+		}
+
+	}
+
+	/**
+	 * Action to train the statistics by a list of tasks.
+	 */
+	class ActionTrain extends ActionRun {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void run() {
+			try {
+				TaskFrame frame = new TaskFrame();
+				frame.setTitle(getLabel() + " - Training tasks");
+				frame.addTasks(getTrainer());
+				frame.show();
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
 		}
 
 	}
@@ -522,21 +550,6 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * Basic network definition.
-	 */
-	static class NetworkDef {
-
-		static class Layer {
-			String type;
-			int size;
-			Activation activation;
-		}
-
-		String key;
-		List<Layer> layers = new ArrayList<>();
-	}
-
-	/**
 	 * Parameters handler.
 	 */
 	static class ParametersHandler extends ParserHandler {
@@ -549,8 +562,6 @@ public class StatisticsAverages extends Statistics {
 		double percentCalc;
 		/** Percentage for edited labels. */
 		double percentEdit;
-		/** Network definition. */
-		NetworkDef networkDef;
 
 		/**
 		 * Constructor.
@@ -567,10 +578,6 @@ public class StatisticsAverages extends Statistics {
 			set("statistics/zig-zag", "bars-ahead", "integer");
 			set("statistics/label-calc", "percent", "double");
 			set("statistics/label-edit", "percent", "double");
-			set("statistics/network", "key", "string");
-			set("statistics/network/layer", "size", "integer", true);
-			set("statistics/network/layer", "activation", "string",
-				"BipolarSigmoid, ReLU, Sigmoid, SoftMax, TANH");
 		}
 
 		/**
@@ -627,21 +634,6 @@ public class StatisticsAverages extends Statistics {
 					if (percentEdit <= 0 || percentEdit >= 50) {
 						throw new Exception("Invalid percentage for label calc " + percentCalc);
 					}
-				}
-
-				/* Validate and retrieve network definition. */
-				if (path.equals("statistics/network")) {
-					String key = getString(attributes, "key");
-					networkDef = new NetworkDef();
-					networkDef.key = key;
-				}
-				if (path.equals("statistics/network/layer")) {
-					Activation activation = Activation.get(getString(attributes, "activation"));
-					int size = getInteger(attributes, "size");
-					Layer layer = new Layer();
-					layer.activation = activation;
-					layer.size = size;
-					networkDef.layers.add(layer);
 				}
 
 			} catch (Exception exc) {
@@ -817,8 +809,7 @@ public class StatisticsAverages extends Statistics {
 
 		int indexPivot;
 		int indexData;
-		int indexLabel;
-		int indexLabelSet;
+		String aliasLabel;
 
 		Color colorNotSet = Color.BLACK;
 		Color colorLong = new Color(32, 160, 32);
@@ -846,14 +837,15 @@ public class StatisticsAverages extends Statistics {
 
 				Data data = dataList.get(index);
 				double value = data.getValue(indexData);
-				double label = data.getValue(indexLabel);
-				boolean labelSet = data.getValue(indexLabelSet) != 0;
+				String label = data.getProperties().getString(aliasLabel);
+				boolean labelSet = !label.isEmpty();
 				x = dc.getCenterCoordinateX(dc.getCoordinateX(index));
 				y = dc.getCoordinateY(value);
 
 				if (index > 0 && index > startIndex) {
-					double previousLabel = dataList.get(index - 1).getValue(indexLabel);
-					boolean previousSet = dataList.get(index - 1).getValue(indexLabelSet) != 0;
+					Data prev = dataList.get(index - 1);
+					String previousLabel = prev.getProperties().getString(aliasLabel);
+					boolean previousSet = !previousLabel.isEmpty();
 					if (path != null && (labelSet != previousSet || label != previousLabel)) {
 						path.lineTo(x, y);
 						paths.add(path);
@@ -867,9 +859,9 @@ public class StatisticsAverages extends Statistics {
 					path.addHint(RenderingHints.KEY_ANTIALIASING,
 						RenderingHints.VALUE_ANTIALIAS_ON);
 					if (labelSet) {
-						if (label == 1) {
+						if (label.equals("1")) {
 							path.setDrawPaint(colorLong);
-						} else if (label == -1) {
+						} else if (label.equals("-1")) {
 							path.setDrawPaint(colorShort);
 						} else {
 							path.setDrawPaint(colorOut);
@@ -1058,8 +1050,9 @@ public class StatisticsAverages extends Statistics {
 	private double percentEdit;
 	/** Plot all candles flag. */
 	private boolean plotAllCandles = true;
-	/** network definition. */
-	private NetworkDef networkDef;
+
+	/** File path for pattern files. */
+	private String filePath;
 
 	/**
 	 * @param instrument The instrument.
@@ -1174,8 +1167,6 @@ public class StatisticsAverages extends Statistics {
 		/* Pivots, reference values and labels. */
 		list.add(view.getFieldIndex(DB.FIELD_SOURCES_PIVOT_CALC));
 		list.add(view.getFieldIndex(DB.FIELD_SOURCES_REFV_CALC));
-		list.add(view.getFieldIndex(DB.FIELD_SOURCES_LABEL_CALC));
-		list.add(view.getFieldIndex(DB.FIELD_SOURCES_LABEL_CALC_SET));
 
 		/* Averages. */
 		fields = getFieldListAverages();
@@ -1202,6 +1193,8 @@ public class StatisticsAverages extends Statistics {
 		int[] indexes = Lists.toIntegerArray(list);
 		Record masterRecord = view.getDefaultRecord();
 		dataConverter = new DataConverter(masterRecord, indexTime, indexes);
+		dataConverter.addProperty(DB.FIELD_SOURCES_LABEL_CALC);
+		dataConverter.addProperty(DB.FIELD_SOURCES_LABEL_NETC);
 
 		properties.setObject("data_converter", dataConverter);
 		return dataConverter;
@@ -1383,20 +1376,108 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
+	 * Return a network definition given the list of hidden layer sizes factors
+	 * versus the previous layer size.
+	 * 
+	 * @param factors The list of hidden layer size factors.
+	 * @return The network definition.
+	 */
+	Network getNetwork(double... factors) {
+
+		Network network = new Network();
+		int[] sizes = getNeworkSizes(factors);
+		network.setName(getNetworkName(sizes));
+
+		/* Layers. */
+		int inputSize, outputSize, index;
+		Activation activation;
+		for (int i = 0; i < sizes.length; i++) {
+			inputSize = -1;
+			if (i == 0) {
+				inputSize = getPatternInputSize();
+			} else {
+				inputSize = sizes[i - 1];
+			}
+			if (i == sizes.length - 1) {
+				activation = new ActivationSoftMax();
+			} else {
+				activation = new ActivationSigmoid();
+			}
+			outputSize = sizes[i];
+			index = i;
+			network.addBranch(
+				Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
+		}
+		inputSize = sizes[sizes.length - 1];
+		outputSize = getPatternOutputSize();
+		activation = new ActivationSoftMax();
+		index = sizes.length;
+		network.addBranch(Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
+
+		return network;
+	}
+
+	/**
+	 * @param sizes Hidden layers sizes.
+	 * @return The name.
+	 */
+	String getNetworkName(int[] sizes) {
+		StringBuilder name = new StringBuilder();
+		name.append(DB.name_ticker(getInstrument(), getPeriod(), getTableNameSuffix("net")));
+		name.append("-" + getPatternInputSize());
+		for (int i = 0; i < sizes.length; i++) {
+			name.append("-" + sizes[i]);
+		}
+		name.append("-" + getPatternOutputSize());
+		return Strings.replace(name.toString(), "_", "-").toUpperCase();
+	}
+
+	/**
+	 * @param factors Hidden layers factors.
+	 * @return The sizes.
+	 */
+	int[] getNeworkSizes(double... factors) {
+		int[] sizes = new int[factors.length];
+		for (int i = 0; i < factors.length; i++) {
+			double prevSize;
+			if (i == 0) {
+				prevSize = getPatternInputSize();
+			} else {
+				prevSize = sizes[i - 1];
+			}
+			sizes[i] = (int) (factors[i] * prevSize);
+		}
+		return sizes;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public List<Option> getOptions() {
 		List<Option> options = new ArrayList<>();
 		Option option;
+		Option.Group groupCalculate = new Option.Group("CALCULATE", 1);
+		Option.Group groupBrowse = new Option.Group("BROWSE", 2);
+		Option.Group groupChart = new Option.Group("CHART", 3);
 
-		/* Calculate the statistics. */
+		/* Calculate statistics. */
 		option = new Option();
 		option.setKey("CALCULATE");
 		option.setText("Calculate");
 		option.setToolTip("Calculate all statistics values");
 		option.setAction(new ActionCalculate());
-		option.setOptionGroup(new Option.Group("CALCULATE", 1));
+		option.setOptionGroup(groupCalculate);
+		option.setSortIndex(1);
+		options.add(option);
+
+		/* Train statistics. */
+		option = new Option();
+		option.setKey("TRAIN");
+		option.setText("Train");
+		option.setToolTip("Train statistics");
+		option.setAction(new ActionTrain());
+		option.setOptionGroup(groupCalculate);
 		option.setSortIndex(1);
 		options.add(option);
 
@@ -1406,7 +1487,7 @@ public class StatisticsAverages extends Statistics {
 		option.setText("Browse raw values");
 		option.setToolTip("Browse source and raw values");
 		option.setAction(new ActionBrowseView(false));
-		option.setOptionGroup(new Option.Group("BROWSE", 2));
+		option.setOptionGroup(groupBrowse);
 		option.setSortIndex(1);
 		options.add(option);
 
@@ -1416,8 +1497,8 @@ public class StatisticsAverages extends Statistics {
 		option.setText("Browse ranges");
 		option.setToolTip("Browse ranges minimum, maximum, average and standard deviation");
 		option.setAction(new ActionBrowseRanges());
-		option.setOptionGroup(new Option.Group("BROWSE", 3));
-		option.setSortIndex(1);
+		option.setOptionGroup(groupBrowse);
+		option.setSortIndex(2);
 		options.add(option);
 
 		/* Browse source and normalized values. */
@@ -1426,8 +1507,8 @@ public class StatisticsAverages extends Statistics {
 		option.setText("Browse normalized values");
 		option.setToolTip("Browse source and normalized values");
 		option.setAction(new ActionBrowseView(true));
-		option.setOptionGroup(new Option.Group("BROWSE", 4));
-		option.setSortIndex(1);
+		option.setOptionGroup(groupBrowse);
+		option.setSortIndex(3);
 		options.add(option);
 
 		/* Chart states. */
@@ -1436,7 +1517,7 @@ public class StatisticsAverages extends Statistics {
 		option.setText("Chart sources");
 		option.setToolTip("Chart on sources data");
 		option.setAction(new ActionChartSources());
-		option.setOptionGroup(new Option.Group("CHART", 3));
+		option.setOptionGroup(groupChart);
 		option.setSortIndex(1);
 		options.add(option);
 
@@ -1474,14 +1555,9 @@ public class StatisticsAverages extends Statistics {
 	 * @return The training pattern.
 	 */
 	Pattern getPattern(Record rc, boolean calculated) {
-		DefaultPattern pattern = (DefaultPattern) rc.getProperties().getObject("PATTERN");
-		if (pattern != null) {
-			return pattern;
-		}
 		double[] inputValues = getPatternInputValues(rc);
 		double[] outputValues = getPatternOutputValues(rc, calculated);
-		pattern = new DefaultPattern(inputValues, outputValues, 0);
-		rc.getProperties().setObject("PATTERN", pattern);
+		DefaultPattern pattern = new DefaultPattern(inputValues, outputValues, 0);
 		return pattern;
 	}
 
@@ -1499,6 +1575,53 @@ public class StatisticsAverages extends Statistics {
 			properties.setObject("pattern_fields", fields);
 		}
 		return fields;
+	}
+
+	/**
+	 * @param calculated The calculated flag.
+	 * @param train      Thain flag (null for all)
+	 * @return The pattern file name.
+	 */
+	String getPatternFileName(boolean calculated, Boolean train) {
+		StringBuilder name = new StringBuilder();
+		name.append(getPatternFileRoot());
+		if (calculated) {
+			name.append("-CALC");
+		} else {
+			name.append("-EDIT");
+		}
+		if (train != null) {
+			if (train) {
+				name.append("-TRAIN");
+			} else {
+				name.append("-TEST");
+			}
+		}
+		name.append(".patterns");
+		return name.toString();
+	}
+
+	/**
+	 * @return The path for pattern files.
+	 */
+	String getPatternFilePath() {
+		if (filePath == null) {
+			filePath = "res/network/";
+		}
+		return filePath;
+	}
+
+	/**
+	 * @return The root name for pattern files.
+	 */
+	String getPatternFileRoot() {
+		StringBuilder root = new StringBuilder();
+		root.append(DB.name_ticker(
+			getInstrument(),
+			getPeriod(),
+			getTableNameSuffix("net")));
+		root.append("-" + getPatternInputSize());
+		return Strings.replace(root.toString(), "_", "-").toUpperCase();
 	}
 
 	/**
@@ -1528,15 +1651,15 @@ public class StatisticsAverages extends Statistics {
 	 */
 	double[] getPatternOutputValues(Record rc, boolean calculated) {
 		double[] outputValues = new double[3];
-		int label;
+		String label;
 		if (calculated) {
-			label = rc.getValue(DB.FIELD_SOURCES_LABEL_CALC).getInteger();
+			label = rc.getValue(DB.FIELD_SOURCES_LABEL_CALC).getString();
 		} else {
-			label = rc.getValue(DB.FIELD_SOURCES_LABEL_EDIT).getInteger();
+			label = rc.getValue(DB.FIELD_SOURCES_LABEL_EDIT).getString();
 		}
-		outputValues[0] = (label == -1 ? 1 : 0);
-		outputValues[1] = (label == 0 ? 1 : 0);
-		outputValues[2] = (label == 1 ? 1 : 0);
+		outputValues[0] = (label.equals("-1") ? 1 : 0);
+		outputValues[1] = (label.equals("0") ? 1 : 0);
+		outputValues[2] = (label.equals("1") ? 1 : 0);
 		return outputValues;
 	}
 
@@ -1545,6 +1668,42 @@ public class StatisticsAverages extends Statistics {
 	 */
 	int getPatternOutputSize() {
 		return 3;
+	}
+
+	/**
+	 * @param calculated Calculated flag.
+	 * @param train      Train flag (null for all)
+	 * @return The pattern source.
+	 */
+	PatternSource getPatternSource(boolean calculated, Boolean train) throws Exception {
+		List<Pattern> patterns = new ArrayList<>();
+		File file = new File(getPatternFilePath(), getPatternFileName(calculated, train));
+		BufferedInputStream bi = null;
+		try {
+			bi = new BufferedInputStream(new FileInputStream(file));
+			int inputSize = IO.readInt(bi);
+			if (inputSize != getPatternInputSize()) {
+				throw new IllegalStateException("Invalid input size: " + inputSize);
+			}
+			int outputSize = IO.readInt(bi);
+			if (outputSize != getPatternOutputSize()) {
+				throw new IllegalStateException("Invalid output size: " + outputSize);
+			}
+			int count = IO.readInt(bi);
+			for (int i = 0; i < count; i++) {
+				double[] inputValues = IO.readDouble1A(bi);
+				double[] outputValues = IO.readDouble1A(bi);
+				Pattern pattern = new DefaultPattern(inputValues, outputValues, 0);
+				patterns.add(pattern);
+			}
+		} catch (Exception exc) {
+			throw exc;
+		} finally {
+			if (bi != null) {
+				bi.close();
+			}
+		}
+		return new ListPatternSource(patterns);
 	}
 
 	/**
@@ -1588,8 +1747,7 @@ public class StatisticsAverages extends Statistics {
 		PlotterLabels plotter = new PlotterLabels();
 		plotter.indexPivot = getChartDataConverter().getIndex(DB.FIELD_SOURCES_PIVOT_CALC);
 		plotter.indexData = getChartDataConverter().getIndex(DB.FIELD_SOURCES_REFV_CALC);
-		plotter.indexLabel = getChartDataConverter().getIndex(DB.FIELD_SOURCES_LABEL_CALC);
-		plotter.indexLabelSet = getChartDataConverter().getIndex(DB.FIELD_SOURCES_LABEL_CALC_SET);
+		plotter.aliasLabel = DB.FIELD_SOURCES_LABEL_CALC;
 		plotter.setIndex(getChartDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
 		dataList.addPlotter(plotter);
 
@@ -1721,7 +1879,7 @@ public class StatisticsAverages extends Statistics {
 	 * @param suffix Last suffix.
 	 * @return The table name suffix.
 	 */
-	private String getTableNameSuffix(String suffix) {
+	String getTableNameSuffix(String suffix) {
 		StringBuilder b = new StringBuilder();
 		b.append(getId());
 		b.append("_");
@@ -1935,22 +2093,22 @@ public class StatisticsAverages extends Statistics {
 
 		table.addField(DB.field_data(instrument, DB.FIELD_SOURCES_REFV_CALC, "V-Calc"));
 		table.addField(DB.field_integer(DB.FIELD_SOURCES_PIVOT_CALC, "P-Calc"));
-		table.addField(DB.field_integer(DB.FIELD_SOURCES_LABEL_CALC, "L-Calc"));
-		table.addField(DB.field_integer(DB.FIELD_SOURCES_LABEL_CALC_SET, "LC-Set"));
+		table.addField(DB.field_string(DB.FIELD_SOURCES_LABEL_CALC, 2, "L-Calc"));
+		table.addField(DB.field_string(DB.FIELD_SOURCES_LABEL_NETC, 2, "L-Net-C"));
+
 		table.addField(DB.field_data(instrument, DB.FIELD_SOURCES_REFV_EDIT, "V-Edit"));
 		table.addField(DB.field_integer(DB.FIELD_SOURCES_PIVOT_EDIT, "P-Edit"));
-		table.addField(DB.field_integer(DB.FIELD_SOURCES_LABEL_EDIT, "L-Edit"));
-		table.addField(DB.field_integer(DB.FIELD_SOURCES_LABEL_EDIT_SET, "LE-Set"));
+		table.addField(DB.field_string(DB.FIELD_SOURCES_LABEL_EDIT, 2, "L-Edit"));
+		table.addField(DB.field_string(DB.FIELD_SOURCES_LABEL_NETE, 2, "L-Net-E"));
 
 		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
 		table.getField(DB.FIELD_SOURCES_REFV_CALC).setFieldGroup(grpLabels);
 		table.getField(DB.FIELD_SOURCES_PIVOT_CALC).setFieldGroup(grpLabels);
 		table.getField(DB.FIELD_SOURCES_LABEL_CALC).setFieldGroup(grpLabels);
-		table.getField(DB.FIELD_SOURCES_LABEL_CALC_SET).setFieldGroup(grpLabels);
+
 		table.getField(DB.FIELD_SOURCES_REFV_EDIT).setFieldGroup(grpLabels);
 		table.getField(DB.FIELD_SOURCES_PIVOT_EDIT).setFieldGroup(grpLabels);
 		table.getField(DB.FIELD_SOURCES_LABEL_EDIT).setFieldGroup(grpLabels);
-		table.getField(DB.FIELD_SOURCES_LABEL_EDIT_SET).setFieldGroup(grpLabels);
 
 		FieldGroup grpAverages = new FieldGroup(ndx++, "avgs", "Averages");
 		List<Field> fields = getFieldListAverages();
@@ -2003,54 +2161,21 @@ public class StatisticsAverages extends Statistics {
 
 	/**
 	 * @return The he trainer to train the network..
+	 * @throws Exception 
 	 */
-	Trainer getTrainer() {
+	Trainer getTrainer() throws Exception {
 
 		Trainer trainer = new Trainer();
 		trainer.setEpochs(500);
 		trainer.setSaveNetworkData(true);
 
-		Network network = new Network();
+		Network network = getNetwork(0.6, 0.2);
 
-		StringBuilder name = new StringBuilder();
-		name.append(Strings.replace(
-			DB.name_ticker(
-				getInstrument(),
-				getPeriod(),
-				getTableNameSuffix(networkDef.key)),
-			"_", "-"));
-		
-		name.append("-" + getPatternInputSize());
-		for (int i = 0; i < networkDef.layers.size(); i++) {
-			name.append("-" + networkDef.layers.get(i).size);
-		}
-		name.append("-" + getPatternOutputSize());
-		
-		network.setName(name.toString());
-
-		int inputSize, outputSize, index;
-		Activation activation;
-		for (int i = 0; i < networkDef.layers.size(); i++) {
-			inputSize = -1;
-			if (i == 0) {
-				inputSize = getPatternInputSize();
-			} else {
-				inputSize = networkDef.layers.get(i - 1).size;
-			}
-			outputSize = networkDef.layers.get(i).size;
-			activation = networkDef.layers.get(i).activation;
-			index = i;
-			network.addBranch(Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
-		}
-		inputSize = networkDef.layers.get(networkDef.layers.size() - 1).size;
-		outputSize = getPatternOutputSize();
-		activation = new ActivationSoftMax();
-		index = networkDef.layers.size();
-		network.addBranch(Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
-		
 		trainer.setNetwork(network);
-		trainer.setPatternSourceTraining(new PatternSourceAverages(this,  true));
-		
+		trainer.setPatternSourceTraining(getPatternSource(true, null));
+//		trainer.setPatternSourceTest(getPatternSource(true, false));
+		trainer.setShuffle(false);
+
 		trainer.setFilePath("res/network/");
 		trainer.setFileRoot(network.getName());
 		trainer.setFileExtension("dat");
@@ -2103,11 +2228,11 @@ public class StatisticsAverages extends Statistics {
 
 		view.setMasterTable(tableSrc);
 
-		Relation relRaw = new Relation();
-		relRaw.setLocalTable(tableSrc);
-		relRaw.setForeignTable(tableRel);
-		relRaw.add(tableSrc.getField(DB.FIELD_BAR_TIME), tableRel.getField(DB.FIELD_BAR_TIME));
-		view.addRelation(relRaw);
+		Relation relation = new Relation();
+		relation.setLocalTable(tableSrc);
+		relation.setForeignTable(tableRel);
+		relation.add(tableSrc.getField(DB.FIELD_BAR_TIME), tableRel.getField(DB.FIELD_BAR_TIME));
+		view.addRelation(relation);
 
 		view.addField(tableSrc.getField(DB.FIELD_BAR_TIME));
 		view.addField(tableSrc.getField(DB.FIELD_BAR_TIME_FMT));
@@ -2119,7 +2244,12 @@ public class StatisticsAverages extends Statistics {
 		view.addField(tableSrc.getField(DB.FIELD_SOURCES_PIVOT_CALC));
 		view.addField(tableSrc.getField(DB.FIELD_SOURCES_REFV_CALC));
 		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_CALC));
-		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_CALC_SET));
+		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_NETC));
+
+		view.addField(tableSrc.getField(DB.FIELD_SOURCES_PIVOT_EDIT));
+		view.addField(tableSrc.getField(DB.FIELD_SOURCES_REFV_EDIT));
+		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_EDIT));
+		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_NETE));
 
 		List<Field> fields = null;
 
@@ -2169,7 +2299,6 @@ public class StatisticsAverages extends Statistics {
 		barsAhead = handler.barsAhead;
 		percentCalc = handler.percentCalc;
 		percentEdit = handler.percentEdit;
-		networkDef = handler.networkDef;
 	}
 
 	/**

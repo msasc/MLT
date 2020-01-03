@@ -148,15 +148,15 @@ public class DB {
 	public static final String FIELD_SERVER_TITLE = "server_title";
 
 	public static final String FIELD_SOURCES_LABEL_CALC = "label_calc";
-	public static final String FIELD_SOURCES_LABEL_CALC_SET = "label_calc_set";
+	public static final String FIELD_SOURCES_LABEL_NETC = "label_net_calc";
 	public static final String FIELD_SOURCES_PIVOT_CALC = "pivot_calc";
 	public static final String FIELD_SOURCES_REFV_CALC = "refv_calc";
 
 	public static final String FIELD_SOURCES_LABEL_EDIT = "label_edit";
-	public static final String FIELD_SOURCES_LABEL_EDIT_SET = "label_edit_set";
+	public static final String FIELD_SOURCES_LABEL_NETE = "label_net_edit";
 	public static final String FIELD_SOURCES_PIVOT_EDIT = "pivot_edit";
 	public static final String FIELD_SOURCES_REFV_EDIT = "refv_edit";
-
+	
 	public static final String FIELD_STATISTICS_ID = "stats_id";
 	public static final String FIELD_STATISTICS_KEY = "stats_key";
 	public static final String FIELD_STATISTICS_PARAMS = "stats_params";

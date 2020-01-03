@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -75,10 +76,12 @@ public class Trainer extends Task {
 	 * @return The trace.
 	 */
 	private static String trace(
+		boolean scanFlat,
 		BigDecimal error,
 		BigDecimal trainPerformance,
 		BigDecimal testPerformance) {
 		StringBuilder b = new StringBuilder();
+		b.append(scanFlat ? "Flat " : "Score ");
 		b.append("(");
 		b.append(error);
 		if (trainPerformance != null) {
@@ -302,10 +305,13 @@ public class Trainer extends Task {
 				setCancelled();
 				break;
 			}
+			int index = i + 1;
+			BigDecimal percent =
+				new BigDecimal((double) index / (double) size).setScale(2, RoundingMode.HALF_UP);
 			updateStatusProgress(
 				STATUS_PROCESSING,
 				PROGRESS_PROCESSING,
-				"Calculating test performance: " + (i + 1) + " of " + size,
+				"Calculating test performance: " + index + " of " + size + " (" + percent + ")",
 				(i + 1), size);
 //			updateStatusProgress(
 //				STATUS_PROCESSING,
@@ -517,7 +523,8 @@ public class Trainer extends Task {
 			Distance distance = new DistanceEuclidean();
 			int matches = 0;
 			scoreMap.clear();
-			for (int i = 0; i < patternIndexes.length; i++) {
+			int size = patternIndexes.length;
+			for (int i = 0; i < size; i++) {
 
 				/* Check cancelled. */
 				if (isCancelRequested()) {
@@ -527,9 +534,15 @@ public class Trainer extends Task {
 
 				/* Work done and notify work. */
 				workDone += 1;
+				BigDecimal percent =
+					new BigDecimal(
+						(double) (i + 1) / (double) size).setScale(2, RoundingMode.HALF_UP);
 				StringBuilder work = new StringBuilder();
 				work.append("Epoch " + epoch);
 				work.append(" Pattern " + (i + 1));
+				work.append(" of ");
+				work.append(patternIndexes.length);
+				work.append(" (" + percent + ")");
 				update(work.toString(), workDone, totalWork);
 
 				/* Process the pattern. */
@@ -548,7 +561,7 @@ public class Trainer extends Task {
 					BigDecimal error =
 						Numbers.getBigDecimal(iterationError / (i + 1), errorDecimals);
 					updateStatusLabel(STATUS_ERROR, LABEL_ERROR,
-						trace(error, maxTrainPerformance, maxTestPerformance));
+						trace(scanFlat, error, maxTrainPerformance, maxTestPerformance));
 				}
 
 				/* Add the error and pattern index to the score map. */
@@ -570,31 +583,33 @@ public class Trainer extends Task {
 
 			/* Calculate iteration (training) performance. */
 			calculateTrainPerformance(matches, patternSourceTraining.size());
-			if (maxTrainPerformance == null ||
-				trainPerformance.compareTo(maxTrainPerformance) > 0) {
-				maxTrainPerformance = trainPerformance;
-				save = (maxTestPerformance == null);
-			}
-
-			/* Calculate test performance. */
-			if (patternSourceTest != null) {
-				calculateTestPerformance();
-				/* Check cancelled. */
-				if (isCancelled()) {
-					break;
+			if (scanFlat) {
+				if (maxTrainPerformance == null ||
+					trainPerformance.compareTo(maxTrainPerformance) > 0) {
+					maxTrainPerformance = trainPerformance;
+					save = (maxTestPerformance == null);
 				}
-				if (maxTestPerformance == null ||
-					testPerformance.compareTo(maxTestPerformance) > 0) {
-					maxTestPerformance = testPerformance;
-					save = true;
-				}
-			}
 
-			if (saveNetworkData && save) {
-				updateStatusLabel(
-					STATUS_PROCESSING, LABEL_PROCESSING, "Saving the network data...");
-				save();
-				clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+				/* Calculate test performance. */
+				if (patternSourceTest != null) {
+					calculateTestPerformance();
+					/* Check cancelled. */
+					if (isCancelled()) {
+						break;
+					}
+					if (maxTestPerformance == null ||
+						testPerformance.compareTo(maxTestPerformance) > 0) {
+						maxTestPerformance = testPerformance;
+						save = true;
+					}
+				}
+
+				if (saveNetworkData && save) {
+					updateStatusLabel(
+						STATUS_PROCESSING, LABEL_PROCESSING, "Saving the network data...");
+					save();
+					clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+				}
 			}
 
 			/* History of epoch errors. */
@@ -624,7 +639,7 @@ public class Trainer extends Task {
 			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, msg.toString());
 
 			/* Commute scan flat. */
-			scanFlat = !scanFlat;
+//			scanFlat = !scanFlat;
 		}
 	}
 

@@ -70,8 +70,7 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 
 		/* Reset values. */
 		ValueMap map = new ValueMap();
-		map.put(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
-		map.put(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(0));
+		map.put(DB.FIELD_SOURCES_LABEL_CALC, new Value(""));
 		persistor.update(new Criteria(), map);
 		
 		/* Count. */
@@ -113,8 +112,7 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 			}
 			int index = i;
 			double value = rc.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
-			rc.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
-			rc.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+			rc.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value("0"));
 			concurrent.add(new Record.Update(rc, persistor));
 
 			/* Analyze previous. */
@@ -139,24 +137,21 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 				if (!labelPrevSet) {
 					double valueTmp = rcTmp.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
 					if (Math.abs(value - valueTmp) <= evalPrev) {
-						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
-						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, "0");
 						concurrent.add(new Record.Update(rcTmp, persistor));
 						labelPrevSet = true;
 					}
 				} else {
-					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
-					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, "0");
 					concurrent.add(new Record.Update(rcTmp, persistor));
 				}
 			}
-			if (rcPrev.getValue(DB.FIELD_SOURCES_LABEL_CALC_SET).getInteger() != 0) {
-				int labelPrev = (pivot == 1 ? 1 : -1);
+			if (!rcPrev.getValue(DB.FIELD_SOURCES_LABEL_CALC).getString().isEmpty()) {
+				String labelPrev = (pivot == 1 ? "1" : "-1");
 				for (int j = indexPrev; j < index; j++) {
 					Record rcTmp = listPersistor.getRecord(j);
-					if (rcTmp.getValue(DB.FIELD_SOURCES_LABEL_CALC_SET).getInteger() == 0) {
-						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(labelPrev));
-						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+					if (rcTmp.getValue(DB.FIELD_SOURCES_LABEL_CALC).getString().isEmpty()) {
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, labelPrev);
 						concurrent.add(new Record.Update(rcTmp, persistor));
 					}
 				}
@@ -184,14 +179,12 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 				if (!labelNextSet) {
 					double valueTmp = rcTmp.getValue(DB.FIELD_SOURCES_REFV_CALC).getDouble();
 					if (Math.abs(value - valueTmp) <= evalNext) {
-						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
-						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+						rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, "0");
 						concurrent.add(new Record.Update(rcTmp, persistor));
 						labelNextSet = true;
 					}
 				} else {
-					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, new Value(0));
-					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC_SET, new Value(1));
+					rcTmp.setValue(DB.FIELD_SOURCES_LABEL_CALC, "0");
 					concurrent.add(new Record.Update(rcTmp, persistor));
 				}
 			}

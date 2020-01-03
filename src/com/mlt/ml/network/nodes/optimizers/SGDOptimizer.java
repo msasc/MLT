@@ -30,11 +30,10 @@ public class SGDOptimizer extends WeightsNodeOptimizer {
 	private double eta = 0.01;
 
 	/**
-	 * @param inputSize  Input size.
-	 * @param outputSize Output size.
+	 * Constructor.
 	 */
-	public SGDOptimizer(int inputSize, int outputSize) {
-		super(inputSize, outputSize);
+	public SGDOptimizer() {
+		super();
 	}
 
 	@Override

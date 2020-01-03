@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import com.mlt.ml.function.Activation;
 import com.mlt.ml.function.Collector;
+import com.mlt.ml.network.nodes.WeightsNodeOptimizer;
 import com.mlt.util.IO;
 import com.mlt.util.Properties;
 
@@ -360,6 +361,18 @@ public abstract class Node {
 				properties.setObject(key, node);
 				continue;
 			}
+			/* Weights node optimizer. */
+			if (type.equals("WeightsNodeOptimizer")) {
+				String className = IO.readString(is);
+				WeightsNodeOptimizer optimizer = null;
+				try {
+					optimizer = (WeightsNodeOptimizer) Class.forName(className).newInstance();
+				} catch (Exception exc) {
+					throw new IOException(exc);
+				}
+				properties.setObject(key, optimizer);
+				continue;
+			}
 			throw new IllegalStateException("Invalid type: " + type);
 		}
 	}
@@ -464,6 +477,14 @@ public abstract class Node {
 				IO.writeString(os, "Node");
 				IO.writeString(os, node.getClass().getName());
 				node.saveProperties(os);
+				continue;
+			}
+			/* Weights node optimizer. */
+			if (value instanceof WeightsNodeOptimizer) {
+				WeightsNodeOptimizer optimizer = (WeightsNodeOptimizer) value;
+				IO.writeString(os, key);
+				IO.writeString(os, "WeightsNodeOptimizer");
+				IO.writeString(os, optimizer.getClass().getName());
 				continue;
 			}
 			throw new IllegalStateException("Invalid value type: " + value.getClass().getName());

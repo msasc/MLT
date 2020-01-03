@@ -442,8 +442,8 @@ public class Trainer extends Task {
 		setTotalWork(totalWork);
 
 		/* Register minimum error and maximum performances. */
-		BigDecimal maxTestPerformance = null;
-		BigDecimal maxTrainPerformance = null;
+		BigDecimal maxTestPerf = null;
+		BigDecimal maxTrainPerf = null;
 
 		/* Lists to trace errors and performances. */
 		List<Trace> traceFlat = new ArrayList<>();
@@ -456,9 +456,9 @@ public class Trainer extends Task {
 				if (isCancelled()) {
 					return;
 				}
-				if (maxTestPerformance == null
-					|| testPerformance.compareTo(maxTestPerformance) > 0) {
-					maxTestPerformance = testPerformance;
+				if (maxTestPerf == null ||
+					testPerformance.compareTo(maxTestPerf) > 0) {
+					maxTestPerf = testPerformance;
 				}
 				calculateTrainPerformance(testMatches, testSize);
 				bestTrace =
@@ -506,19 +506,20 @@ public class Trainer extends Task {
 				int index = 0;
 				while (iter.hasNext()) {
 					scoreIndexes[index++] = iter.next();
-					if (index >= scoreSize) break;
+					if (index >= scoreSize) {
+						break;
+					}
 				}
 				index = 0;
 				for (int i = 0; i < patternIndexes.length; i++) {
 					patternIndexes[i] = scoreIndexes[index++];
-					if (index >= scoreSize) index = 0;
+					if (index >= scoreSize) {
+						index = 0;
+					}
 				}
 			}
 
-			/*
-			 * Reset the iteration error and the number of matches to calculate the
-			 * iteration performance.
-			 */
+			/* Reset the iteration error and the number of matches. */
 			iterationError = 0;
 			Distance distance = new DistanceEuclidean();
 			int matches = 0;
@@ -534,16 +535,7 @@ public class Trainer extends Task {
 
 				/* Work done and notify work. */
 				workDone += 1;
-				BigDecimal percent =
-					new BigDecimal(
-						(double) (i + 1) / (double) size).setScale(2, RoundingMode.HALF_UP);
-				StringBuilder work = new StringBuilder();
-				work.append("Epoch " + epoch);
-				work.append(" Pattern " + (i + 1));
-				work.append(" of ");
-				work.append(patternIndexes.length);
-				work.append(" (" + percent + ")");
-				update(work.toString(), workDone, totalWork);
+				update(getMessage(epoch, i + 1, patternIndexes.length), workDone, totalWork);
 
 				/* Process the pattern. */
 				int index = patternIndexes[i];
@@ -557,12 +549,9 @@ public class Trainer extends Task {
 				/* Total error. */
 				double patternError = distance.distance(patternOutput, networkOutput);
 				iterationError += patternError;
-				if ((i + 1) % getProgressModulus() == 0 || (i + 1) >= patternIndexes.length) {
-					BigDecimal error =
-						Numbers.getBigDecimal(iterationError / (i + 1), errorDecimals);
-					updateStatusLabel(STATUS_ERROR, LABEL_ERROR,
-						trace(scanFlat, error, maxTrainPerformance, maxTestPerformance));
-				}
+				BigDecimal error = Numbers.getBigDecimal(iterationError / (i + 1), errorDecimals);
+				updateStatusLabel(STATUS_ERROR, LABEL_ERROR,
+					trace(scanFlat, error, maxTrainPerf, maxTestPerf));
 
 				/* Add the error and pattern index to the score map. */
 				scoreMap.put(patternError, index);
@@ -584,10 +573,10 @@ public class Trainer extends Task {
 			/* Calculate iteration (training) performance. */
 			calculateTrainPerformance(matches, patternSourceTraining.size());
 			if (scanFlat) {
-				if (maxTrainPerformance == null ||
-					trainPerformance.compareTo(maxTrainPerformance) > 0) {
-					maxTrainPerformance = trainPerformance;
-					save = (maxTestPerformance == null);
+				if (maxTrainPerf == null ||
+					trainPerformance.compareTo(maxTrainPerf) > 0) {
+					maxTrainPerf = trainPerformance;
+					save = (maxTestPerf == null);
 				}
 
 				/* Calculate test performance. */
@@ -597,9 +586,9 @@ public class Trainer extends Task {
 					if (isCancelled()) {
 						break;
 					}
-					if (maxTestPerformance == null ||
-						testPerformance.compareTo(maxTestPerformance) > 0) {
-						maxTestPerformance = testPerformance;
+					if (maxTestPerf == null ||
+						testPerformance.compareTo(maxTestPerf) > 0) {
+						maxTestPerf = testPerformance;
 						save = true;
 					}
 				}
@@ -639,7 +628,7 @@ public class Trainer extends Task {
 			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, msg.toString());
 
 			/* Commute scan flat. */
-//			scanFlat = !scanFlat;
+			scanFlat = !scanFlat;
 		}
 	}
 
@@ -656,6 +645,18 @@ public class Trainer extends Task {
 			files.add(file);
 		}
 		return files;
+	}
+
+	private String getMessage(int epoch, int pattern, int size) {
+		double factor = (double) (pattern) / (double) size;
+		BigDecimal percent = new BigDecimal(factor).setScale(2, RoundingMode.HALF_UP);
+		StringBuilder msg = new StringBuilder();
+		msg.append("Epoch " + epoch);
+		msg.append(" Pattern " + pattern);
+		msg.append(" of ");
+		msg.append(size);
+		msg.append(" (" + percent + "%)");
+		return msg.toString();
 	}
 
 	/**
@@ -735,7 +736,15 @@ public class Trainer extends Task {
 			bestTrace = trace;
 		} else {
 			if (trace.testPerformance != null) {
+				boolean bestTest = false;
+				boolean bestTrain = false;
 				if (trace.testPerformance.compareTo(bestTrace.testPerformance) >= 0) {
+					bestTest = true;
+				}
+				if (trace.trainPerformance.compareTo(bestTrace.trainPerformance) >= 0) {
+					bestTrain = true;
+				}
+				if (bestTest && bestTrain) {
 					bestTrace = trace;
 				}
 			} else {

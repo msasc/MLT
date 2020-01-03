@@ -42,19 +42,16 @@ public abstract class WeightsNodeOptimizer {
 
 	/**
 	 * Constructor.
-	 * 
-	 * @param inputSize  Input size.
-	 * @param outputSize Output size.
 	 */
-	public WeightsNodeOptimizer(int inputSize, int outputSize) {
+	public WeightsNodeOptimizer() {
 		super();
-		this.inputSize = inputSize;
-		this.outputSize = outputSize;
 	}
 
 	/**
 	 * Set internal protected parameters to calculate the step.
 	 * 
+	 * @param inputSize    Input size.
+	 * @param outputSize   Output size.
 	 * @param weights      Weights.
 	 * @param inputDeltas  Input deltas.
 	 * @param inputValues  Input values.
@@ -62,18 +59,22 @@ public abstract class WeightsNodeOptimizer {
 	 * @param outputValues Output values.
 	 */
 	public void set(
+		int inputSize,
+		int outputSize,
 		double[][] weights,
 		double[] inputDeltas,
 		double[] inputValues,
 		double[] outputDeltas,
 		double[] outputValues) {
+		this.inputSize = inputSize;
+		this.outputSize = outputSize;
 		this.weights = weights;
 		this.inputDeltas = inputDeltas;
 		this.inputValues = inputValues;
 		this.outputDeltas = outputDeltas;
 		this.outputValues = outputValues;
 	}
-	
+
 	/**
 	 * Backward process from input indexes start to end.
 	 * 

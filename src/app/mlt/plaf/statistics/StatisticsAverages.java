@@ -2169,11 +2169,12 @@ public class StatisticsAverages extends Statistics {
 		trainer.setEpochs(500);
 		trainer.setSaveNetworkData(true);
 
-		Network network = getNetwork(0.6, 0.2);
+		Network network = getNetwork(0.8, 0.2);
 
 		trainer.setNetwork(network);
-		trainer.setPatternSourceTraining(getPatternSource(true, null));
-//		trainer.setPatternSourceTest(getPatternSource(true, false));
+		PatternSource patternSource = getPatternSource(true, null);
+		trainer.setPatternSourceTraining(patternSource);
+		trainer.setPatternSourceTest(patternSource);
 		trainer.setShuffle(false);
 
 		trainer.setFilePath("res/network/");

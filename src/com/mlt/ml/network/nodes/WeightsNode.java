@@ -76,7 +76,7 @@ public class WeightsNode extends Node {
 		setName(name);
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
-		this.optimizer = new SGDOptimizer(inputSize, outputSize);
+		this.optimizer = new SGDOptimizer();
 	}
 
 	/**
@@ -119,7 +119,14 @@ public class WeightsNode extends Node {
 		}
 		inputValues = inputEdges.get(0).getForwardData();
 		outputDeltas = outputEdges.get(0).getBackwardData();
-		optimizer.set(weights, inputDeltas, inputValues, outputDeltas, outputValues);
+		optimizer.set(
+			inputSize, 
+			outputSize, 
+			weights, 
+			inputDeltas, 
+			inputValues, 
+			outputDeltas,
+			outputValues);
 		backwardFunction.process();
 		pushBackward(inputDeltas);
 	}
@@ -223,6 +230,7 @@ public class WeightsNode extends Node {
 		inputSize = properties.getInteger("input-size");
 		outputSize = properties.getInteger("output-size");
 		weights = properties.getDouble2A("weights");
+		optimizer = (WeightsNodeOptimizer) properties.getObject("optimizer");
 		initializeVectorsAndFunctions();
 	}
 
@@ -234,6 +242,7 @@ public class WeightsNode extends Node {
 		properties.setInteger("input-size", inputSize);
 		properties.setInteger("output-size", outputSize);
 		properties.setDouble2A("weights", weights);
+		properties.setObject("optimizer", optimizer);
 		saveProperties(os);
 	}
 }

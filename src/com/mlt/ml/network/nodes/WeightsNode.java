@@ -25,7 +25,7 @@ import java.util.Random;
 import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
-import com.mlt.ml.network.nodes.optimizers.SGDOptimizer;
+import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
 
 /**
  * A matrix of weights node.
@@ -50,7 +50,7 @@ public class WeightsNode extends Node {
 	private int outputSize;
 
 	/** Weights optimizer. */
-	private WeightsNodeOptimizer optimizer;
+	private WeightsOptimizer optimizer;
 
 	/** Backward function. */
 	private RangeFunction backwardFunction;
@@ -76,7 +76,7 @@ public class WeightsNode extends Node {
 		setName(name);
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
-		this.optimizer = new SGDOptimizer();
+		this.optimizer = new AdaOptimizer();
 	}
 
 	/**
@@ -232,7 +232,7 @@ public class WeightsNode extends Node {
 		inputSize = properties.getInteger("input-size");
 		outputSize = properties.getInteger("output-size");
 		weights = properties.getDouble2A("weights");
-		optimizer = (WeightsNodeOptimizer) properties.getObject("optimizer");
+		optimizer = (WeightsOptimizer) properties.getObject("optimizer");
 		initializeVectorsAndFunctions();
 	}
 

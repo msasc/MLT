@@ -29,7 +29,7 @@ import java.util.UUID;
 
 import com.mlt.ml.function.Activation;
 import com.mlt.ml.function.Collector;
-import com.mlt.ml.network.nodes.WeightsNodeOptimizer;
+import com.mlt.ml.network.nodes.WeightsOptimizer;
 import com.mlt.util.IO;
 import com.mlt.util.Properties;
 
@@ -361,12 +361,12 @@ public abstract class Node {
 				properties.setObject(key, node);
 				continue;
 			}
-			/* Weights node optimizer. */
-			if (type.equals("WeightsNodeOptimizer")) {
+			/* Weights optimizer. */
+			if (type.equals("WeightsOptimizer")) {
 				String className = IO.readString(is);
-				WeightsNodeOptimizer optimizer = null;
+				WeightsOptimizer optimizer = null;
 				try {
-					optimizer = (WeightsNodeOptimizer) Class.forName(className).newInstance();
+					optimizer = (WeightsOptimizer) Class.forName(className).newInstance();
 				} catch (Exception exc) {
 					throw new IOException(exc);
 				}
@@ -479,11 +479,11 @@ public abstract class Node {
 				node.saveProperties(os);
 				continue;
 			}
-			/* Weights node optimizer. */
-			if (value instanceof WeightsNodeOptimizer) {
-				WeightsNodeOptimizer optimizer = (WeightsNodeOptimizer) value;
+			/* Weights optimizer. */
+			if (value instanceof WeightsOptimizer) {
+				WeightsOptimizer optimizer = (WeightsOptimizer) value;
 				IO.writeString(os, key);
-				IO.writeString(os, "WeightsNodeOptimizer");
+				IO.writeString(os, "WeightsOptimizer");
 				IO.writeString(os, optimizer.getClass().getName());
 				continue;
 			}

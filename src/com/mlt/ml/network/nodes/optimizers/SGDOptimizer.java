@@ -17,17 +17,17 @@
 
 package com.mlt.ml.network.nodes.optimizers;
 
-import com.mlt.ml.network.nodes.WeightsNodeOptimizer;
+import com.mlt.ml.network.nodes.WeightsOptimizer;
 
 /**
  * Default stochastic gradient descent optimizer.
  *
  * @author Miquel Sas
  */
-public class SGDOptimizer extends WeightsNodeOptimizer {
+public class SGDOptimizer extends WeightsOptimizer {
 	
-	/** Eta or learning rate. */
-	private double eta = 0.01;
+	/** Learning rate. */
+	private double learningRate = 0.01;
 
 	/**
 	 * Constructor.
@@ -46,7 +46,7 @@ public class SGDOptimizer extends WeightsNodeOptimizer {
 				double outputDelta = outputDeltas[out];
 				inputDelta += (weight * outputDelta);
 				/* Weight delta. */
-				double weightDelta = eta * outputDelta * input;
+				double weightDelta = learningRate * outputDelta * input;
 				weights[in][out] += weightDelta;
 			}
 			inputDeltas[in] = inputDelta;

@@ -22,7 +22,7 @@ package com.mlt.ml.network.nodes;
  *
  * @author Miquel Sas
  */
-public abstract class WeightsNodeOptimizer {
+public abstract class WeightsOptimizer {
 
 	/** Input size. */
 	protected int inputSize;
@@ -43,7 +43,7 @@ public abstract class WeightsNodeOptimizer {
 	/**
 	 * Constructor.
 	 */
-	public WeightsNodeOptimizer() {
+	public WeightsOptimizer() {
 		super();
 	}
 
@@ -66,6 +66,7 @@ public abstract class WeightsNodeOptimizer {
 		double[] inputValues,
 		double[] outputDeltas,
 		double[] outputValues) {
+		
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
 		this.weights = weights;

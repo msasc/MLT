@@ -2168,7 +2168,7 @@ public class StatisticsAverages extends Statistics {
 		Trainer trainer = new Trainer();
 		trainer.setEpochs(500);
 
-		Network network = getNetwork(2.0, 0.4);
+		Network network = getNetwork(4.0, 0.2);
 
 		trainer.setNetwork(network);
 		trainer.setPatternSourceTraining(getPatternSource(true, true));

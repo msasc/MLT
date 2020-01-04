@@ -293,7 +293,7 @@ public class StatusBar extends Control {
 	 * @param key The key of the progress.
 	 */
 	public void removeProgress(String key) {
-		ProgressControl progress = getProgress(key, null);
+		ProgressControl progress = getProgress(key, false);
 		if (progress != null) {
 			components.remove(progress);
 			layoutComponents();

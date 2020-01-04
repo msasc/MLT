@@ -956,11 +956,11 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 *
 	 * @param message The message string.
 	 */
-	protected void updateMessage(String message) {
+	protected void updateMessage(Object message) {
 		if (isPooled()) {
 			return;
 		}
-		notifyOnMessage(message);
+		notifyOnMessage(message.toString());
 	}
 
 	/**
@@ -1051,11 +1051,11 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 * @param labelKey  The label key.
 	 * @param text      The text.
 	 */
-	protected void updateStatusLabel(String statusKey, String labelKey, String text) {
+	protected void updateStatusLabel(String statusKey, String labelKey, Object text) {
 		if (isPooled()) {
 			return;
 		}
-		notifyStatusLabel(statusKey, labelKey, text);
+		notifyStatusLabel(statusKey, labelKey, text.toString());
 	}
 
 	/**
@@ -1089,13 +1089,13 @@ public abstract class Task implements Runnable, Callable<Void> {
 	protected void updateStatusProgress(
 		String statusKey,
 		String progressKey,
-		String text,
+		Object text,
 		int workDone,
 		int totalWork) {
 		if (isPooled()) {
 			return;
 		}
-		notifyStatusProgress(statusKey, progressKey, text, workDone, totalWork);
+		notifyStatusProgress(statusKey, progressKey, text.toString(), workDone, totalWork);
 	}
 
 	/**

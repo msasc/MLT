@@ -119,6 +119,7 @@ public class WeightsNode extends Node {
 		}
 		inputValues = inputEdges.get(0).getForwardData();
 		outputDeltas = outputEdges.get(0).getBackwardData();
+		
 		optimizer.set(
 			inputSize, 
 			outputSize, 
@@ -127,6 +128,7 @@ public class WeightsNode extends Node {
 			inputValues, 
 			outputDeltas,
 			outputValues);
+		
 		backwardFunction.process();
 		pushBackward(inputDeltas);
 	}

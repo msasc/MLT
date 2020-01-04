@@ -2,19 +2,17 @@
  * Copyright (C) 2018 Miquel Sas
  *
  * This program is free software: you can redistribute it and/or modify it under
- * the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see
- * <http://www.gnu.org/licenses/>.
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 package com.mlt.ml.network;
@@ -31,122 +29,82 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.mlt.desktop.Alert;
 import com.mlt.desktop.FileChooser;
 import com.mlt.desktop.Option;
 import com.mlt.ml.data.Pattern;
 import com.mlt.ml.data.PatternSource;
-import com.mlt.ml.function.distance.DistanceEuclidean;
 import com.mlt.ml.function.Distance;
+import com.mlt.ml.function.distance.DistanceEuclidean;
 import com.mlt.task.Task;
+import com.mlt.util.Lists;
 import com.mlt.util.Numbers;
 import com.mlt.util.Strings;
+import com.mlt.util.Vector;
 
 /**
- * Trainer task for networks.
- * 
+ *
  * @author Miquel Sas
  */
 public class Trainer extends Task {
 
 	/**
-	 * Subtract the values of vector b from vector a (must have the same length).
-	 *
-	 * @param x Vector x.
-	 * @param y Vector y.
-	 * @return The result of subtracting the values.
+	 * Data structure to trace an epoch performance.
 	 */
-	private static double[] subtract(double[] x, double[] y) {
-		double[] r = new double[x.length];
-		for (int i = 0; i < x.length; i++) {
-			r[i] = x[i] - y[i];
-		}
-		return r;
-	}
+	public static class Performance implements Comparable<Performance> {
+		/** Label. */
+		public String label;
+		/** Error. */
+		public BigDecimal error;
+		/** Size of the pattern source. */
+		public int size;
+		/** Matches of the epoch iteration. */
+		public int matches;
+		/** Performance. */
+		public BigDecimal performance;
 
-	/**
-	 * Return the trace data.
-	 * 
-	 * @param error            Iteration error.
-	 * @param trainPerformance Train performance.
-	 * @param testPerformance  Test performance.
-	 * @return The trace.
-	 */
-	private static String trace(
-		boolean scanFlat,
-		BigDecimal error,
-		BigDecimal trainPerformance,
-		BigDecimal testPerformance) {
-		StringBuilder b = new StringBuilder();
-		b.append(scanFlat ? "Flat " : "Score ");
-		b.append("(");
-		b.append(error);
-		if (trainPerformance != null) {
-			b.append(", ");
-			b.append(trainPerformance);
-		}
-		if (testPerformance != null) {
-			b.append(", ");
-			b.append(testPerformance);
-		}
-		b.append(")");
-		return b.toString();
-	}
-
-	/**
-	 * Trace of error, train performance and test performance.
-	 */
-	static class Trace {
-		BigDecimal error;
-		int trainMatches;
-		int trainSize;
-		BigDecimal trainPerformance;
-		int testMatches;
-		int testSize;
-		BigDecimal testPerformance;
-
-		Trace(
-			BigDecimal error,
-			int trainMatches,
-			int trainSize,
-			BigDecimal trainPerformance,
-			int testMatches,
-			int testSize,
-			BigDecimal testPerformance) {
-
-			this.error = error;
-			this.trainMatches = trainMatches;
-			this.trainSize = trainSize;
-			this.trainPerformance = trainPerformance;
-			this.testMatches = testMatches;
-			this.testSize = testSize;
-			this.testPerformance = testPerformance;
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public int compareTo(Performance p) {
+			if (error.compareTo(p.error) < 0 && performance.compareTo(p.performance) > 0) {
+				return -1;
+			}
+			if (error.compareTo(p.error) > 0 && performance.compareTo(p.performance) < 0) {
+				return 1;
+			}
+			return 0;
 		}
 
+		/**
+		 * @param p The argument performance to compare with.
+		 * @return A boolean indicating whether this performance is better than the
+		 *         argument one.
+		 */
+		public boolean isBetterThan(Performance p) {
+			return compareTo(p) < 0;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
 		public String toString() {
 			StringBuilder b = new StringBuilder();
-			b.append("(");
+			b.append(label);
+			b.append(": ");
 			b.append(error);
-			if (trainPerformance != null) {
-				b.append(", ");
-				b.append(trainMatches);
-				b.append("/");
-				b.append(trainSize);
-				b.append(", ");
-				b.append(trainPerformance);
-			}
-			if (testPerformance != null) {
-				b.append(", ");
-				b.append(testMatches);
-				b.append("/");
-				b.append(testSize);
-				b.append(", ");
-				b.append(testPerformance);
-			}
-			b.append(")");
+//			b.append(", ");
+//			b.append(matches);
+//			b.append(" of ");
+//			b.append(size);
+			b.append(", ");
+			b.append(performance);
+			b.append("%");
 			return b.toString();
 		}
 	}
@@ -188,58 +146,53 @@ public class Trainer extends Task {
 		}
 	}
 
-	/** Label to show the current error. */
+	/** Label key to show the current error. */
 	private static final String LABEL_ERROR = "LABEL-ERROR";
-	/** Label to show the history of flat errors and performances. */
-	private static final String LABEL_FLAT = "LABEL-FLAT";
-	/** Label to show the history of score errors and performances. */
-	private static final String LABEL_SCORE = "LABEL-SCORE";
-	/**
-	 * Label to inform of an additional process like saving or calculating
-	 * performance.
-	 */
+	/** Label key to show the history of train performances. */
+	private static final String LABEL_TRAIN = "LABEL-TRAIN";
+	/** Label key to show the history of test performances. */
+	private static final String LABEL_TEST = "LABEL-TEST";
+	/** Label key of an additional processes. */
 	private static final String LABEL_PROCESSING = "LABEL-PROCESSING";
+
 	/** Option new file. */
 	private static final String OPTION_NEW_FILE = "NEW-FILE";
 	/** Option use existing. */
 	private static final String OPTION_USE_EXISTING = "USE-EXISTING";
 	/** Option cancel. */
 	private static final String OPTION_CANCEL = "CANCEL";
-	/**
-	 * Label to inform of an additional process like saving or calculating
-	 * performance.
-	 */
+	/** Progress key of additional processes. */
 	private static final String PROGRESS_PROCESSING = "PROGRESS-PROCESSING";
 
-	/** Status to show the current error. */
+	/** Status key to show the current error. */
 	private static final String STATUS_ERROR = "STATUS-ERROR";
-	/** Status to show the history of flat errors and performances. */
-	private static final String STATUS_FLAT = "STATUS-FLAT";
-	/** Status to show the history of score errors and performances. */
-	private static final String STATUS_SCORE = "STATUS-SCORE";
-	/**
-	 * Status to inform of an additional process like saving or calculating
-	 * performance.
-	 */
+	/** Status key to show the history of train performances. */
+	private static final String STATUS_TRAIN = "STATUS-TRAIN";
+	/** Status key to show the history of test performances. */
+	private static final String STATUS_TEST = "STATUS-TEST";
+	/** Status key of additional processes. */
 	private static final String STATUS_PROCESSING = "STATUS-PROCESSING";
 
 	/** The network. */
 	private Network network;
 	/** The training pattern source. */
-	private PatternSource patternSourceTraining;
+	private PatternSource sourceTrain;
 	/** The test pattern source. */
-	private PatternSource patternSourceTest;
+	private PatternSource sourceTest;
 	/** The number of epochs or turns to the full list of patterns. */
 	private int epochs = 500;
 	/** The file to save the network. */
 	private File file;
-	/** A boolean to indicate whether to save/restore network data. */
-	private boolean saveNetworkData = true;
-	/**
-	 * A boolean that indicates whether the train source should be shuffled before
-	 * each iteration.
-	 */
+	/** Shuffle flag indicator. */
 	private boolean shuffle = true;
+	/** Score flag indicator. */
+	private boolean score = true;
+	/** Error decimals. */
+	private int errorDecimals = 8;
+	/** Performance and decimals. */
+	private int performanceDecimals = 2;
+	/** Percentages decimals. */
+	private int percentageDecimals = 2;
 
 	/** File path. */
 	private String filePath;
@@ -248,100 +201,93 @@ public class Trainer extends Task {
 	/** File extension. */
 	private String fileExtension;
 
-	/** Test size. */
-	private int testSize;
-	/** Test matches. */
-	private int testMatches;
-	/** Test performance. */
-	private BigDecimal testPerformance;
-	/** Train size. */
-	private int trainSize;
-	/** Train matches. */
-	private int trainMatches;
-	/** Train performance. */
-	private BigDecimal trainPerformance;
-
-	/** Error decimals. */
-	private int errorDecimals = 8;
-	/** Performance decimals. */
-	private int performanceDecimals = 2;
-	/** Maximum trace length. */
-	private int maxTrace = 4;
-	/** Best trace. */
-	private Trace bestTrace;
-
-	/** Random to set random scored sizes. */
-	private Random random = new Random();
+	/** Distance function. */
+	private Distance distance = new DistanceEuclidean();
+	/** Last train performance. */
+	private Performance trainPerformance;
+	/** Last test performance. */
+	private Performance testPerformance;
+	/** Performance history. */
+	private int performanceHistory = 4;
 
 	/**
-	 * Default constructor.
+	 * Constructor.
 	 */
 	public Trainer() {
 		this(Locale.getDefault());
 	}
 
 	/**
-	 * Constructor assigning the locale.
+	 * Constructor.
 	 * 
-	 * @param locale The locale for messages.
+	 * @param locale Locale.
 	 */
 	public Trainer(Locale locale) {
 		super(locale);
 		addStatus(STATUS_ERROR);
-		addStatus(STATUS_FLAT);
-		addStatus(STATUS_SCORE);
+		addStatus(STATUS_TRAIN);
+		addStatus(STATUS_TEST);
 		addStatus(STATUS_PROCESSING);
 	}
 
 	/**
-	 * Calculate the test performance.
+	 * Calculate the performance.
+	 * 
+	 * @param label The label.
+	 * @param train Train/test indicator.
 	 */
-	private void calculateTestPerformance() {
+	private Performance calculatePerformance(String label, boolean train) {
 		removeStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
+
+		PatternSource source = train ? sourceTrain : sourceTest;
+
 		int matches = 0;
-		int size = patternSourceTest.size();
+		int size = source.size();
+		double error = 0;
 		for (int i = 0; i < size; i++) {
+
 			if (isCancelRequested()) {
 				setCancelled();
 				break;
 			}
+
 			int index = i + 1;
-			BigDecimal percent =
-				new BigDecimal((double) index / (double) size).setScale(2, RoundingMode.HALF_UP);
-			updateStatusProgress(
-				STATUS_PROCESSING,
-				PROGRESS_PROCESSING,
-				"Calculating test performance: " + index + " of " + size + " (" + percent + ")",
-				(i + 1), size);
-//			updateStatusProgress(
-//				STATUS_PROCESSING,
-//				PROGRESS_PROCESSING,
-//				(i + 1), size);
-			Pattern pattern = patternSourceTest.get(i);
+			double percent = (double) (index * 100) / (double) size;
+			StringBuilder msg = new StringBuilder();
+			msg.append("Calculating ");
+			msg.append(train ? "train" : "test");
+			msg.append(" performance: ");
+			msg.append(index);
+			msg.append(" of ");
+			msg.append(size);
+			msg.append(" (");
+			msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
+			msg.append("%)");
+			updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, index, size);
+
+			Pattern pattern = source.get(i);
 			double[] patternInput = pattern.getInputValues();
+			double[] patternOutput = pattern.getOutputValues();
 			double[] networkOutput = network.calculate(patternInput);
 			if (pattern.matches(networkOutput)) {
 				matches += 1;
 			}
+			error += distance.distance(patternOutput, networkOutput);
 		}
-		double performance = 100.0 * matches / size;
-		testSize = patternSourceTest.size();
-		testMatches = (int) matches;
-		testPerformance = Numbers.getBigDecimal(performance, performanceDecimals);
-		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
-	}
 
-	/**
-	 * Calculate the train performance.
-	 * 
-	 * @param matches Matches.
-	 * @param size    Size.
-	 */
-	private void calculateTrainPerformance(int matches, int size) {
-		double performance = 100.0 * matches / size;
-		trainSize = size;
-		trainMatches = matches;
-		trainPerformance = Numbers.getBigDecimal(performance, performanceDecimals);
+		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
+		error /= (double) size;
+
+		Performance performance = new Performance();
+		performance.label = label;
+		performance.error = Numbers.getBigDecimal(error, errorDecimals);
+		performance.size = size;
+		performance.matches = matches;
+		performance.performance =
+			Numbers.getBigDecimal((double) (matches * 100) / (double) size, performanceDecimals);
+
+		return performance;
 	}
 
 	/**
@@ -349,7 +295,253 @@ public class Trainer extends Task {
 	 */
 	@Override
 	protected long calculateTotalWork() throws Throwable {
-		return patternSourceTraining.size() * epochs;
+		setTotalWork(sourceTrain.size() * epochs);
+		return getTotalWork();
+	}
+
+	/**
+	 * Check and optionally restore a network file.
+	 */
+	private boolean checkRestore() throws Exception {
+		List<File> files = getFiles();
+		if (files.isEmpty()) {
+			file = getNewFile(files);
+		} else {
+			Option option = getFileOption();
+			if (option.equals(OPTION_CANCEL)) {
+				setCancelled();
+				return false;
+			}
+			if (option.equals(OPTION_NEW_FILE)) {
+				file = getNewFile(files);
+			} else {
+				FileChooser chooser = new FileChooser(new File(filePath));
+				chooser.setDialogTitle("Please, select a network file");
+				chooser.setDialogType(FileChooser.OPEN_DIALOG);
+				chooser.setFileSelectionMode(FileChooser.FILES_ONLY);
+				chooser.setAcceptAllFileFilterUsed(true);
+				chooser.setFileFilter(new TrainerFileFilter());
+				file = null;
+				if (chooser.showDialog(null) == FileChooser.APPROVE_OPTION) {
+					file = chooser.getSelectedFile();
+				} else {
+					setCancelled();
+					return false;
+				}
+			}
+		}
+		setTitle(file.getName());
+		updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, "Restoring the network data...");
+		if (file != null && file.exists() && file.length() != 0) {
+			FileInputStream fi = new FileInputStream(file);
+			BufferedInputStream bi = new BufferedInputStream(fi);
+			network.restore(bi);
+			bi.close();
+			fi.close();
+		}
+		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+		return true;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void compute() throws Throwable {
+
+		/* Validate. */
+		validate();
+
+		/* Clear messages. */
+		clearMessage();
+		clearStatusLabel(STATUS_ERROR, LABEL_ERROR);
+		clearStatusLabel(STATUS_TRAIN, LABEL_TRAIN);
+		clearStatusLabel(STATUS_TEST, LABEL_TEST);
+		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+
+		/* Check restore or create a new file. */
+		if (!checkRestore()) {
+			return;
+		}
+
+		/* Perfirnces history. */
+		List<Performance> trainPerformances = new ArrayList<>();
+		List<Performance> testPerformances = new ArrayList<>();
+
+		/* Calculate train and test performance. */
+		trainPerformance = calculatePerformance("Train flat", true);
+		testPerformance = calculatePerformance("Test", false);
+
+		/* Register performances and display them. */
+		trainPerformances.add(trainPerformance);
+		testPerformances.add(testPerformance);
+		updateStatusLabel(STATUS_TRAIN, LABEL_TRAIN, toString(trainPerformances));
+		updateStatusLabel(STATUS_TEST, LABEL_TEST, toString(testPerformances));
+		updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformance());
+
+		/* Iterate epochs. Start with a flat scan. */
+		calculateTotalWork();
+		long totalWork = getTotalWork();
+		long workDone = 0;
+		boolean scanFlat = true;
+		TreeMap<Double, Integer> scoreMap = new TreeMap<>((a, b) -> (Double.compare(a, b) * -1));
+		for (int epoch = 1; epoch <= epochs; epoch++) {
+
+			/* Check cancelled. */
+			if (isCancelRequested()) {
+				setCancelled();
+				break;
+			}
+
+			/*
+			 * List of pattern indexes. To build the list of indexes, first decide whether
+			 * to scan flat the training source or to scan a fraction of the the worst
+			 * scored patterns.
+			 */
+			int[] indexes = null;
+			if (scanFlat) {
+				if (shuffle) {
+					sourceTrain.shuffle();
+				}
+				indexes = getIndexesFlat(sourceTrain.size());
+			} else {
+				indexes = getIndexesScore(sourceTrain.size(), scoreMap);
+			}
+
+			int size = indexes.length;
+			double epochError = 0;
+			for (int i = 0; i < size; i++) {
+
+				/* Check cancelled. */
+				if (isCancelRequested()) {
+					setCancelled();
+					break;
+				}
+
+				/* Work done and notify work. */
+				workDone += 1;
+				update(getMessage(epoch, i + 1, size), workDone, totalWork);
+
+				/* Process the pattern. */
+				int index = indexes[i];
+				Pattern pattern = sourceTrain.get(index);
+				double[] patternOutput = pattern.getOutputValues();
+				double[] networkOutput = network.forward(pattern.getInputValues());
+				epochError += distance.distance(patternOutput, networkOutput);
+				BigDecimal error = Numbers.getBigDecimal(epochError / (i + 1), errorDecimals);
+				StringBuilder msg = new StringBuilder();
+				msg.append("Epoch error ");
+				msg.append(scanFlat ? "flat: " : "score: ");
+				msg.append(error);
+				updateStatusLabel(STATUS_ERROR, LABEL_ERROR, msg);
+
+				/* Add the error and pattern index to the score map. */
+				scoreMap.put(error.doubleValue(), index);
+
+				/* Errors or deltas and backward. Discard the return vector. */
+				double[] networkDeltas = Vector.subtract(patternOutput, networkOutput);
+				network.backward(networkDeltas);
+			}
+
+			/* Last network unfold if history size is not a multiple of the source size. */
+			network.unfold();
+
+			/* Check cancelled. */
+			if (isCancelled()) {
+				break;
+			}
+
+			/* Current performances. */
+			Performance trainPerf =
+				calculatePerformance(scanFlat ? "Train flat" : "Train score", true);
+			Performance testPerf = calculatePerformance("Test", false);
+
+			/* Save data if both performances are better. */
+			if (trainPerf.isBetterThan(trainPerformance) &&
+				testPerf.isBetterThan(testPerformance)) {
+				trainPerformance = trainPerf;
+				testPerformance = testPerf;
+				updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, "Saving network...");
+				saveNetwork();
+				clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+			}
+
+			/* Register performances and display them. */
+			trainPerformances.add(trainPerf);
+			testPerformances.add(testPerf);
+			updateStatusLabel(STATUS_TRAIN, LABEL_TRAIN, toString(trainPerformances));
+			updateStatusLabel(STATUS_TEST, LABEL_TEST, toString(testPerformances));
+			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformance());
+
+			/* Change scan flag. */
+			scanFlat = score ? !scanFlat : true;
+		}
+	}
+
+	private String getBestPerformance() {
+		StringBuilder msg = new StringBuilder();
+		msg.append("Best performance -> train (");
+		msg.append(trainPerformance);
+		msg.append(") test (");
+		msg.append(testPerformance);
+		msg.append(")");
+		return msg.toString();
+	}
+
+	/**
+	 * @param performances The list of performances.
+	 * @return The string displaying them.
+	 */
+	private String toString(List<Performance> performances) {
+		if (performances.size() > performanceHistory) {
+			performances.remove(0);
+		}
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < performances.size(); i++) {
+			if (i > 0) {
+				b.append(", ");
+			}
+			b.append("(");
+			b.append(performances.get(i).toString());
+			b.append(")");
+		}
+		return b.toString();
+	}
+
+	/**
+	 * @param size The size or number of indexes.
+	 * @return The list of flat indexes.
+	 */
+	private int[] getIndexesFlat(int size) {
+		int[] indexes = new int[size];
+		for (int i = 0; i < size; i++) {
+			indexes[i] = i;
+		}
+		return indexes;
+	}
+
+	/**
+	 * @param size     The size or number of indexes.
+	 * @param scoreMap The score map.
+	 * @return The list of score indexes.
+	 */
+	private int[] getIndexesScore(int size, TreeMap<Double, Integer> scoreMap) {
+		int scoreSize = ThreadLocalRandom.current().nextInt(size / 2) + 1;
+		int[] scoreIndexes = new int[scoreSize];
+		Iterator<Integer> iter = scoreMap.values().iterator();
+		int index = 0;
+		while (iter.hasNext()) {
+			scoreIndexes[index++] = iter.next();
+			if (index >= scoreSize) {
+				break;
+			}
+		}
+		List<Integer> indexes = new ArrayList<>();
+		while (indexes.size() < size) {
+			int i = ThreadLocalRandom.current().nextInt(scoreSize);
+			indexes.add(scoreIndexes[i]);
+		}
+		return Lists.toIntegerArray(indexes);
 	}
 
 	/**
@@ -383,258 +575,6 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	protected void compute() throws Throwable {
-		validate();
-
-		/* Clear messages. */
-		clearMessage();
-		clearStatusLabel(STATUS_ERROR, LABEL_ERROR);
-		clearStatusLabel(STATUS_FLAT, LABEL_FLAT);
-		clearStatusLabel(STATUS_SCORE, LABEL_SCORE);
-		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
-
-		boolean restored = false;
-		if (saveNetworkData) {
-
-			/* Get possible files. */
-			List<File> files = getFiles();
-			if (files.isEmpty()) {
-				file = getNewFile(files);
-			} else {
-
-				/* Check whether to create a new file or use an existing file. */
-				Option option = getFileOption();
-				if (option.equals(OPTION_CANCEL)) {
-					setCancelled();
-					return;
-				}
-				if (option.equals(OPTION_NEW_FILE)) {
-					file = getNewFile(files);
-				} else {
-					FileChooser chooser = new FileChooser(new File(filePath));
-					chooser.setDialogTitle("Please, select a network file");
-					chooser.setDialogType(FileChooser.OPEN_DIALOG);
-					chooser.setFileSelectionMode(FileChooser.FILES_ONLY);
-					chooser.setAcceptAllFileFilterUsed(true);
-					chooser.setFileFilter(new TrainerFileFilter());
-					file = null;
-					if (chooser.showDialog(null) == FileChooser.APPROVE_OPTION) {
-						file = chooser.getSelectedFile();
-					} else {
-						setCancelled();
-						return;
-					}
-				}
-			}
-			setTitle(file.getName());
-			/* Restore the network. */
-			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, "Restoring the network data...");
-			restored = restore();
-			clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
-		}
-
-		/* Calculate and register total work. */
-		long totalWork = calculateTotalWork();
-		long workDone = 0;
-		setTotalWork(totalWork);
-
-		/* Register minimum error and maximum performances. */
-		BigDecimal maxTestPerf = null;
-		BigDecimal maxTrainPerf = null;
-
-		/* Lists to trace errors and performances. */
-		List<Trace> traceFlat = new ArrayList<>();
-		List<Trace> traceScore = new ArrayList<>();
-
-		if (restored) {
-			/* Calculate test performance if applicable. */
-			if (patternSourceTest != null) {
-				calculateTestPerformance();
-				if (isCancelled()) {
-					return;
-				}
-				if (maxTestPerf == null ||
-					testPerformance.compareTo(maxTestPerf) > 0) {
-					maxTestPerf = testPerformance;
-				}
-				calculateTrainPerformance(testMatches, testSize);
-				bestTrace =
-					new Trace(
-						Numbers.getBigDecimal(0, errorDecimals),
-						testMatches,
-						testSize,
-						testPerformance,
-						testMatches,
-						testSize,
-						testPerformance);
-			}
-		}
-
-		/* Iterate epochs. */
-		int patternsSize = patternSourceTraining.size();
-		boolean scanFlat = true;
-		TreeMap<Double, Integer> scoreMap = new TreeMap<>((a, b) -> (Double.compare(a, b) * -1));
-		double iterationError = 0;
-
-		testSize = 0;
-		testMatches = 0;
-		testPerformance = null;
-		trainSize = 0;
-		trainMatches = 0;
-		trainPerformance = null;
-		bestTrace = null;
-
-		for (int epoch = 1; epoch <= epochs; epoch++) {
-
-			/* List of pattern indexes. */
-			int[] patternIndexes = new int[patternSourceTraining.size()];
-
-			if (scanFlat) {
-				if (shuffle) {
-					patternSourceTraining.shuffle();
-				}
-				for (int i = 0; i < patternIndexes.length; i++) {
-					patternIndexes[i] = i;
-				}
-			} else {
-				int scoreSize = random.nextInt(patternsSize / 2) + 1;
-				int[] scoreIndexes = new int[scoreSize];
-				Iterator<Integer> iter = scoreMap.values().iterator();
-				int index = 0;
-				while (iter.hasNext()) {
-					scoreIndexes[index++] = iter.next();
-					if (index >= scoreSize) {
-						break;
-					}
-				}
-				index = 0;
-				for (int i = 0; i < patternIndexes.length; i++) {
-					patternIndexes[i] = scoreIndexes[index++];
-					if (index >= scoreSize) {
-						index = 0;
-					}
-				}
-			}
-
-			/* Reset the iteration error and the number of matches. */
-			iterationError = 0;
-			Distance distance = new DistanceEuclidean();
-			int matches = 0;
-			scoreMap.clear();
-			int size = patternIndexes.length;
-			for (int i = 0; i < size; i++) {
-
-				/* Check cancelled. */
-				if (isCancelRequested()) {
-					setCancelled();
-					break;
-				}
-
-				/* Work done and notify work. */
-				workDone += 1;
-				update(getMessage(epoch, i + 1, patternIndexes.length), workDone, totalWork);
-
-				/* Process the pattern. */
-				int index = patternIndexes[i];
-				Pattern pattern = patternSourceTraining.get(index);
-				double[] patternOutput = pattern.getOutputValues();
-				double[] networkOutput = network.forward(pattern.getInputValues());
-				if (pattern.matches(networkOutput)) {
-					matches += 1;
-				}
-
-				/* Total error. */
-				double patternError = distance.distance(patternOutput, networkOutput);
-				iterationError += patternError;
-				BigDecimal error = Numbers.getBigDecimal(iterationError / (i + 1), errorDecimals);
-				updateStatusLabel(STATUS_ERROR, LABEL_ERROR,
-					trace(scanFlat, error, maxTrainPerf, maxTestPerf));
-
-				/* Add the error and pattern index to the score map. */
-				scoreMap.put(patternError, index);
-
-				/* Errors or deltas and backward. Discard the return vector. */
-				double[] networkErrors = subtract(patternOutput, networkOutput);
-				network.backward(networkErrors);
-			}
-
-			/* Last network unfold if history size is not a multiple of the source size. */
-			network.unfold();
-
-			/* Check cancelled. */
-			if (isCancelled()) break;
-
-			/* Save data. */
-			boolean save = false;
-
-			/* Calculate iteration (training) performance. */
-			calculateTrainPerformance(matches, patternSourceTraining.size());
-			if (scanFlat) {
-				if (maxTrainPerf == null ||
-					trainPerformance.compareTo(maxTrainPerf) > 0) {
-					maxTrainPerf = trainPerformance;
-					save = (maxTestPerf == null);
-				}
-
-				/* Calculate test performance. */
-				if (patternSourceTest != null) {
-					calculateTestPerformance();
-					/* Check cancelled. */
-					if (isCancelled()) {
-						break;
-					}
-					if (maxTestPerf == null ||
-						testPerformance.compareTo(maxTestPerf) > 0) {
-						maxTestPerf = testPerformance;
-						save = true;
-					}
-				}
-
-				if (saveNetworkData && save) {
-					updateStatusLabel(
-						STATUS_PROCESSING, LABEL_PROCESSING, "Saving the network data...");
-					save();
-					clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
-				}
-			}
-
-			/* History of epoch errors. */
-			BigDecimal error = Numbers.getBigDecimal(iterationError / patternsSize, errorDecimals);
-			pushTrace(scanFlat ? traceFlat : traceScore, error);
-			updateStatusLabel(STATUS_FLAT, LABEL_FLAT, getTraceMessage(traceFlat));
-			updateStatusLabel(STATUS_SCORE, LABEL_SCORE, getTraceMessage(traceScore));
-
-			/* Performance message when score factor is 0.0. */
-			StringBuilder msg = new StringBuilder();
-			msg.append("Best performance -> train (");
-			msg.append(bestTrace.trainMatches);
-			msg.append("/");
-			msg.append(bestTrace.trainSize);
-			msg.append(", ");
-			msg.append(bestTrace.trainPerformance);
-			msg.append(")");
-			if (testPerformance != null) {
-				msg.append(" test (");
-				msg.append(bestTrace.testMatches);
-				msg.append("/");
-				msg.append(bestTrace.testSize);
-				msg.append(", ");
-				msg.append(bestTrace.testPerformance);
-				msg.append(")");
-			}
-			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, msg.toString());
-
-			/* Commute scan flat. */
-			scanFlat = !scanFlat;
-		}
-	}
-
-	/**
-	 * Return the list of files with the path, root and extension.
-	 * 
 	 * @return The list of accepted files.
 	 */
 	private List<File> getFiles() {
@@ -647,6 +587,12 @@ public class Trainer extends Task {
 		return files;
 	}
 
+	/**
+	 * @param epoch   The epoch.
+	 * @param pattern The pattern index.
+	 * @param size    The size or number of patterns.
+	 * @return The process message.
+	 */
 	private String getMessage(int epoch, int pattern, int size) {
 		double factor = (double) (pattern) / (double) size;
 		BigDecimal percent = new BigDecimal(factor).setScale(2, RoundingMode.HALF_UP);
@@ -686,103 +632,11 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Return the trace message.
-	 * 
-	 * @param trace The trace list.
-	 * @return The message.
-	 */
-	private String getTraceMessage(List<Trace> trace) {
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < trace.size(); i++) {
-			if (i > 0) b.append(", ");
-			b.append(getTraceMessageSimple(trace.get(i)));
-		}
-		return b.toString();
-	}
-
-	/**
-	 * Return a simple message for the trace.
-	 * 
-	 * @param trace The trace.
-	 * @return The message.
-	 */
-	private String getTraceMessageSimple(Trace trace) {
-		StringBuilder b = new StringBuilder();
-		b.append("(");
-		b.append(trace.error);
-		if (trace.trainPerformance != null) {
-			b.append(", ");
-			b.append(trace.trainPerformance);
-		}
-		if (trace.testPerformance != null) {
-			b.append(", ");
-			b.append(trace.testPerformance);
-		}
-		b.append(")");
-		return b.toString();
-	}
-
-	/**
-	 * Push the trace to the trace list and set the best trace.
-	 * 
-	 * @param traces The trace.
-	 * @param error  The error.
-	 */
-	private void pushTrace(List<Trace> traces, BigDecimal error) {
-		Trace trace =
-			new Trace(error, trainMatches, trainSize, trainPerformance, testMatches,
-				testSize, testPerformance);
-		if (bestTrace == null) {
-			bestTrace = trace;
-		} else {
-			if (trace.testPerformance != null) {
-				boolean bestTest = false;
-				boolean bestTrain = false;
-				if (trace.testPerformance.compareTo(bestTrace.testPerformance) >= 0) {
-					bestTest = true;
-				}
-				if (trace.trainPerformance.compareTo(bestTrace.trainPerformance) >= 0) {
-					bestTrain = true;
-				}
-				if (bestTest && bestTrain) {
-					bestTrace = trace;
-				}
-			} else {
-				if (trace.trainPerformance != null) {
-					if (trace.trainPerformance.compareTo(bestTrace.trainPerformance) >= 0) {
-						bestTrace = trace;
-					}
-				}
-			}
-		}
-		traces.add(trace);
-		if (traces.size() > maxTrace) traces.remove(0);
-	}
-
-	/**
-	 * Restore the network data.
-	 * 
-	 * @return A boolean indicating that the network was restored.
-	 * @throws IOException
-	 */
-	private boolean restore() throws IOException {
-		if (file != null && file.exists() && file.length() != 0) {
-			FileInputStream fi = new FileInputStream(file);
-			BufferedInputStream bi = new BufferedInputStream(fi);
-			network.restore(bi);
-			bi.close();
-			fi.close();
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Save the network data.
 	 * 
 	 * @throws IOException
 	 */
-	private void save() throws IOException {
+	private void saveNetwork() throws IOException {
 		if (file != null) {
 			String name = file.getName() + ".save";
 			File fileSave = new File(file.getParentFile(), name);
@@ -809,8 +663,14 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Set the number of epochs to process.
-	 * 
+	 * @param distance The distance function.
+	 */
+	public void setDistance(Distance distance) {
+		if (distance == null) throw new NullPointerException();
+		this.distance = distance;
+	}
+
+	/**
 	 * @param epochs The number of epochs to process.
 	 */
 	public void setEpochs(int epochs) {
@@ -818,8 +678,13 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Set the file path.
-	 * 
+	 * @param errorDecimals The error decimals.
+	 */
+	public void setErrorDecimals(int errorDecimals) {
+		this.errorDecimals = errorDecimals;
+	}
+
+	/**
 	 * @param filePath The parent file path.
 	 */
 	public void setFilePath(String filePath) {
@@ -827,8 +692,6 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Set the file root name.
-	 * 
 	 * @param fileRoot The file root name.
 	 */
 	public void setFileRoot(String fileRoot) {
@@ -836,8 +699,6 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Set the file extension.
-	 * 
 	 * @param fileExtension The file extension.
 	 */
 	public void setFileExtension(String fileExtension) {
@@ -845,17 +706,13 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Set the shuffle flag.
-	 * 
-	 * @param shuffle A boolean.
+	 * @param shuffle A boolean indicating whether to shuffle sources.
 	 */
 	public void setShuffle(boolean shuffle) {
 		this.shuffle = shuffle;
 	}
 
 	/**
-	 * Set the network.
-	 * 
 	 * @param network The network.
 	 */
 	public void setNetwork(Network network) {
@@ -863,21 +720,24 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Set the test pattern source.
-	 * 
 	 * @param patternSource The test pattern source.
 	 */
 	public void setPatternSourceTest(PatternSource patternSource) {
-		this.patternSourceTest = patternSource;
+		this.sourceTest = patternSource;
 	}
 
 	/**
-	 * Set the training pattern source.
-	 * 
 	 * @param patternSource The training pattern source.
 	 */
 	public void setPatternSourceTraining(PatternSource patternSource) {
-		this.patternSourceTraining = patternSource;
+		this.sourceTrain = patternSource;
+	}
+
+	/**
+	 * @param percentageDecimals The percentage decimals.
+	 */
+	public void setPercentageDecimals(int percentageDecimals) {
+		this.percentageDecimals = percentageDecimals;
 	}
 
 	/**
@@ -888,12 +748,10 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Set whether network data should be saved/restored.
-	 * 
-	 * @param saveNetworkData A boolean.
+	 * @param score A boolean to train scored data.
 	 */
-	public void setSaveNetworkData(boolean saveNetworkData) {
-		this.saveNetworkData = saveNetworkData;
+	public void setScore(boolean score) {
+		this.score = score;
 	}
 
 	/**
@@ -903,38 +761,38 @@ public class Trainer extends Task {
 		if (network == null) {
 			throw new IllegalStateException("The network must be set");
 		}
-		if (patternSourceTraining == null) {
+		if (sourceTrain == null) {
 			throw new IllegalStateException("The training pattern source must be set");
 		}
-		if (saveNetworkData) {
-			if (filePath == null) {
-				throw new IllegalStateException(
-					"The file path is required to save the network data");
-			}
-			File path = new File(filePath);
-			if (!path.exists()) {
-				throw new IllegalStateException("The file path does not exist");
-			}
-			if (!path.isDirectory()) {
-				throw new IllegalStateException("The file path must be a directory");
-			}
-			if (fileRoot == null) {
-				throw new IllegalStateException(
-					"The file root is required to save the network data");
-			}
-			if (fileExtension == null) {
-				fileExtension = "dat";
-			}
+		if (sourceTest == null) {
+			sourceTest = sourceTrain;
+		}
+		if (filePath == null) {
+			throw new IllegalStateException(
+				"The file path is required to save the network data");
+		}
+		File path = new File(filePath);
+		if (!path.exists()) {
+			throw new IllegalStateException("The file path does not exist");
+		}
+		if (!path.isDirectory()) {
+			throw new IllegalStateException("The file path must be a directory");
+		}
+		if (fileRoot == null) {
+			throw new IllegalStateException(
+				"The file root is required to save the network data");
+		}
+		if (fileExtension == null) {
+			fileExtension = "dat";
 		}
 
 		/* Check shuffle supported. */
 		if (shuffle) {
 			try {
-				patternSourceTraining.shuffle();
+				sourceTrain.shuffle();
 			} catch (Exception exc) {
 				shuffle = false;
 			}
 		}
 	}
-
 }

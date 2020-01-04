@@ -81,7 +81,6 @@ public class MNISTTrainer {
 		Trainer trainer = new Trainer();
 		trainer.setProgressModulus(100);
 		trainer.setEpochs(500);
-		trainer.setSaveNetworkData(true);
 
 		Network network = new Network();
 		

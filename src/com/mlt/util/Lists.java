@@ -19,8 +19,9 @@
 package com.mlt.util;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -94,9 +95,12 @@ public class Lists {
 	 */
 	@SafeVarargs
 	public static <T> List<T> asList(T... array) {
-		List<T> list = new ArrayList<>();
-		if (array != null) {
-			list.addAll(Arrays.asList(array));
+		if (array == null) {
+			return new ArrayList<>();
+		}
+		List<T> list = new ArrayList<>(array.length);
+		for (T e : array) {
+			list.add(e);
 		}
 		return list;
 	}
@@ -269,6 +273,21 @@ public class Lists {
 			return null;
 		}
 		return list.get(0);
+	}
+
+	/**
+	 * Return the first element of a collection.
+	 * 
+	 * @param <T>        The type of the collection elements.
+	 * @param collection The collection.
+	 * @return The first element.
+	 */
+	public static <T> T getFirst(Collection<T> collection) {
+		Iterator<T> i = collection.iterator();
+		if (i.hasNext()) {
+			return i.next();
+		}
+		return null;
 	}
 
 	/**
@@ -450,5 +469,36 @@ public class Lists {
 			values[i] = list.get(i);
 		}
 		return values;
+	}
+
+	/**
+	 * Returns a list accessible by index from a collection.
+	 * 
+	 * @param <T>        The type of data.
+	 * @param collection The collection.
+	 * @return The list.
+	 */
+	public static <T> List<T> toList(Collection<T> collection) {
+		List<T> list = new ArrayList<>();
+		for (T e : collection) {
+			list.add(e);
+		}
+		return list;
+	}
+
+	/**
+	 * Returns a list accessible by index from a collection.
+	 * 
+	 * @param <T>        The type of data.
+	 * @param collection The collection.
+	 * @return The list.
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> List<T> toList(T... collection) {
+		List<T> list = new ArrayList<>();
+		for (T e : collection) {
+			list.add(e);
+		}
+		return list;
 	}
 }

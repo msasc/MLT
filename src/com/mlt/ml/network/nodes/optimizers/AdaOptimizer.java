@@ -17,7 +17,15 @@
 
 package com.mlt.ml.network.nodes.optimizers;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+import com.mlt.ml.function.Collector;
+import com.mlt.ml.function.collector.CollectorAverage;
+import com.mlt.ml.function.collector.CollectorTransfer;
 import com.mlt.ml.network.nodes.WeightsOptimizer;
+import com.mlt.util.Matrix;
+import com.mlt.util.Vector;
 
 /**
  * Adaptative optimizer, with an learning rate and a momentum for each weight,
@@ -32,8 +40,24 @@ public class AdaOptimizer extends WeightsOptimizer {
 	private double[][] learningRates;
 	/** Momentums. */
 	private double[][] momentums;
-	/** Last weight deltas. */
+	/** Last weight deltas to apply to momentums. */
 	private double[][] weightDeltas;
+	/** Averages of output deltas. */
+	private double[] averages;
+	/** Standard deviations on output deltas. */
+	private double[] stddevs;
+	
+	/** Output deltas processed by the collector. */
+	private double[] outputDeltas;
+	/** Output deltas queue. */
+	private Deque<double[]> deltasQueue;
+	/** Maximum queue size. */
+	private int maxQueueSize = 50;
+	/** Collector function to apply to the queue of deltas. */
+	private Collector collector;
+	
+	/** Counter of steps. */
+	private int step;
 
 	/**
 	 * Constructor.
@@ -75,15 +99,42 @@ public class AdaOptimizer extends WeightsOptimizer {
 		if (learningRates != null) {
 			return;
 		}
+		
+		/* Learning rates. */
 		learningRates = new double[inputSize][outputSize];
+		Matrix.fill(learningRates, 0.01);
+		
+		/* Momentums. */
 		momentums = new double[inputSize][outputSize];
+		Matrix.fill(momentums, 0.5);
+		
+		/* Last weight deltas. */
 		weightDeltas = new double[inputSize][outputSize];
-		for (int in = 0; in < inputSize; in++) {
-			for (int out = 0; out < outputSize; out++) {
-				learningRates[in][out] = 0.01;
-				momentums[in][out] = 0.5;
-				weightDeltas[in][out] = 0.0;
-			}
+		Matrix.fill(weightDeltas, 0.0);
+		
+		/* Averages of output deltas. */
+		averages = new double[outputSize];
+		Vector.fill(averages, 0.0);
+		
+		/* Standard deviations of output deltas. */
+		stddevs = new double[outputSize];
+		Vector.fill(stddevs, 0.0);
+		
+		/* Queue of output deltasand default collector. */
+		deltasQueue = new ArrayDeque<>();
+		collector = new CollectorAverage();
+		
+		/* Counter of steps. */
+		step = 0;
+	}
+	
+	/**
+	 * @param outputDeltas The output deltas to push in the queue.
+	 */
+	private void pushOutputDeltas(double[] outputDeltas) {
+		deltasQueue.addLast(outputDeltas);
+		if (deltasQueue.size() > maxQueueSize) {
+			deltasQueue.removeFirst();
 		}
 	}
 
@@ -113,6 +164,10 @@ public class AdaOptimizer extends WeightsOptimizer {
 		checkInitialize();
 		
 		/* Push output deltas. */
+		pushOutputDeltas(outputDeltas);
+		
+		/* Retrieve output deltas. */
+		this.outputDeltas = collector.collect(deltasQueue);
 	}
 
 }

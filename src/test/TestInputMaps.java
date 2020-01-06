@@ -12,7 +12,7 @@ import javax.swing.KeyStroke;
 
 import com.google.common.base.Strings;
 
-public class TextInputMaps {
+public class TestInputMaps {
 	
 	static class KeyComparator implements Comparator<KeyStroke> {
 		@Override

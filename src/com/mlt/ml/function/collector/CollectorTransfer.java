@@ -19,6 +19,7 @@ import java.util.Collection;
 import com.mlt.ml.function.Collector;
 
 /**
+ * A collector that just transfera the unique queued vector.
  *
  * @author Miquel Sas
  */

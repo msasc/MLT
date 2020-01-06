@@ -1,19 +1,25 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.util;
 
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 
 /**
  * Operations on vectors.
@@ -23,18 +29,155 @@ import java.util.Arrays;
 public class Vector {
 
 	/**
-	 * Add (cumulate) the list of vector on the destination result vector.
+	 * Accumulates a collection of vectors of the same size.
 	 * 
-	 * @param result  The result vector.
-	 * @param vectors The list of vectors to cumulate.
+	 * @param vectors The collection of vectors.
+	 * @return The result accumulation vector.
 	 */
-	public static void add(double[] result, double[]... vectors) {
-		for (int i = 0; i < result.length; i++) {
-			for (int j = 0; j < vectors.length; j++) {
-				result[i] += vectors[j][i];
+	public static double[] add(Collection<double[]> vectors) {
+		double[] result = null;
+		Iterator<double[]> iter = vectors.iterator();
+		while (iter.hasNext()) {
+			double[] vector = iter.next();
+			/* Initialize result if required. */
+			if (result == null) {
+				result = new double[vector.length];
+			}
+			/* Validate subsequent vector sizes. */
+			if (vector.length != result.length) {
+				throw new IllegalArgumentException("Not all vectors have the same size.");
+			}
+			/* Do accumulate. */
+			for (int i = 0; i < result.length; i++) {
+				result[i] += vector[i];
 			}
 		}
+		return result;
+	}
 
+	/**
+	 * Accumulates a list of vectors of the same size.
+	 * 
+	 * @param vectors The collection of vectors.
+	 * @return The result accumulation vector.
+	 */
+	public static double[] add(double[]... vectors) {
+		return add(Lists.asList(vectors));
+	}
+
+	/**
+	 * Return a vector which elements are the exponential (moving) average of the
+	 * elements of the argument list of vectors.
+	 * 
+	 * @param vectors The list of vectors.
+	 * @return The average vector.
+	 */
+	public static double[] averageEMA(Collection<double[]> vectors) {
+		if (vectors.isEmpty()) {
+			throw new IllegalArgumentException("Empty list of vectors.");
+		}
+		int size = -1;
+		double alpha = -1;
+		double[] averages = null;
+		Iterator<double[]> iter = vectors.iterator();
+		while (iter.hasNext()) {
+			double[] vector = iter.next();
+			if (averages == null) {
+				size = vector.length;
+				alpha = 2.0 / Double.valueOf(size);
+				averages = new double[size];
+			}
+			for (int i = 0; i < size; i++) {
+				double last = averages[i];
+				double next = vector[i];
+				averages[i] = next * alpha + (1 - alpha) * last;
+			}
+		}
+		return averages;
+	}
+
+	/**
+	 * Return a vector which elements are the simple (moving) average of the
+	 * elements of the argument list of vectors.
+	 * 
+	 * @param vectors The list of vectors.
+	 * @return The average vector.
+	 */
+	public static double[] averageSMA(Collection<double[]> vectors) {
+		if (vectors.isEmpty()) {
+			throw new IllegalArgumentException("Empty list of vectors.");
+		}
+		double[] averages = null;
+		double size = vectors.size();
+		Iterator<double[]> iter = vectors.iterator();
+		while (iter.hasNext()) {
+			double[] vector = iter.next();
+			if (averages == null) {
+				averages = new double[vector.length];
+			}
+			for (int i = 0; i < averages.length; i++) {
+				averages[i] += vector[i];
+			}
+		}
+		for (int i = 0; i < averages.length; i++) {
+			averages[i] /= size;
+		}
+		return averages;
+	}
+
+	/**
+	 * Return a vector which elements are the weighted (moving) average of the
+	 * elements of the argument list of vectors.
+	 * 
+	 * @param vectors The list of vectors.
+	 * @return The average vector.
+	 */
+	public static double[] averageWMA(Collection<double[]> vectors) {
+		if (vectors.isEmpty()) {
+			throw new IllegalArgumentException("Empty list of vectors.");
+		}
+		double[] averages = null;
+		double weight = 1;
+		Iterator<double[]> iter = vectors.iterator();
+		while (iter.hasNext()) {
+			double[] vector = iter.next();
+			if (averages == null) {
+				averages = new double[vector.length];
+			}
+			for (int i = 0; i < averages.length; i++) {
+				averages[i] += vector[i] * weight;
+			}
+			weight += weight;
+		}
+		for (int i = 0; i < averages.length; i++) {
+			averages[i] /= weight;
+		}
+		return averages;
+	}
+
+	/**
+	 * Check that two vectors have the same length. Throws an
+	 * IllegalArgumentException.
+	 *
+	 * @param x Vector x.
+	 * @param y Vector y.
+	 */
+	public static void checkLengths(double[] x, double[] y) {
+		if (x.length != y.length) {
+			throw new IllegalArgumentException("Vectors have different length.");
+		}
+	}
+
+	/**
+	 * Check that a vector has a minimum length. Throws an IllegalArgumentException.
+	 *
+	 * @param x         Vector x.
+	 * @param minLength Minimum length.
+	 */
+	public static void checkMinLength(double[] x, int minLength) {
+		if (x.length < minLength) {
+			throw new IllegalArgumentException("Vector length has to be at least " + minLength);
+		}
 	}
 
 	/**
@@ -50,7 +193,8 @@ public class Vector {
 	}
 
 	/**
-	 * Copy the source array into the destination array. Both must have the same length.
+	 * Copy the source array into the destination array. Both must have the same
+	 * length.
 	 *
 	 * @param src The source array.
 	 * @param dst The destination array.
@@ -176,10 +320,14 @@ public class Vector {
 	}
 
 	/**
-	 * Jensen-Shannon divergence JS(P||Q) = (KL(P||M) + KL(Q||M)) / 2, where M = (P+Q)/2.The Jensen-Shannon divergence
-	 * is a popular method of measuring the similarity between two probability distributions.It is also known as
-	 * information radius or total divergence to the average.It is based on the Kullback-Leibler divergence, with the
-	 * difference that it is always a finite value. The square root of the Jensen-Shannon divergence is a metric.
+	 * Jensen-Shannon divergence JS(P||Q) = (KL(P||M) + KL(Q||M)) / 2, where M =
+	 * (P+Q)/2.The Jensen-Shannon divergence
+	 * is a popular method of measuring the similarity between two probability
+	 * distributions.It is also known as
+	 * information radius or total divergence to the average.It is based on the
+	 * Kullback-Leibler divergence, with the
+	 * difference that it is always a finite value. The square root of the
+	 * Jensen-Shannon divergence is a metric.
 	 *
 	 * @param x x coord.
 	 * @param y y coord.
@@ -195,14 +343,20 @@ public class Vector {
 	}
 
 	/**
-	 * Kullback-Leibler divergence.The Kullback-Leibler divergence (also information divergence, information gain,
-	 * relative entropy, or KLIC) is a non-symmetric measure of the difference between two probability distributions P
-	 * and Q.KL measures the expected number of extra bits required to code samples from P when using a code based on Q,
-	 * rather than using a code based on P.Typically P represents the "true" distribution of data, observations, or a
-	 * precise calculated theoretical distribution. The measure Q typically represents a theory, model, description, or
+	 * Kullback-Leibler divergence.The Kullback-Leibler divergence (also information
+	 * divergence, information gain,
+	 * relative entropy, or KLIC) is a non-symmetric measure of the difference
+	 * between two probability distributions P
+	 * and Q.KL measures the expected number of extra bits required to code samples
+	 * from P when using a code based on Q,
+	 * rather than using a code based on P.Typically P represents the "true"
+	 * distribution of data, observations, or a
+	 * precise calculated theoretical distribution. The measure Q typically
+	 * represents a theory, model, description, or
 	 * approximation of P.
 	 * <p>
-	 * Although it is often intuited as a distance metric, the KL divergence is not a true metric - for example, the KL
+	 * Although it is often intuited as a distance metric, the KL divergence is not
+	 * a true metric - for example, the KL
 	 * from P to Q is not necessarily the same as the KL from Q to P.
 	 *
 	 * @param x x coord.
@@ -229,11 +383,13 @@ public class Vector {
 	/**
 	 * Fill the array.
 	 * 
-	 * @param a   Destination array.
-	 * @param val Value.
+	 * @param a Destination array.
+	 * @param v Value.
 	 */
-	public static void fill(double[] a, double val) {
-		Arrays.fill(a, val);
+	public static void fill(double[] a, double v) {
+		for (int i = 0; i < a.length; i++) {
+			a[i] = v;
+		}
 	}
 
 	/**
@@ -248,7 +404,7 @@ public class Vector {
 		}
 		return sum(x) / x.length;
 	}
-	
+
 	/**
 	 * Returns the cosine similarity between two vectors.
 	 *
@@ -276,20 +432,6 @@ public class Vector {
 	}
 
 	/**
-	 * Returns the sum of a vector.
-	 *
-	 * @param x The vector.
-	 * @return The sum.
-	 */
-	public static double sum(double[] x) {
-		double sum = 0.0;
-		for (double n : x) {
-			sum += n;
-		}
-		return sum;
-	}
-
-	/**
 	 * Subtract the values of vector b from vector a (must have the same length).
 	 *
 	 * @param x Vector x.
@@ -302,6 +444,20 @@ public class Vector {
 			r[i] = x[i] - y[i];
 		}
 		return r;
+	}
+
+	/**
+	 * Returns the sum of a vector.
+	 *
+	 * @param x The vector.
+	 * @return The sum.
+	 */
+	public static double sum(double[] x) {
+		double sum = 0.0;
+		for (double n : x) {
+			sum += n;
+		}
+		return sum;
 	}
 
 	/**
@@ -322,29 +478,5 @@ public class Vector {
 
 		int n = x.length - 1;
 		return sumsq / n - (sum / x.length) * (sum / n);
-	}
-
-	/**
-	 * Check that two vectors have the same length. Throws an IllegalArgumentException.
-	 *
-	 * @param x Vector x.
-	 * @param y Vector y.
-	 */
-	public static void checkLengths(double[] x, double[] y) {
-		if (x.length != y.length) {
-			throw new IllegalArgumentException("Vectors have different length.");
-		}
-	}
-
-	/**
-	 * Check that a vector has a minimum length. Throws an IllegalArgumentException.
-	 *
-	 * @param x         Vector x.
-	 * @param minLength Minimum length.
-	 */
-	public static void checkMinLength(double[] x, int minLength) {
-		if (x.length < minLength) {
-			throw new IllegalArgumentException("Vector length has to be at least " + minLength);
-		}
 	}
 }

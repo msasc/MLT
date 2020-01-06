@@ -130,7 +130,7 @@ public class Matrix {
 	 * @param matrix The matrix to initialize.
 	 * @param value  The value to assign.
 	 */
-	public static void set(double[][] matrix, double value) {
+	public static void fill(double[][] matrix, double value) {
 		int rows = rows(matrix);
 		int columns = columns(matrix);
 		for (int row = 0; row < rows; row++) {

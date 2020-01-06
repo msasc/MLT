@@ -17,6 +17,7 @@ package com.mlt.ml.function.collector;
 import java.util.Collection;
 
 import com.mlt.ml.function.Collector;
+import com.mlt.util.Vector;
 
 /**
  * Addition collector function.
@@ -37,18 +38,11 @@ public class CollectorAddition implements Collector {
 	 */
 	@Override
 	public double[] collect(Collection<double[]> vectors) {
-		int size = -1;
-		double[] addition = null;
-		for (double[] vector : vectors) {
-			if (addition == null) {
-				size = vector.length;
-				addition = new double[size];
-			}
-			for (int i = 0; i < size; i++) {
-				addition[i] += vector[i];
-			}
+		double[] result = Vector.add(vectors);
+		if (result == null) {
+			throw new IllegalArgumentException("Empty vectors.");
 		}
-		return addition;
+		return result;
 	}
 
 }

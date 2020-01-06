@@ -16,7 +16,6 @@
  */
 package com.mlt.mkt.data.indicators;
 
-import java.util.Arrays;
 import java.util.List;
 
 import com.mlt.db.DefaultFieldValidator;
@@ -74,7 +73,7 @@ public abstract class PeriodIndicator extends Indicator {
 		// (divided by the period) and adding the new value of the series (also divided
 		// bythe period).
 		double[] averages = new double[numIndexes];
-		Arrays.fill(averages, 0);
+		Vector.fill(averages, 0);
 		int averageIndex = 0;
 		for (IndicatorSource source : indicatorSources) {
 			DataList dataList = source.getDataList();
@@ -155,7 +154,7 @@ public abstract class PeriodIndicator extends Indicator {
 					double divisor = period;
 
 					double[] delAvgs = new double[numIndexes];
-					Arrays.fill(delAvgs, 0);
+					Vector.fill(delAvgs, 0);
 					int deleteIndex = start - 1;
 					averageIndex = 0;
 					for (IndicatorSource source : indicatorSources) {
@@ -169,14 +168,14 @@ public abstract class PeriodIndicator extends Indicator {
 					}
 
 					double[] currAvgs = new double[numIndexes];
-					Arrays.fill(currAvgs, 0);
+					Vector.fill(currAvgs, 0);
 					int currentIndex = index - 1;
 					for (int i = 0; i < numIndexes; i++) {
 						currAvgs[i] = indicatorDataList.get(currentIndex).getValue(i);
 					}
 
 					double[] addAvgs = new double[numIndexes];
-					Arrays.fill(addAvgs, 0);
+					Vector.fill(addAvgs, 0);
 					averageIndex = 0;
 					for (IndicatorSource source : indicatorSources) {
 						DataList dataList = source.getDataList();
@@ -188,8 +187,7 @@ public abstract class PeriodIndicator extends Indicator {
 						}
 					}
 
-					double[] averages = new double[numIndexes];
-					Vector.add(averages, addAvgs, Vector.subtract(currAvgs, delAvgs));
+					double[] averages = Vector.add(addAvgs, Vector.subtract(currAvgs, delAvgs));
 					Data data = new Data();
 					data.setData(averages);
 					data.setTime(indicatorSources.get(0).getDataList().get(index).getTime());
@@ -199,7 +197,7 @@ public abstract class PeriodIndicator extends Indicator {
 		}
 
 		double[] averages = new double[numIndexes];
-		Arrays.fill(averages, 0);
+		Vector.fill(averages, 0);
 		for (int i = start; i <= index; i++) {
 			int averageIndex = 0;
 			for (IndicatorSource source : indicatorSources) {
@@ -252,8 +250,8 @@ public abstract class PeriodIndicator extends Indicator {
 		// Must be calculated for all the period each time.
 		double[] averages = new double[numIndexes];
 		double[] weights = new double[numIndexes];
-		Arrays.fill(averages, 0);
-		Arrays.fill(weights, 0);
+		Vector.fill(averages, 0);
+		Vector.fill(weights, 0);
 		double weight = 1;
 		for (int i = startIndex; i <= endIndex; i++) {
 			int averageIndex = 0;
@@ -396,7 +394,7 @@ public abstract class PeriodIndicator extends Indicator {
 	protected Data getSource(int index, List<IndicatorSource> indicatorSources) {
 		int numIndexes = getNumIndexes();
 		double[] values = new double[numIndexes];
-		Arrays.fill(values, 0);
+		Vector.fill(values, 0);
 
 		int valueIndex = 0;
 		for (IndicatorSource source : indicatorSources) {

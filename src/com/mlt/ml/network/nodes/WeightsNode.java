@@ -22,10 +22,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
 
-import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
+import com.mlt.util.IndexFunction;
 
 /**
  * A matrix of weights node.
@@ -56,9 +56,9 @@ public class WeightsNode extends Node {
 	private WeightsOptimizer optimizer;
 
 	/** Backward function. */
-	private RangeFunction backwardFunction;
+	private IndexFunction backwardFunction;
 	/** Forward function. */
-	private RangeFunction forwardFunction;
+	private IndexFunction forwardFunction;
 
 	/**
 	 * Constructor used to restore.
@@ -79,7 +79,7 @@ public class WeightsNode extends Node {
 		setName(name);
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
-		
+
 		optimizer = new AdaOptimizer();
 		optimizer.setNode(this);
 	}
@@ -128,18 +128,17 @@ public class WeightsNode extends Node {
 		optimizer.initializeBackward();
 		backwardFunction.process();
 		optimizer.finalizeBackward();
-		
+
 		pushBackward(inputDeltas);
 	}
 
 	/**
 	 * Backward process from input indexes start to end.
 	 * 
-	 * @param start Input start index.
-	 * @param end   Input end index.
+	 * @param in Input index.
 	 */
-	private void backward(int start, int end) {
-		optimizer.backward(start, end);
+	private void backward(int in) {
+		optimizer.backward(in);
 	}
 
 	/**
@@ -155,19 +154,16 @@ public class WeightsNode extends Node {
 	/**
 	 * Forward process from output indexes start to end.
 	 * 
-	 * @param start Output start index.
-	 * @param end   Output end index.
+	 * @param out Output index.
 	 */
-	private void forward(int start, int end) {
-		for (int out = start; out <= end; out++) {
-			double signal = 0;
-			for (int in = 0; in < inputSize; in++) {
-				double input = inputValues[in];
-				double weight = weights[in][out];
-				signal += (input * weight);
-			}
-			outputValues[out] = signal;
+	private void forward(int out) {
+		double signal = 0;
+		for (int in = 0; in < inputSize; in++) {
+			double input = inputValues[in];
+			double weight = weights[in][out];
+			signal += (input * weight);
 		}
+		outputValues[out] = signal;
 	}
 
 	/**
@@ -253,8 +249,8 @@ public class WeightsNode extends Node {
 		inputDeltas = new double[inputSize];
 		inputValues = new double[inputSize];
 		outputValues = new double[outputSize];
-		backwardFunction = new RangeFunction(inputSize, (s, e) -> backward(s, e));
-		forwardFunction = new RangeFunction(outputSize, (s, e) -> forward(s, e));
+		backwardFunction = new IndexFunction(inputSize, (in) -> backward(in));
+		forwardFunction = new IndexFunction(outputSize, (out) -> forward(out));
 	}
 
 	/**

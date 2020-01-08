@@ -40,15 +40,14 @@ public abstract class WeightsOptimizer {
 	protected WeightsNode getNode() {
 		return node;
 	}
-	
+
 	/**
 	 * Backward process for the weights for a range of input indexes, updateing the
 	 * weight and calculating the input delta.
 	 * 
-	 * @param start Input start index.
-	 * @param end   Input end index.
+	 * @param in Input index.
 	 */
-	public abstract void backward(int start, int end);
+	public abstract void backward(int in);
 
 	/**
 	 * Perform any required finalization after the concurrent call to the

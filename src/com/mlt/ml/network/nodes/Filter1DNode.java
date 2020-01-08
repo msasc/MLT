@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
+import com.mlt.util.IndexFunction;
 import com.mlt.util.Numbers;
 
 /**
@@ -54,7 +54,7 @@ public class Filter1DNode extends Node {
 	private double[] outputValues;
 
 	/** Forward function for parallel processing. */
-	private RangeFunction forwardFunction;
+	private IndexFunction forwardFunction;
 
 	/**
 	 * Constructor for restore.
@@ -73,11 +73,13 @@ public class Filter1DNode extends Node {
 	 * @param padding      A boolean indicating whether padding should be applied.
 	 * @param padValue     Pad value.
 	 */
-	public Filter1DNode(String name, int inputSize, double[] filterValues, boolean padding, double padValue) {
+	public Filter1DNode(String name, int inputSize, double[] filterValues, boolean padding,
+		double padValue) {
 		super();
 		if (filterValues == null) throw new NullPointerException();
 		if (filterValues.length > inputSize) throw new IllegalArgumentException("Filter too big");
-		if (!Numbers.isOdd(filterValues.length)) throw new IllegalArgumentException("Filter length must be odd");
+		if (!Numbers.isOdd(filterValues.length)) throw new IllegalArgumentException(
+			"Filter length must be odd");
 
 		setName(name);
 		this.filterSize = filterValues.length;
@@ -93,7 +95,7 @@ public class Filter1DNode extends Node {
 		this.outputValues = new double[outputSize];
 
 		/* Initialize the function. */
-		forwardFunction = new RangeFunction(outputSize, (s, e) -> forward(s, e));
+		forwardFunction = new IndexFunction(outputSize, (out) -> forward(out));
 	}
 
 	/**
@@ -154,22 +156,20 @@ public class Filter1DNode extends Node {
 	 * @param startIndex Start index in the result vector.
 	 * @param endIndex   End index in the result vector.
 	 */
-	private void forward(int startIndex, int endIndex) {
-		for (int outputIndex = startIndex; outputIndex <= endIndex; outputIndex++) {
-			double outputValue = 0;
-			for (int filterIndex = 0; filterIndex < filterSize; filterIndex++) {
-				int inputIndex = outputIndex + filterIndex - padSize;
-				double inputValue = 0;
-				if (inputIndex < 0 || inputIndex >= inputSize) {
-					inputValue = padValue;
-				} else {
-					inputValue = inputValues[inputIndex];
-				}
-				double filterValue = filterValues[filterIndex];
-				outputValue += (inputValue * filterValue);
+	private void forward(int outputIndex) {
+		double outputValue = 0;
+		for (int filterIndex = 0; filterIndex < filterSize; filterIndex++) {
+			int inputIndex = outputIndex + filterIndex - padSize;
+			double inputValue = 0;
+			if (inputIndex < 0 || inputIndex >= inputSize) {
+				inputValue = padValue;
+			} else {
+				inputValue = inputValues[inputIndex];
 			}
-			outputValues[outputIndex] = outputValue;
+			double filterValue = filterValues[filterIndex];
+			outputValue += (inputValue * filterValue);
 		}
+		outputValues[outputIndex] = outputValue;
 	}
 
 	/**
@@ -211,7 +211,7 @@ public class Filter1DNode extends Node {
 		outputValues = new double[outputSize];
 
 		/* Initialize the function. */
-		forwardFunction = new RangeFunction(outputSize, (s, e) -> forward(s, e));
+		forwardFunction = new IndexFunction(outputSize, (out) -> forward(out));
 	}
 
 	/**

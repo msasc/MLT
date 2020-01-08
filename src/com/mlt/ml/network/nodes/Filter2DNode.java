@@ -28,9 +28,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
 
-import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
+import com.mlt.util.IndexFunction;
 import com.mlt.util.Numbers;
 
 /**
@@ -85,7 +85,14 @@ public class Filter2DNode extends Node {
 	 * @param start  The starting angle of the arc in degrees.
 	 * @param extent The angular extent of the arc in degrees.
 	 */
-	public static void printArc(double[][] filter, double x, double y, double width, double height, double start, double extent) {
+	public static void printArc(
+		double[][] filter,
+		double x,
+		double y,
+		double width,
+		double height,
+		double start,
+		double extent) {
 
 		int rows = filter.length;
 		int columns = filter[0].length;
@@ -142,7 +149,7 @@ public class Filter2DNode extends Node {
 	/** Filter values. */
 	private double[] filterValues;
 	/** Forward function. */
-	private RangeFunction forwardFunction;
+	private IndexFunction forwardFunction;
 	/** Input columns. */
 	private int inputColumns;
 	/** Input rows. */
@@ -183,7 +190,8 @@ public class Filter2DNode extends Node {
 	 * @param padding       Padding flag.
 	 * @param padValue      Pad value.
 	 */
-	public Filter2DNode(String name, int inputRows, int inputColumns, double[][] filter, boolean padding,
+	public Filter2DNode(String name, int inputRows, int inputColumns, double[][] filter,
+		boolean padding,
 		double padValue) {
 		super();
 		setName(name);
@@ -191,10 +199,14 @@ public class Filter2DNode extends Node {
 		/* Rows and columns. */
 		this.filterRows = filter.length;
 		this.filterColumns = filter[0].length;
-		if (!Numbers.isOdd(filterRows)) throw new IllegalArgumentException("Filter rows must be odd");
-		if (!Numbers.isOdd(filterColumns)) throw new IllegalArgumentException("Filter columns must be odd");
-		if (filterRows > inputRows) throw new IllegalArgumentException("Filter rows greater than input rows");
-		if (filterRows > inputRows) throw new IllegalArgumentException("Filter rows greater than input rows");
+		if (!Numbers
+			.isOdd(filterRows)) throw new IllegalArgumentException("Filter rows must be odd");
+		if (!Numbers
+			.isOdd(filterColumns)) throw new IllegalArgumentException("Filter columns must be odd");
+		if (filterRows > inputRows) throw new IllegalArgumentException(
+			"Filter rows greater than input rows");
+		if (filterRows > inputRows) throw new IllegalArgumentException(
+			"Filter rows greater than input rows");
 		if (filterColumns > inputColumns) throw new IllegalArgumentException(
 			"Filter columns greater than input columns");
 
@@ -213,7 +225,7 @@ public class Filter2DNode extends Node {
 
 		this.outputValues = new double[outputRows * outputColumns];
 		/* Initialize the function. */
-		forwardFunction = new RangeFunction(outputRows * outputColumns, (s, e) -> forward(s, e));
+		forwardFunction = new IndexFunction(outputRows * outputColumns, (index) -> forward(index));
 	}
 
 	/**
@@ -271,33 +283,31 @@ public class Filter2DNode extends Node {
 	/**
 	 * Forward to process in parallel.
 	 * 
-	 * @param startIndex Start index in the result vector.
-	 * @param endIndex   End index in the result vector.
+	 * @param index Index in the result vector.
 	 */
-	private void forward(int startIndex, int endIndex) {
-		for (int index = startIndex; index <= endIndex; index++) {
-			int outputRow = index / outputColumns;
-			int outputColumn = index % outputColumns;
-			double outputValue = 0;
-			for (int filterRow = 0; filterRow < filterRows; filterRow++) {
-				for (int filterColumn = 0; filterColumn < filterColumns; filterColumn++) {
-					int inputRow = outputRow + filterRow - padRows;
-					int inputColumn = outputColumn + filterColumn - padColumns;
-					double inputValue = 0;
-					if (inputRow < 0 || inputColumn < 0 || inputRow >= inputRows || inputColumn >= inputColumns) {
-						inputValue = padValue;
-					} else {
-						int inputIndex = inputRow * inputColumns + inputColumn;
-						inputValue = inputValues[inputIndex];
-					}
-					int filterIndex = filterRow * filterColumns + filterColumn;
-					double filterValue = filterValues[filterIndex];
-					outputValue += (inputValue * filterValue);
+	private void forward(int index) {
+		int outputRow = index / outputColumns;
+		int outputColumn = index % outputColumns;
+		double outputValue = 0;
+		for (int filterRow = 0; filterRow < filterRows; filterRow++) {
+			for (int filterColumn = 0; filterColumn < filterColumns; filterColumn++) {
+				int inputRow = outputRow + filterRow - padRows;
+				int inputColumn = outputColumn + filterColumn - padColumns;
+				double inputValue = 0;
+				if (inputRow < 0 || inputColumn < 0 || inputRow >= inputRows
+					|| inputColumn >= inputColumns) {
+					inputValue = padValue;
+				} else {
+					int inputIndex = inputRow * inputColumns + inputColumn;
+					inputValue = inputValues[inputIndex];
 				}
+				int filterIndex = filterRow * filterColumns + filterColumn;
+				double filterValue = filterValues[filterIndex];
+				outputValue += (inputValue * filterValue);
 			}
-			int outputIndex = outputRow * outputColumns + outputColumn;
-			outputValues[outputIndex] = outputValue;
 		}
+		int outputIndex = outputRow * outputColumns + outputColumn;
+		outputValues[outputIndex] = outputValue;
 	}
 
 	/**
@@ -388,7 +398,7 @@ public class Filter2DNode extends Node {
 
 		outputValues = new double[outputRows * outputColumns];
 		/* Initialize the function. */
-		forwardFunction = new RangeFunction(outputRows * outputColumns, (s, e) -> forward(s, e));
+		forwardFunction = new IndexFunction(outputRows * outputColumns, (index) -> forward(index));
 	}
 
 	/**

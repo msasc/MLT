@@ -28,7 +28,7 @@ public class SGDOptimizer extends WeightsOptimizer {
 
 	/** Learning rate. */
 	private double learningRate = 0.01;
-	
+
 	/**
 	 * Constructor.
 	 */
@@ -40,27 +40,25 @@ public class SGDOptimizer extends WeightsOptimizer {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void backward(int start, int end) {
-		
+	public void backward(int in) {
+
 		double[] inputDeltas = getNode().getInputDeltas();
 		double[] inputValues = getNode().getInputValues();
 		double[] outputDeltas = getNode().getOutputDeltas();
 		double[][] weights = getNode().getWeights();
 		int outputSize = getNode().getOutputSize();
-		
-		for (int in = start; in <= end; in++) {
-			double inputValue = inputValues[in];
-			double inputDelta = 0;
-			for (int out = 0; out < outputSize; out++) {
-				double weight = weights[in][out];
-				double outputDelta = outputDeltas[out];
-				inputDelta += (weight * outputDelta);
-				/* Weight delta. */
-				double weightDelta = learningRate * outputDelta * inputValue;
-				weights[in][out] += weightDelta;
-			}
-			inputDeltas[in] = inputDelta;
+
+		double inputValue = inputValues[in];
+		double inputDelta = 0;
+		for (int out = 0; out < outputSize; out++) {
+			double weight = weights[in][out];
+			double outputDelta = outputDeltas[out];
+			inputDelta += (weight * outputDelta);
+			/* Weight delta. */
+			double weightDelta = learningRate * outputDelta * inputValue;
+			weights[in][out] += weightDelta;
 		}
+		inputDeltas[in] = inputDelta;
 	}
 
 	/**

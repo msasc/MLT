@@ -42,7 +42,7 @@ public class CollectorAverage implements Collector {
 	 */
 	public CollectorAverage() {
 		super();
-		this.type = Type.SMA;
+		this.type = Type.EMA;
 	}
 
 	/**

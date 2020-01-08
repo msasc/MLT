@@ -1,17 +1,25 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.util;
+
+import java.util.Collection;
+import java.util.Iterator;
 
 /**
  * Operations on matrices.
@@ -21,19 +29,36 @@ package com.mlt.util;
 public class Matrix {
 
 	/**
-	 * Return the cumulative average.
-	 *
-	 * @param a The source vector.
-	 * @return The cumulative average.
+	 * Accumulates a collection of matrices of the same dimensions.
+	 * 
+	 * @param matrices The collection of matrices.
+	 * @return The accumulated matrix.
 	 */
-	public static double[] avgCumulative(double[] a) {
-		double avg = 0;
-		double[] c = new double[a.length];
-		for (int i = 0; i < a.length; i++) {
-			avg += a[i];
-			c[i] = avg / (i + 1);
+	public static double[][] add(Collection<double[][]> matrices) {
+		double[][] result = null;
+		int rows = 0;
+		int cols = 0;
+		Iterator<double[][]> iter = matrices.iterator();
+		while (iter.hasNext()) {
+			double[][] matrix = iter.next();
+			/* Initialize if required. */
+			if (result == null) {
+				rows = rows(matrix);
+				cols = cols(matrix);
+				result = new double[rows][cols];
+			}
+			/* Validate subsequent matrices dimensions. */
+			if (rows(matrix) != rows || cols(matrix) != cols) {
+				throw new IllegalArgumentException("Not all matrices have the same dimensions.");
+			}
+			/* Do accumulate. */
+			for (int row = 0; row < rows; row++) {
+				for (int col = 0; col < cols; col++) {
+					result[row][col] += matrix[row][col];
+				}
+			}
 		}
-		return c;
+		return result;
 	}
 
 	/**
@@ -42,7 +67,7 @@ public class Matrix {
 	 * @param matrix The argument matrix.
 	 * @return The number of columns.
 	 */
-	public static int columns(double[][] matrix) {
+	public static int cols(double[][] matrix) {
 		if (rows(matrix) != 0) {
 			return matrix[0].length;
 		}
@@ -57,37 +82,26 @@ public class Matrix {
 	 */
 	public static double[][] copy(double[][] src) {
 		int rows = rows(src);
-		int cols = columns(src);
+		int cols = cols(src);
 		double[][] dst = new double[rows][cols];
-		copy(src, dst);
-		return dst;
-	}
-
-	/**
-	 * Copy the source matrix to the destination. Rows and columns must be the same.
-	 *
-	 * @param src The source matrix.
-	 * @param dst The destination matrix.
-	 */
-	public static void copy(double[][] src, double[][] dst) {
-		int rows = rows(src);
-		int cols = columns(src);
 		for (int row = 0; row < rows; row++) {
 			for (int col = 0; col < cols; col++) {
 				dst[row][col] = src[row][col];
 			}
 		}
+		return dst;
 	}
 
 	/**
-	 * Cumulate the source array into the destination. Both must have the same dimensions.
+	 * Cumulate the source array into the destination. Both must have the same
+	 * dimensions.
 	 *
 	 * @param src The source.
 	 * @param dst The destination.
 	 */
 	public static void cumulate(double[][] src, double[][] dst) {
 		int rows = rows(src);
-		int cols = columns(src);
+		int cols = cols(src);
 		for (int row = 0; row < rows; row++) {
 			for (int col = 0; col < cols; col++) {
 				dst[row][col] += src[row][col];
@@ -104,7 +118,7 @@ public class Matrix {
 	 */
 	public static double[][] hadamard(double[][] a, double[][] b) {
 		int rows = rows(a);
-		int cols = columns(a);
+		int cols = cols(a);
 		double[][] h = new double[rows][cols];
 		for (int r = 0; r < rows; r++) {
 			for (int c = 0; c < cols; c++) {
@@ -132,10 +146,10 @@ public class Matrix {
 	 */
 	public static void fill(double[][] matrix, double value) {
 		int rows = rows(matrix);
-		int columns = columns(matrix);
+		int cols = cols(matrix);
 		for (int row = 0; row < rows; row++) {
-			for (int column = 0; column < columns; column++) {
-				matrix[row][column] = value;
+			for (int col = 0; col < cols; col++) {
+				matrix[row][col] = value;
 			}
 		}
 	}

@@ -17,7 +17,9 @@
 
 package com.mlt.util;
 
+import java.util.AbstractCollection;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -27,7 +29,45 @@ import java.util.List;
  *
  * @author Miquel Sas
  */
-public class FixedSizeList<E> {
+public class FixedSizeList<E> extends AbstractCollection<E> {
+
+	/**
+	 * Internal iterator.
+	 */
+	private class InternalIterator implements Iterator<E> {
+
+		/** Index of the current element. */
+		private int index = -1;
+		/** Call to next control flag, to apply remove properly. */
+		private boolean nextCalled = false;
+
+		@Override
+		public boolean hasNext() {
+			return !isEmpty() && index < size() - 1;
+		}
+
+		@Override
+		public E next() {
+			if (!hasNext()) {
+				throw new IllegalStateException("Empty list or end of list reached.");
+			}
+			index++;
+			E element = getFirst(index);
+			nextCalled = true;
+			return element;
+		}
+
+		@Override
+		public void remove() {
+			if (!nextCalled) {
+				throw new IllegalStateException("Next has not been called");
+			}
+			FixedSizeList.this.remove(index);
+			index--;
+			nextCalled = false;
+		}
+
+	}
 
 	/** Internal list. */
 	private List<E> list = new ArrayList<>();
@@ -72,14 +112,15 @@ public class FixedSizeList<E> {
 	 * 
 	 * @param e The element to add.
 	 */
-	public void add(E e) {
+	@Override
+	public boolean add(E e) {
 
 		/* List is empty, initialize. */
 		if (list.isEmpty()) {
 			list.add(e);
 			firstIndex = 0;
 			lastIndex = 0;
-			return;
+			return true;
 		}
 
 		/* Size less than maximum size. */
@@ -87,7 +128,7 @@ public class FixedSizeList<E> {
 			list.add(e);
 			firstIndex = 0;
 			lastIndex++;
-			return;
+			return true;
 		}
 
 		/* Size equals maximum size. */
@@ -118,13 +159,15 @@ public class FixedSizeList<E> {
 			}
 		}
 
+		return true;
 	}
 
 	/**
 	 * Clear the list.
 	 */
+	@Override
 	public void clear() {
-		list.clear();
+		super.clear();
 		firstIndex = -1;
 		lastIndex = -1;
 	}
@@ -136,7 +179,7 @@ public class FixedSizeList<E> {
 	 * @param index The index.
 	 * @return The element.
 	 */
-	public E getHead(int index) {
+	public E getFirst(int index) {
 		if (index < 0 || index >= size()) {
 			throw new ArrayIndexOutOfBoundsException();
 		}
@@ -150,7 +193,7 @@ public class FixedSizeList<E> {
 	 * @param index The index.
 	 * @return The element.
 	 */
-	public E getTail(int index) {
+	public E getLast(int index) {
 		if (index < 0 || index >= size()) {
 			throw new ArrayIndexOutOfBoundsException();
 		}
@@ -167,42 +210,37 @@ public class FixedSizeList<E> {
 	}
 
 	/**
-	 * Check emptyness.
-	 * 
-	 * @return A boolean.
+	 * {@inheritDoc}
 	 */
-	public boolean isEmpty() {
-		return list.isEmpty();
+	@Override
+	public Iterator<E> iterator() {
+		return new InternalIterator();
 	}
 
 	/**
-	 * Return the working size of the queue.
+	 * Remove and return the element at the given index starting with index 0 at the
+	 * head or origin of the queue.
 	 * 
-	 * @return The size.
+	 * @param index The index.
+	 * @return The element.
 	 */
-	public int size() {
-		if (list.isEmpty()) {
-			return 0;
+	public E remove(int index) {
+		if (index < 0 || index >= size()) {
+			throw new ArrayIndexOutOfBoundsException();
 		}
-		return lastIndex - firstIndex + 1;
+		E element = list.remove(firstIndex + index);
+		lastIndex--;
+		return element;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public String toString() {
-		StringBuilder b = new StringBuilder();
-		if (!list.isEmpty()) {
-			b.append("[");
-			for (int i = 0; i < size(); i++) {
-				if (i > 0) {
-					b.append(", ");
-				}
-				b.append(getHead(i));
-			}
-			b.append("]");
+	public int size() {
+		if (list.isEmpty()) {
+			return 0;
 		}
-		return b.toString();
+		return lastIndex - firstIndex + 1;
 	}
 }

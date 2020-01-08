@@ -42,21 +42,23 @@ public class ActivationBipolarSigmoid implements Activation {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void activations(double[] triggers, double[] outputs) {
-		int length = triggers.length;
-		for (int i = 0; i < length; i++) {
+	public double[] activations(double[] triggers) {
+		double[] outputs = new double[triggers.length];
+		for (int i = 0; i < triggers.length; i++) {
 			outputs[i] = (2 / (1 + Math.exp(-triggers[i]))) - 1;
 		}
+		return outputs;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void derivatives(double[] outputs, double[] derivatives) {
-		int length = outputs.length;
-		for (int i = 0; i < length; i++) {
+	public double[] derivatives(double[] outputs) {
+		double[] derivatives = new double[outputs.length];
+		for (int i = 0; i < outputs.length; i++) {
 			derivatives[i] = (1 - (outputs[i] * outputs[i])) / 2;
 		}
+		return derivatives;
 	}
 }

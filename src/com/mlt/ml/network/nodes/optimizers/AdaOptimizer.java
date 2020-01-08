@@ -17,20 +17,12 @@
 
 package com.mlt.ml.network.nodes.optimizers;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
-import com.mlt.ml.function.Collector;
-import com.mlt.ml.function.collector.CollectorAverage;
-import com.mlt.ml.function.collector.CollectorTransfer;
 import com.mlt.ml.network.nodes.WeightsOptimizer;
+import com.mlt.util.FixedSizeList;
 import com.mlt.util.Matrix;
-import com.mlt.util.Vector;
 
 /**
- * Adaptative optimizer, with an learning rate and a momentum for each weight,
- * and a queue of output deltas to optionally calculate moving averages and
- * other functions on those output deltas.
+ * Adaptative optimizer.
  *
  * @author Miquel Sas
  */
@@ -42,22 +34,9 @@ public class AdaOptimizer extends WeightsOptimizer {
 	private double[][] momentums;
 	/** Last weight deltas to apply to momentums. */
 	private double[][] weightDeltas;
-	/** Averages of output deltas. */
-	private double[] averages;
-	/** Standard deviations on output deltas. */
-	private double[] stddevs;
-	
-	/** Output deltas processed by the collector. */
-	private double[] outputDeltas;
-	/** Output deltas queue. */
-	private Deque<double[]> deltasQueue;
-	/** Maximum queue size. */
-	private int maxQueueSize = 50;
-	/** Collector function to apply to the queue of deltas. */
-	private Collector collector;
-	
-	/** Counter of steps. */
-	private int step;
+
+	private FixedSizeList<double[][]> gradientsQueue = new FixedSizeList<>(5);
+	private double[][] gradients = null;
 
 	/**
 	 * Constructor.
@@ -71,70 +50,47 @@ public class AdaOptimizer extends WeightsOptimizer {
 	 */
 	@Override
 	public void backward(int start, int end) {
+
+		/* Necessary data from the weights node. */
+		int outputSize = getNode().getOutputSize();
+		double[] inputDeltas = getNode().getInputDeltas();
+		double[] outputDeltas = getNode().getOutputDeltas();
+		double[][] weights = getNode().getWeights();
+
+		/* Iterate input indexes through the range. */
 		for (int in = start; in <= end; in++) {
-			double input = inputValues[in];
+
+			/* Input value and initialize the input delta. */
 			double inputDelta = 0;
+
+			/* Iterate all output indexes for each input index. */
 			for (int out = 0; out < outputSize; out++) {
-				double weight = weights[in][out];
-				double outputDelta = outputDeltas[out];
-				inputDelta += (weight * outputDelta);
-				/* Weight delta. */
+
+				/* Output delta and gradient (input value * output delta). */
+				double gradient = gradients[in][out];
+
+				/* Current learning rate and momentum and last weight delta. */
 				double learningRate = learningRates[in][out];
 				double momentum = momentums[in][out];
 				double lastDelta = weightDeltas[in][out];
-				double prevDelta = momentum * lastDelta;
-				double nextDelta = (1 - momentum) * (learningRate * outputDelta * input);
-				double weightDelta = prevDelta + nextDelta;
-				weights[in][out] += weightDelta;
-				weightDeltas[in][out] = weightDelta;
-			}
-			inputDeltas[in] = inputDelta;
-		}
-	}
 
-	/**
-	 * Check if should initialize internal arrays.
-	 */
-	private void checkInitialize() {
-		if (learningRates != null) {
-			return;
-		}
-		
-		/* Learning rates. */
-		learningRates = new double[inputSize][outputSize];
-		Matrix.fill(learningRates, 0.01);
-		
-		/* Momentums. */
-		momentums = new double[inputSize][outputSize];
-		Matrix.fill(momentums, 0.5);
-		
-		/* Last weight deltas. */
-		weightDeltas = new double[inputSize][outputSize];
-		Matrix.fill(weightDeltas, 0.0);
-		
-		/* Averages of output deltas. */
-		averages = new double[outputSize];
-		Vector.fill(averages, 0.0);
-		
-		/* Standard deviations of output deltas. */
-		stddevs = new double[outputSize];
-		Vector.fill(stddevs, 0.0);
-		
-		/* Queue of output deltasand default collector. */
-		deltasQueue = new ArrayDeque<>();
-		collector = new CollectorAverage();
-		
-		/* Counter of steps. */
-		step = 0;
-	}
-	
-	/**
-	 * @param outputDeltas The output deltas to push in the queue.
-	 */
-	private void pushOutputDeltas(double[] outputDeltas) {
-		deltasQueue.addLast(outputDeltas);
-		if (deltasQueue.size() > maxQueueSize) {
-			deltasQueue.removeFirst();
+				/* Calculate the weight delta. */
+				double prevDelta = momentum * lastDelta;
+				double nextDelta = (1 - momentum) * (learningRate * gradient);
+				double weightDelta = prevDelta + nextDelta;
+
+				/* Apply weight delta to weight. */
+				weights[in][out] += weightDelta;
+
+				/* Save weight delta and gradient for next iteration. */
+				weightDeltas[in][out] = weightDelta;
+
+				/* Accumulate input delta using the current weight. */
+				inputDelta += (weights[in][out] * outputDeltas[out]);
+			}
+
+			/* Save input delta for intermediate layers. */
+			inputDeltas[in] = inputDelta;
 		}
 	}
 
@@ -142,32 +98,54 @@ public class AdaOptimizer extends WeightsOptimizer {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void set(
-		int inputSize,
-		int outputSize,
-		double[][] weights,
-		double[] inputDeltas,
-		double[] inputValues,
-		double[] outputDeltas,
-		double[] outputValues) {
-		
-		super.set(
-			inputSize,
-			outputSize,
-			weights,
-			inputDeltas,
-			inputValues,
-			outputDeltas,
-			outputValues);
-		
-		/* Check initialize. */
-		checkInitialize();
-		
-		/* Push output deltas. */
-		pushOutputDeltas(outputDeltas);
-		
-		/* Retrieve output deltas. */
-		this.outputDeltas = collector.collect(deltasQueue);
+	public void finalizeBackward() {}
+
+	/**
+	 * @return The gradients calculated with input values and output deltas.
+	 */
+	private double[][] gradients() {
+		int inputSize = getNode().getInputSize();
+		int outputSize = getNode().getOutputSize();
+		double[] inputValues = getNode().getInputValues();
+		double[] outputDeltas = getNode().getOutputDeltas();
+		double[][] gradients = new double[inputSize][outputSize];
+		for (int in = 0; in < inputSize; in++) {
+			for (int out = 0; out < outputSize; out++) {
+				gradients[in][out] = inputValues[in] * outputDeltas[out];
+			}
+		}
+		return gradients;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void initializeBackward() {
+
+		/* Check internal data initialized. */
+		if (learningRates == null) {
+
+			/* Input and output sizes. */
+			int inputSize = getNode().getInputSize();
+			int outputSize = getNode().getOutputSize();
+
+			/* Learning rates. */
+			learningRates = new double[inputSize][outputSize];
+			Matrix.fill(learningRates, 0.01);
+
+			/* Momentums. */
+			momentums = new double[inputSize][outputSize];
+			Matrix.fill(momentums, 0.0);
+
+			/* Last weight deltas. */
+			weightDeltas = new double[inputSize][outputSize];
+			Matrix.fill(weightDeltas, 0.0);
+		}
+
+		/* Push and calculate gradients. */
+		gradientsQueue.add(gradients());
+		gradients = Matrix.add(gradientsQueue);
 	}
 
 }

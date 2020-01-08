@@ -24,21 +24,8 @@ package com.mlt.ml.network.nodes;
  */
 public abstract class WeightsOptimizer {
 
-	/** Input size. */
-	protected int inputSize;
-	/** Output size. */
-	protected int outputSize;
-
-	/** Matrix of weights (in-out). */
-	protected double[][] weights;
-	/** Cached input deltas, to be accessed concurrently. */
-	protected double[] inputDeltas;
-	/** Cached input values, to be accessed concurrently. */
-	protected double[] inputValues;
-	/** Cached output deltas, to be accessed concurrently. */
-	protected double[] outputDeltas;
-	/** Cached output values, to be accessed concurrently. */
-	protected double[] outputValues;
+	/** Weights node. */
+	private WeightsNode node;
 
 	/**
 	 * Constructor.
@@ -48,39 +35,37 @@ public abstract class WeightsOptimizer {
 	}
 
 	/**
-	 * Set internal protected parameters to calculate the step.
-	 * 
-	 * @param inputSize    Input size.
-	 * @param outputSize   Output size.
-	 * @param weights      Weights.
-	 * @param inputDeltas  Input deltas.
-	 * @param inputValues  Input values.
-	 * @param outputDeltas Output deltas.
-	 * @param outputValues Output values.
+	 * @return The parent weights node.
 	 */
-	public void set(
-		int inputSize,
-		int outputSize,
-		double[][] weights,
-		double[] inputDeltas,
-		double[] inputValues,
-		double[] outputDeltas,
-		double[] outputValues) {
-		
-		this.inputSize = inputSize;
-		this.outputSize = outputSize;
-		this.weights = weights;
-		this.inputDeltas = inputDeltas;
-		this.inputValues = inputValues;
-		this.outputDeltas = outputDeltas;
-		this.outputValues = outputValues;
+	protected WeightsNode getNode() {
+		return node;
 	}
-
+	
 	/**
-	 * Backward process from input indexes start to end.
+	 * Backward process for the weights for a range of input indexes, updateing the
+	 * weight and calculating the input delta.
 	 * 
 	 * @param start Input start index.
 	 * @param end   Input end index.
 	 */
 	public abstract void backward(int start, int end);
+
+	/**
+	 * Perform any required finalization after the concurrent call to the
+	 * backward per weight pass.
+	 */
+	public abstract void finalizeBackward();
+
+	/**
+	 * Perform any required initialization before the concurrent call to the
+	 * backward per weight pass.
+	 */
+	public abstract void initializeBackward();
+
+	/**
+	 * @param node The parent weights node.
+	 */
+	public void setNode(WeightsNode node) {
+		this.node = node;
+	}
 }

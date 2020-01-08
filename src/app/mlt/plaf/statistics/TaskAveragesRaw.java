@@ -257,7 +257,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			double low = Numbers.MAX_DOUBLE;
 			double close = 0;
 			for (int j = start; j <= end; j++) {
-				Record rc = buffer.getHead(j);
+				Record rc = buffer.getFirst(j);
 				if (j == start) {
 					time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
 					open = rc.getValue(DB.FIELD_BAR_OPEN).getDouble();

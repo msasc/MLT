@@ -20,15 +20,15 @@ package com.mlt.ml.network.nodes.optimizers;
 import com.mlt.ml.network.nodes.WeightsOptimizer;
 
 /**
- * Default stochastic gradient descent optimizer.
+ * Basic stochastic gradient descent optimizer.
  *
  * @author Miquel Sas
  */
 public class SGDOptimizer extends WeightsOptimizer {
-	
+
 	/** Learning rate. */
 	private double learningRate = 0.01;
-
+	
 	/**
 	 * Constructor.
 	 */
@@ -36,20 +36,42 @@ public class SGDOptimizer extends WeightsOptimizer {
 		super();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void backward(int start, int end) {
+		
+		double[] inputDeltas = getNode().getInputDeltas();
+		double[] inputValues = getNode().getInputValues();
+		double[] outputDeltas = getNode().getOutputDeltas();
+		double[][] weights = getNode().getWeights();
+		int outputSize = getNode().getOutputSize();
+		
 		for (int in = start; in <= end; in++) {
-			double input = inputValues[in];
+			double inputValue = inputValues[in];
 			double inputDelta = 0;
 			for (int out = 0; out < outputSize; out++) {
 				double weight = weights[in][out];
 				double outputDelta = outputDeltas[out];
 				inputDelta += (weight * outputDelta);
 				/* Weight delta. */
-				double weightDelta = learningRate * outputDelta * input;
+				double weightDelta = learningRate * outputDelta * inputValue;
 				weights[in][out] += weightDelta;
 			}
 			inputDeltas[in] = inputDelta;
 		}
 	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void finalizeBackward() {}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void initializeBackward() {}
 }

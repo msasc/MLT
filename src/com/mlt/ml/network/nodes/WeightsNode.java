@@ -29,6 +29,9 @@ import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
 
 /**
  * A matrix of weights node.
+ * <p>
+ * Accessors for input and anput size, weights, input and output values and
+ * deltas, are provided to be used by the weights optimizer.
  *
  * @author Miquel Sas
  */
@@ -76,7 +79,9 @@ public class WeightsNode extends Node {
 		setName(name);
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
-		this.optimizer = new AdaOptimizer();
+		
+		optimizer = new AdaOptimizer();
+		optimizer.setNode(this);
 	}
 
 	/**
@@ -119,17 +124,11 @@ public class WeightsNode extends Node {
 		}
 		inputValues = inputEdges.get(0).getForwardData();
 		outputDeltas = outputEdges.get(0).getBackwardData();
-		
-		optimizer.set(
-			inputSize, 
-			outputSize, 
-			weights, 
-			inputDeltas, 
-			inputValues, 
-			outputDeltas,
-			outputValues);
-		
+
+		optimizer.initializeBackward();
 		backwardFunction.process();
+		optimizer.finalizeBackward();
+		
 		pushBackward(inputDeltas);
 	}
 
@@ -172,6 +171,13 @@ public class WeightsNode extends Node {
 	}
 
 	/**
+	 * @return The input deltas.
+	 */
+	public double[] getInputDeltas() {
+		return inputDeltas;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -180,11 +186,39 @@ public class WeightsNode extends Node {
 	}
 
 	/**
+	 * @return The input values
+	 */
+	public double[] getInputValues() {
+		return inputValues;
+	}
+
+	/**
+	 * @return The output deltas.
+	 */
+	public double[] getOutputDeltas() {
+		return outputDeltas;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public int getOutputSize() {
 		return outputSize;
+	}
+
+	/**
+	 * @return The output values
+	 */
+	public double[] getOutputValues() {
+		return outputValues;
+	}
+
+	/**
+	 * @return The weights.
+	 */
+	public double[][] getWeights() {
+		return weights;
 	}
 
 	/**
@@ -233,6 +267,7 @@ public class WeightsNode extends Node {
 		outputSize = properties.getInteger("output-size");
 		weights = properties.getDouble2A("weights");
 		optimizer = (WeightsOptimizer) properties.getObject("optimizer");
+		optimizer.setNode(this);
 		initializeVectorsAndFunctions();
 	}
 

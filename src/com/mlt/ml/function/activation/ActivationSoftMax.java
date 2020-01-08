@@ -43,30 +43,32 @@ public class ActivationSoftMax implements Activation {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void activations(double[] triggers, double[] outputs) {
-		int length = triggers.length;
+	public double[] activations(double[] triggers) {
+		double[] outputs = new double[triggers.length];
 		double div = 0;
-		for (int i = 0; i < length; i++) {
+		for (int i = 0; i < triggers.length; i++) {
 			double p = Numbers.bound(Math.exp(triggers[i]));
 			outputs[i] = p;
 			div += p;
 		}
 		if (div != 0) {
-			for (int i = 0; i < length; i++) {
+			for (int i = 0; i < triggers.length; i++) {
 				outputs[i] /= div;
 			}
 		}
+		return outputs;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void derivatives(double[] outputs, double[] derivatives) {
-		int length = outputs.length;
-		for (int i = 0; i < length; i++) {
+	public double[] derivatives(double[] outputs) {
+		double[] derivatives = new double[outputs.length];
+		for (int i = 0; i < outputs.length; i++) {
 			derivatives[i] = 1.0;
 		}
+		return derivatives;
 	}
 
 }

@@ -49,7 +49,7 @@ public class Average implements Comparable<Average> {
 
 		double average = 0;
 		for (int index = startIndex; index <= endIndex; index++) {
-			average += buffer.getHead(index);
+			average += buffer.getFirst(index);
 		}
 		average /= ((double) (endIndex - startIndex + 1));
 		return average;
@@ -64,7 +64,7 @@ public class Average implements Comparable<Average> {
 		double weight = 1;
 		double totalWeight = 0;
 		for (int index = startIndex; index <= endIndex; index++) {
-			average += (buffer.getHead(index) * weight);
+			average += (buffer.getFirst(index) * weight);
 			totalWeight += weight;
 			weight += 1;
 		}

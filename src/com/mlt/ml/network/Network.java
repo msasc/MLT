@@ -17,6 +17,8 @@
 
 package com.mlt.ml.network;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,6 +28,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 
 import com.mlt.util.IO;
+import com.mlt.util.Logs;
 
 /**
  * A neural network internally represented by a computational graph, with only
@@ -233,6 +236,24 @@ public class Network {
 	 */
 	public double[] forward(double[] inputValues) {
 		return forward(inputValues, true);
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Network clone() {
+		try {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			save(out);
+			ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+			Network network = new Network();
+			network.restore(in);
+			return network;
+		} catch (IOException exc) {
+			Logs.catching(exc);
+			return null;
+		}
 	}
 
 	/**

@@ -36,6 +36,8 @@ public class ActivationNode extends Node {
 	private int size;
 	/** Activation function. */
 	private Activation activation;
+	/** Flat spot to avoid near zero derivatives. */
+	private static double flatSpot = 0.01;
 
 	/**
 	 * Constructor used for restore.
@@ -95,14 +97,13 @@ public class ActivationNode extends Node {
 	public void backward() {
 		double[] deltas = outputEdges.get(0).getBackwardData();
 		double[] values = outputEdges.get(0).getForwardData();
-		double[] derivatives = new double[size];
-		activation.derivatives(values, derivatives);
+		double[] derivatives = activation.derivatives(values);
 		/*
 		 * Apply derivatives to deltas including a flat spot to avoid near zero
 		 * derivatives.
 		 */
 		for (int i = 0; i < size; i++) {
-			deltas[i] = deltas[i] * (derivatives[i] + 0.01);
+			deltas[i] = deltas[i] * (derivatives[i] + flatSpot);
 		}
 		pushBackward(deltas);
 	}
@@ -114,8 +115,7 @@ public class ActivationNode extends Node {
 	public void forward() {
 		Edge inputEdge = inputEdges.get(0);
 		double[] triggerValues = inputEdge.getForwardData();
-		double[] outputValues = new double[size];
-		activation.activations(triggerValues, outputValues);
+		double[] outputValues = activation.activations(triggerValues);
 		pushForward(outputValues);
 	}
 

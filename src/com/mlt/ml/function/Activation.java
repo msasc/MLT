@@ -77,16 +77,16 @@ public interface Activation {
 	 * Calculates the output values of the function given the trigger values.
 	 * 
 	 * @param triggers The trigger (weighted sum plus bias) values.
-	 * @param outputs  The outputs to set.
+	 * @return The activation outputs .
 	 */
-	void activations(double[] triggers, double[] outputs);
+	double[] activations(double[] triggers);
 
 	/**
 	 * Calculates the first derivatives of the function, given the outputs.
 	 * 
 	 * @param outputs     The outputs obtained applying the triggers to
 	 *                    <i>activations</i>.
-	 * @param derivatives The derivatives to set.
+	 * @return The derivatives.
 	 */
-	void derivatives(double[] outputs, double[] derivatives);
+	double[] derivatives(double[] outputs);
 }

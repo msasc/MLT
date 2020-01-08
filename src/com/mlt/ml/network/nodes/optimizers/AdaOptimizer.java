@@ -17,9 +17,16 @@
 
 package com.mlt.ml.network.nodes.optimizers;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
+
 import com.mlt.ml.network.nodes.WeightsOptimizer;
 import com.mlt.util.FixedSizeList;
 import com.mlt.util.Matrix;
+import com.mlt.util.Range;
 
 /**
  * Adaptative optimizer.
@@ -27,6 +34,36 @@ import com.mlt.util.Matrix;
  * @author Miquel Sas
  */
 public class AdaOptimizer extends WeightsOptimizer {
+
+	/**
+	 * Callable to cumulate gradients from the gradients queue, concurrently.
+	 */
+	class GradientAdd implements Callable<Void> {
+
+		int start;
+		int end;
+
+		GradientAdd(Range range) {
+			this.start = range.start;
+			this.end = range.end;
+		}
+
+		@Override
+		public Void call() throws Exception {
+			int outputSize = getNode().getOutputSize();
+			Iterator<double[][]> iter = gradientsQueue.iterator();
+			while (iter.hasNext()) {
+				double[][] matrix = iter.next();
+				for (int in = start; in <= end; in++) {
+					for (int out = 0; out < outputSize; out++) {
+						gradients[in][out] += matrix[in][out];
+					}
+				}
+			}
+			return null;
+		}
+
+	}
 
 	/** Learning rates. */
 	private double[][] learningRates;
@@ -37,6 +74,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 
 	private FixedSizeList<double[][]> gradientsQueue = new FixedSizeList<>(5);
 	private double[][] gradients = null;
+	private List<GradientAdd> gradientTasks = null;
 
 	/**
 	 * Constructor.
@@ -141,11 +179,24 @@ public class AdaOptimizer extends WeightsOptimizer {
 			/* Last weight deltas. */
 			weightDeltas = new double[inputSize][outputSize];
 			Matrix.fill(weightDeltas, 0.0);
+
+			/* Gradients. */
+			gradients = new double[inputSize][outputSize];
+
+			/* List of tasks to add gradients. */
+			int count = getNode().getInputSize();
+			int module = Runtime.getRuntime().availableProcessors();
+			List<Range> ranges = Range.getRanges(count, module);
+			gradientTasks = new ArrayList<>();
+			for (Range range : ranges) {
+				gradientTasks.add(new GradientAdd(range));
+			}
 		}
 
 		/* Push and calculate gradients. */
 		gradientsQueue.add(gradients());
-		gradients = Matrix.add(gradientsQueue);
+		Matrix.fill(gradients, 0.0);
+		ForkJoinPool.commonPool().invokeAll(gradientTasks);
 	}
 
 }

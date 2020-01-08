@@ -20,6 +20,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.BiConsumer;
 
+import com.mlt.util.Range;
+
 /**
  * Helper calculator to execute a range functions in parallel.
  *
@@ -30,24 +32,16 @@ public class RangeFunction {
 	/**
 	 * Build a list of range functions sized for the total indexes to process according to the available procssors.
 	 * 
-	 * @param indexCount The number of indexes to process.
+	 * @param count The number of indexes to process.
 	 * @param function   The bi-consumer function.
 	 * @return The list of range functions.
 	 */
-	public static List<Range> list(int indexCount, BiConsumer<Integer, Integer> function) {
-		int mod = Runtime.getRuntime().availableProcessors();
-		while (indexCount % mod != 0) {
-			mod--;
-		}
-		int rangeIndexes = indexCount / mod;
-		List<Range> functions = new ArrayList<>();
-		int start = 0;
-		while (true) {
-			int end = start + rangeIndexes - 1;
-			if (end >= indexCount) end = indexCount - 1;
-			functions.add(new Range(start, end, function));
-			if (end == indexCount - 1) break;
-			start = end + 1;
+	public static List<RangeCall> list(int count, BiConsumer<Integer, Integer> function) {
+		int module = Runtime.getRuntime().availableProcessors();
+		List<Range> ranges = Range.getRanges(count, module);
+		List<RangeCall> functions = new ArrayList<>();
+		for (Range range : ranges) {
+			functions.add(new RangeCall(range.start, range.end, function));
 		}
 		return functions;
 	}
@@ -56,7 +50,7 @@ public class RangeFunction {
 	 * A callable function to be executed for a range of indexes, start to end. Many calculations on matrices and vectors
 	 * can be safely executed in parallel for a certain range of indexes.
 	 */
-	public static class Range implements Callable<Void> {
+	public static class RangeCall implements Callable<Void> {
 
 		/** Start index. */
 		private int start;
@@ -72,7 +66,7 @@ public class RangeFunction {
 		 * @param end      End index.
 		 * @param function Bi-consumer function.
 		 */
-		public Range(int start, int end, BiConsumer<Integer, Integer> function) {
+		public RangeCall(int start, int end, BiConsumer<Integer, Integer> function) {
 			this.start = start;
 			this.end = end;
 			this.function = function;
@@ -89,7 +83,7 @@ public class RangeFunction {
 	}
 
 	/** List of range functions. */
-	private List<Range> functions;
+	private List<RangeCall> functions;
 	/** Size. */
 	private int size;
 	/** Function. */

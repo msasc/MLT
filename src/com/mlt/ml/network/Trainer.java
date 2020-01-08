@@ -48,7 +48,6 @@ import com.mlt.util.Lists;
 import com.mlt.util.Numbers;
 import com.mlt.util.Strings;
 import com.mlt.util.Vector;
-import com.sun.deploy.uitoolkit.impl.fx.ui.ErrorPane;
 
 /**
  * Trainer of neural networks.

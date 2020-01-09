@@ -51,11 +51,12 @@ public class SGDOptimizer extends WeightsOptimizer {
 		double inputValue = inputValues[in];
 		double inputDelta = 0;
 		for (int out = 0; out < outputSize; out++) {
-			double weight = weights[in][out];
 			double outputDelta = outputDeltas[out];
+			double weight = weights[in][out];
 			inputDelta += (weight * outputDelta);
 			/* Weight delta. */
-			double weightDelta = learningRate * outputDelta * inputValue;
+			double gradient = outputDelta * inputValue;
+			double weightDelta = learningRate * gradient;
 			weights[in][out] += weightDelta;
 		}
 		inputDeltas[in] = inputDelta;

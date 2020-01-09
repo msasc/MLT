@@ -28,9 +28,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
 
+import com.mlt.ml.function.IndexFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
-import com.mlt.util.IndexFunction;
 import com.mlt.util.Numbers;
 
 /**

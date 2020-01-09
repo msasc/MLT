@@ -1,4 +1,4 @@
-package com.mlt.util;
+package com.mlt.ml.function;
 
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;

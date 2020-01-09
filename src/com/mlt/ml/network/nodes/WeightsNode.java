@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import com.mlt.ml.function.IndexFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 import com.mlt.ml.network.Weights;
-import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
-import com.mlt.util.IndexFunction;
+import com.mlt.ml.network.nodes.optimizers.SGDOptimizer;
 
 /**
  * A matrix of weights node.
@@ -80,7 +80,7 @@ public class WeightsNode extends Node {
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
 
-		optimizer = new AdaOptimizer();
+		optimizer = new SGDOptimizer();
 		optimizer.setNode(this);
 	}
 

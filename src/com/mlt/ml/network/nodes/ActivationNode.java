@@ -37,7 +37,7 @@ public class ActivationNode extends Node {
 	/** Activation function. */
 	private Activation activation;
 	/** Flat spot to avoid near zero derivatives. */
-	private static double flatSpot = 0.01;
+	private static double flatSpot = 0.00;
 
 	/**
 	 * Constructor used for restore.

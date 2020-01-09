@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.mlt.util;
+package com.mlt.ml.function;
 
 import java.util.ArrayList;
 import java.util.List;

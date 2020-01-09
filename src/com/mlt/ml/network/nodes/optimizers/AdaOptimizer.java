@@ -19,9 +19,9 @@ package com.mlt.ml.network.nodes.optimizers;
 
 import java.util.Iterator;
 
+import com.mlt.ml.function.IndexFunction;
 import com.mlt.ml.network.nodes.WeightsOptimizer;
 import com.mlt.util.FixedSizeList;
-import com.mlt.util.IndexFunction;
 import com.mlt.util.Matrix;
 
 /**
@@ -47,7 +47,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 	
 	/** Queue of raw gradients. */
 	private FixedSizeList<double[][]> gradientsQueue;
-	/** Function to calculate gradients ADD/EMA/SMA/WMA. */
+	/** Function to calculate gradients ADD/EMA/SMA/WMA from the queue. */
 	private IndexFunction gradientsFunction;
 	/** Function operation on gradients queue. */
 	private GradientsType gradientsType = GradientsType.WMA;
@@ -82,6 +82,10 @@ public class AdaOptimizer extends WeightsOptimizer {
 
 		/* Iterate all output indexes for each input index. */
 		for (int out = 0; out < outputSize; out++) {
+			
+			double outputDelta = outputDeltas[out];
+			double weight = weights[in][out];
+			inputDelta += (weight * outputDelta);
 
 			/* Output delta and gradient (input value * output delta). */
 			double gradient = gradients[in][out];
@@ -101,9 +105,6 @@ public class AdaOptimizer extends WeightsOptimizer {
 
 			/* Save weight delta and gradient for next iteration. */
 			weightDeltas[in][out] = weightDelta;
-
-			/* Accumulate input delta using the current weight. */
-			inputDelta += (weights[in][out] * outputDeltas[out]);
 		}
 
 		/* Save input delta for intermediate layers. */
@@ -220,9 +221,19 @@ public class AdaOptimizer extends WeightsOptimizer {
 		}
 
 		/* Push and calculate gradients. */
-		gradientsQueue.add(gradients());
-		Matrix.fill(gradients, 0.0);
-		gradientsFunction.process();
+//		gradientsQueue.add(gradients());
+//		Matrix.fill(gradients, 0.0);
+//		gradientsFunction.process();
+//		gradients = gradients();
+		int inputSize = getNode().getInputSize();
+		int outputSize = getNode().getOutputSize();
+		double[] inputValues = getNode().getInputValues();
+		double[] outputDeltas = getNode().getOutputDeltas();
+		for (int in = 0; in < inputSize; in++) {
+			for (int out = 0; out < outputSize; out++) {
+				gradients[in][out] = inputValues[in] * outputDeltas[out];
+			}
+		}
 	}
 
 }

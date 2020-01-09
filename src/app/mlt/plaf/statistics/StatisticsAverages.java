@@ -1382,10 +1382,9 @@ public class StatisticsAverages extends Statistics {
 	 * @param factors The list of hidden layer size factors.
 	 * @return The network definition.
 	 */
-	Network getNetwork(double... factors) {
+	Network getNetwork(int... sizes) {
 
 		Network network = new Network();
-		int[] sizes = getNeworkSizes(factors);
 		network.setName(getNetworkName(sizes));
 
 		/* Layers. */
@@ -2163,17 +2162,20 @@ public class StatisticsAverages extends Statistics {
 	 * @return The he trainer to train the network..
 	 * @throws Exception 
 	 */
-	Trainer getTrainer() throws Exception {
+	private Trainer getTrainer() throws Exception {
 
 		Trainer trainer = new Trainer();
 		trainer.setEpochs(500);
 
-		Network network = getNetwork(4.0, 0.2);
+		Network network = getNetwork(1024, 256, 64);
 
 		trainer.setNetwork(network);
 		trainer.setPatternSourceTraining(getPatternSource(true, true));
 		trainer.setPatternSourceTest(getPatternSource(true, false));
 		trainer.setShuffle(false);
+		trainer.setScore(false);
+		trainer.setEpochs(6);
+		trainer.setPerformanceHistory(6);
 
 		trainer.setFilePath("res/network/");
 		trainer.setFileRoot(network.getName());

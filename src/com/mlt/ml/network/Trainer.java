@@ -72,10 +72,16 @@ public class Trainer extends Task {
 		 */
 		@Override
 		public int compareTo(Performance p) {
-			if (error.compareTo(p.error) < 0 && performance.compareTo(p.performance) > 0) {
+//			if (error.compareTo(p.error) < 0 && performance.compareTo(p.performance) > 0) {
+//				return -1;
+//			}
+//			if (error.compareTo(p.error) > 0 && performance.compareTo(p.performance) < 0) {
+//				return 1;
+//			}
+			if (performance.compareTo(p.performance) > 0) {
 				return -1;
 			}
-			if (error.compareTo(p.error) > 0 && performance.compareTo(p.performance) < 0) {
+			if (performance.compareTo(p.performance) < 0) {
 				return 1;
 			}
 			return 0;
@@ -891,13 +897,6 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * @param shuffle A boolean indicating whether to shuffle sources.
-	 */
-	public void setShuffle(boolean shuffle) {
-		this.shuffle = shuffle;
-	}
-
-	/**
 	 * @param network The network.
 	 */
 	public void setNetwork(Network network) {
@@ -933,10 +932,24 @@ public class Trainer extends Task {
 	}
 
 	/**
+	 * @param performanceHistory The performance history size.
+	 */
+	public void setPerformanceHistory(int performanceHistory) {
+		this.performanceHistory = performanceHistory;
+	}
+
+	/**
 	 * @param score A boolean to train scored data.
 	 */
 	public void setScore(boolean score) {
 		this.score = score;
+	}
+
+	/**
+	 * @param shuffle A boolean indicating whether to shuffle sources.
+	 */
+	public void setShuffle(boolean shuffle) {
+		this.shuffle = shuffle;
 	}
 
 	/**

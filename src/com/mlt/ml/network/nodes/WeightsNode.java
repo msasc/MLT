@@ -20,10 +20,10 @@ package com.mlt.ml.network.nodes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Random;
 
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
+import com.mlt.ml.network.Weights;
 import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
 import com.mlt.util.IndexFunction;
 
@@ -234,10 +234,10 @@ public class WeightsNode extends Node {
 		/* Initialize. */
 		weights = new double[inputSize][outputSize];
 		initializeVectorsAndFunctions();
-		Random random = new Random();
+		Weights w = new Weights(true);
 		for (int in = 0; in < inputSize; in++) {
 			for (int out = 0; out < outputSize; out++) {
-				weights[in][out] = random.nextGaussian();
+				weights[in][out] = w.nextGaussian();
 			}
 		}
 	}

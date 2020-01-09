@@ -173,6 +173,15 @@ public class FixedSizeList<E> extends AbstractCollection<E> {
 	}
 
 	/**
+	 * Return the first element of the queue.
+	 * 
+	 * @return The element.
+	 */
+	public E getFirst() {
+		return getFirst(0);
+	}
+
+	/**
 	 * Return the element at the given index starting with index 0 at the head or
 	 * origin of the queue.
 	 * 
@@ -184,6 +193,15 @@ public class FixedSizeList<E> extends AbstractCollection<E> {
 			throw new ArrayIndexOutOfBoundsException();
 		}
 		return list.get(firstIndex + index);
+	}
+
+	/**
+	 * Return the last element of the queue.
+	 * 
+	 * @return The element.
+	 */
+	public E getLast() {
+		return getLast(0);
 	}
 
 	/**

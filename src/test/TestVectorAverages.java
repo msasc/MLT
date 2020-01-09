@@ -12,11 +12,6 @@ public class TestVectorAverages {
 		vectors.add(new double[] { 1.0, 2.0, 3.0 });
 		vectors.add(new double[] { 2.0, 2.0, 3.0 });
 		vectors.add(new double[] { 4.0, 0.0, 3.0 });
-		vectors.add(new double[] { 1.0, 0.0, 3.0 });
-		vectors.add(new double[] { 1.0, 0.0, 3.0 });
-		vectors.add(new double[] { 1.0, 0.0, 3.0 });
-		vectors.add(new double[] { 1.0, 0.0, 3.0 });
-		vectors.add(new double[] { 1.0, 0.0, 3.0 });
 		System.out.println(Lists.asList(Vector.averageSMA(vectors)));
 		System.out.println(Lists.asList(Vector.averageEMA(vectors)));
 		System.out.println(Lists.asList(Vector.averageWMA(vectors)));

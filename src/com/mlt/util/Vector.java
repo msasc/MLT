@@ -138,6 +138,7 @@ public class Vector {
 		}
 		double[] averages = null;
 		double weight = 1;
+		double total = 0;
 		Iterator<double[]> iter = vectors.iterator();
 		while (iter.hasNext()) {
 			double[] vector = iter.next();
@@ -147,10 +148,11 @@ public class Vector {
 			for (int i = 0; i < averages.length; i++) {
 				averages[i] += vector[i] * weight;
 			}
-			weight += weight;
+			total += weight;
+			weight += 1;
 		}
 		for (int i = 0; i < averages.length; i++) {
-			averages[i] /= weight;
+			averages[i] /= total;
 		}
 		return averages;
 	}

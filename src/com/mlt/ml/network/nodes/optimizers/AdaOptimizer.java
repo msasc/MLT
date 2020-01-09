@@ -30,6 +30,13 @@ import com.mlt.util.Matrix;
  * @author Miquel Sas
  */
 public class AdaOptimizer extends WeightsOptimizer {
+	
+	/**
+	 * Types of operations on gradients queue.
+	 */
+	public static enum GradientsType {
+		ADD, EMA, SMA, WMA
+	}
 
 	/** Learning rates. */
 	private double[][] learningRates;
@@ -37,10 +44,19 @@ public class AdaOptimizer extends WeightsOptimizer {
 	private double[][] momentums;
 	/** Last weight deltas to apply to momentums. */
 	private double[][] weightDeltas;
-
+	
+	/** Queue of raw gradients. */
 	private FixedSizeList<double[][]> gradientsQueue;
+	/** Function to calculate gradients ADD/EMA/SMA/WMA. */
+	private IndexFunction gradientsFunction;
+	/** Function operation on gradients queue. */
+	private GradientsType gradientsType = GradientsType.WMA;
+
+	/** Matrix to process concurrent calculations. */
 	private double[][] gradients;
-	private IndexFunction gradientsAdd;
+
+	/** Size of queues. */
+	private int historySize = 5;
 
 	/**
 	 * Constructor.
@@ -116,11 +132,14 @@ public class AdaOptimizer extends WeightsOptimizer {
 		}
 		return gradients;
 	}
-	
+
 	/**
-	 * @param in The input index of the gradients to add.
+	 * Consurrently (by input index) calculates the addition of the raw gradients
+	 * queue.
+	 * 
+	 * @param in The input index of the gradients to process.
 	 */
-	private void gradientsAdd(int in) {
+	private void gradientsADD(int in) {
 		int outputSize = getNode().getOutputSize();
 		Iterator<double[][]> iter = gradientsQueue.iterator();
 		while (iter.hasNext()) {
@@ -128,6 +147,29 @@ public class AdaOptimizer extends WeightsOptimizer {
 			for (int out = 0; out < outputSize; out++) {
 				gradients[in][out] += matrix[in][out];
 			}
+		}
+	}
+
+	/**
+	 * Consurrently (by input index) calculates the WMA of the raw gradients queue.
+	 * 
+	 * @param in The input index of the gradients to process.
+	 */
+	private void gradientsWMA(int in) {
+		int outputSize = getNode().getOutputSize();
+		Iterator<double[][]> iter = gradientsQueue.iterator();
+		double weight = 1;
+		double total = 0;
+		while (iter.hasNext()) {
+			double[][] matrix = iter.next();
+			for (int out = 0; out < outputSize; out++) {
+				gradients[in][out] += (matrix[in][out] * weight);
+			}
+			total += weight;
+			weight += 1;
+		}
+		for (int out = 0; out < outputSize; out++) {
+			gradients[in][out] /= total;
 		}
 	}
 
@@ -150,26 +192,37 @@ public class AdaOptimizer extends WeightsOptimizer {
 
 			/* Momentums. */
 			momentums = new double[inputSize][outputSize];
-			Matrix.fill(momentums, 0.2);
+			Matrix.fill(momentums, 0.0);
 
 			/* Last weight deltas. */
 			weightDeltas = new double[inputSize][outputSize];
 			Matrix.fill(weightDeltas, 0.0);
 
-			/* Gradients queue. */
-			gradientsQueue = new FixedSizeList<>(5);
+			/* Gradients queues. */
+			gradientsQueue = new FixedSizeList<>(historySize);
 
 			/* Gradients. */
 			gradients = new double[inputSize][outputSize];
 
-			/* List of tasks to add gradients. */
-			gradientsAdd = new IndexFunction(inputSize, (in) -> gradientsAdd(in));
+			/* Function to calculate gradients ADD/SMA/EMA/WMA concurrently. */
+			switch (gradientsType) {
+			case ADD:
+				gradientsFunction = new IndexFunction(inputSize, (in) -> gradientsADD(in));
+				break;
+			case EMA:
+				break;
+			case SMA:
+				break;
+			case WMA:
+				gradientsFunction = new IndexFunction(inputSize, (in) -> gradientsWMA(in));
+				break;
+			}
 		}
 
 		/* Push and calculate gradients. */
 		gradientsQueue.add(gradients());
 		Matrix.fill(gradients, 0.0);
-		gradientsAdd.process();;
+		gradientsFunction.process();
 	}
 
 }

@@ -311,6 +311,14 @@ public class Filter2DNode extends Node {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getExtendedDescription() {
+		return "";
+	}
+
+	/**
 	 * Return the filter columns.
 	 * 
 	 * @return The filter columns.

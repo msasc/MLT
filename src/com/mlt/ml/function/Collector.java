@@ -17,17 +17,16 @@ package com.mlt.ml.function;
 import java.util.Collection;
 
 /**
- * A function that is applied to a collection of vectors to produce a result vector.
+ * A function that is applied to a collection of objects to produce a result object.
  *
  * @author Miquel Sas
  */
-public interface Collector {
+public interface Collector<T> {
 	/**
-	 * Apply the function to a collection of vectors and produce a result vector.
+	 * Apply the function to a collection of object and produce a result object.
 	 * 
-	 * @param vectors The collection of vectors.
+	 * @param objects The collection of objects.
 	 * @return The result vector.
 	 */
-	double[] collect(Collection<double[]> vectors);
-
+	T collect(Collection<T> objects);
 }

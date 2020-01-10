@@ -20,6 +20,8 @@ package com.mlt.ml.network;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -36,10 +38,12 @@ import com.mlt.util.Properties;
 /**
  * A node of a computational graph.
  * <p>
- * In the forward pass, a node reads data from the input edges, processes it, and pushes the resulting data to the
+ * In the forward pass, a node reads data from the input edges, processes it,
+ * and pushes the resulting data to the
  * output edges.
  * <p>
- * In the backward pass, a node may read data, normally deltas to adjust parameters, from the output edges, do as
+ * In the backward pass, a node may read data, normally deltas to adjust
+ * parameters, from the output edges, do as
  * internally expected, and optionally push backward data to the input edges.
  *
  * @author Miquel Sas
@@ -71,7 +75,8 @@ public abstract class Node {
 	public abstract void addInputEdge(Edge edge);
 
 	/**
-	 * Add an output edge, validating when necessary, perhaps throwing an <em>IllegalStateException</em> or an
+	 * Add an output edge, validating when necessary, perhaps throwing an
+	 * <em>IllegalStateException</em> or an
 	 * <em>IllegalArgumentException</em>.
 	 * 
 	 * @param edge The output edge.
@@ -97,9 +102,44 @@ public abstract class Node {
 	}
 
 	/**
-	 * Request values from input edges, apply node calculations and push values to output edges.
+	 * Request values from input edges, apply node calculations and push values to
+	 * output edges.
 	 */
 	public abstract void forward();
+
+	/**
+	 * Return a description made with the information available at this abstract
+	 * node level, and additionally the extended description of the node if any.
+	 * 
+	 * @return The node description.
+	 */
+	public String getDescription() {
+		StringWriter s = new StringWriter();
+		PrintWriter p = new PrintWriter(s);
+
+		/* Node class name. */
+		p.print("Node class: " + getClass().getName());
+		p.println();
+		
+		/* Input and output sizes. */
+		p.print("Input size: ");
+		p.print(getInputSize());
+		p.print(", output size: ");
+		p.print(getOutputSize());
+		p.println();
+
+		/* Input and output edges. */
+		
+		p.close();
+		return s.toString();
+	}
+
+	/**
+	 * Return an extended description particular for the node type.
+	 * 
+	 * @return The extended description.
+	 */
+	public abstract String getExtendedDescription();
 
 	/**
 	 * Return an unmodifiable list of input edges.
@@ -193,7 +233,8 @@ public abstract class Node {
 	public abstract void initialize();
 
 	/**
-	 * Check whether this node is the input node, that is, one of its input edges is the input edge of the network.
+	 * Check whether this node is the input node, that is, one of its input edges is
+	 * the input edge of the network.
 	 * 
 	 * @return A boolean.
 	 */
@@ -216,7 +257,8 @@ public abstract class Node {
 	}
 
 	/**
-	 * Check whether this node is the output node, that is, one of its output edges is the output edge of the network.
+	 * Check whether this node is the output node, that is, one of its output edges
+	 * is the output edge of the network.
 	 * 
 	 * @return A boolean.
 	 */
@@ -230,7 +272,8 @@ public abstract class Node {
 	}
 
 	/**
-	 * Check whether this node is strictly recurrent, that is, it has only one input edge and it is recurrent.
+	 * Check whether this node is strictly recurrent, that is, it has only one input
+	 * edge and it is recurrent.
 	 * 
 	 * @return A boolean.
 	 */
@@ -239,7 +282,8 @@ public abstract class Node {
 	}
 
 	/**
-	 * Check whether this node is a transfer node, it has only one input edge and one output edge.
+	 * Check whether this node is a transfer node, it has only one input edge and
+	 * one output edge.
 	 * 
 	 * @return A boolean.
 	 */
@@ -270,11 +314,20 @@ public abstract class Node {
 	}
 
 	/**
+	 * Restore from an input stream.
+	 * 
+	 * @param is The input stream.
+	 * @throws IOException
+	 */
+	public abstract void restore(InputStream is) throws IOException;
+
+	/**
 	 * Restore the properties from the input stream.
 	 * 
 	 * @param is The input stream.
 	 * @throws IOException
 	 */
+	@SuppressWarnings("unchecked")
 	protected void restoreProperties(InputStream is) throws IOException {
 		/* Clear properties. */
 		properties.clear();
@@ -339,9 +392,9 @@ public abstract class Node {
 			/* Collector. */
 			if (type.equals("Collector")) {
 				String className = IO.readString(is);
-				Collector collector = null;
+				Collector<double[]> collector = null;
 				try {
-					collector = (Collector) Class.forName(className).newInstance();
+					collector = (Collector<double[]>) Class.forName(className).newInstance();
 				} catch (Exception exc) {
 					throw new IOException(exc);
 				}
@@ -376,6 +429,14 @@ public abstract class Node {
 			throw new IllegalStateException("Invalid type: " + type);
 		}
 	}
+
+	/**
+	 * Save to an output stream.
+	 * 
+	 * @param os The output stream.
+	 * @throws IOException
+	 */
+	public abstract void save(OutputStream os) throws IOException;
 
 	/**
 	 * Save a properties container to an output stream using the <em>IO</em>
@@ -508,19 +569,4 @@ public abstract class Node {
 		String id = getName();
 		return (!id.isEmpty() ? id : super.toString());
 	}
-	/**
-	 * Restore from an input stream.
-	 * 
-	 * @param is The input stream.
-	 * @throws IOException
-	 */
-	public abstract void restore(InputStream is) throws IOException;
-
-	/**
-	 * Save to an output stream.
-	 * 
-	 * @param os The output stream.
-	 * @throws IOException
-	 */
-	public abstract void save(OutputStream os) throws IOException;
 }

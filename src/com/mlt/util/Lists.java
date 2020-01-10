@@ -262,6 +262,21 @@ public class Lists {
 	}
 
 	/**
+	 * Return the first element of a collection.
+	 * 
+	 * @param <T>        The type of the collection elements.
+	 * @param collection The collection.
+	 * @return The first element.
+	 */
+	public static <T> T getFirst(Collection<T> collection) {
+		Iterator<T> i = collection.iterator();
+		if (i.hasNext()) {
+			return i.next();
+		}
+		return null;
+	}
+
+	/**
 	 * Returns the first element of a list.
 	 *
 	 * @param <T>  The type.
@@ -276,18 +291,22 @@ public class Lists {
 	}
 
 	/**
-	 * Return the first element of a collection.
-	 * 
-	 * @param <T>        The type of the collection elements.
+	 * Returns the last element of a collection.
+	 *
+	 * @param <T>        The type.
 	 * @param collection The collection.
-	 * @return The first element.
+	 * @return The last element.
 	 */
-	public static <T> T getFirst(Collection<T> collection) {
-		Iterator<T> i = collection.iterator();
-		if (i.hasNext()) {
-			return i.next();
+	public static <T> T getLast(Collection<T> collection) {
+		if (collection == null || collection.isEmpty()) {
+			return null;
 		}
-		return null;
+		T last = null;
+		Iterator<T> i = collection.iterator();
+		while (i.hasNext()) {
+			last = i.next();
+		}
+		return last;
 	}
 
 	/**
@@ -323,6 +342,18 @@ public class Lists {
 	/**
 	 * Check in the list.
 	 *
+	 * @param <T>    The type to check.
+	 * @param value  The value to check.
+	 * @param values The list of values.
+	 * @return A boolean.
+	 */
+	public static <T> boolean in(T value, List<T> values) {
+		return values.stream().anyMatch((v) -> (v.equals(value)));
+	}
+
+	/**
+	 * Check in the list.
+	 *
 	 * @param <T>    The type to check in.
 	 * @param value  The value to check.
 	 * @param values The list of values.
@@ -339,15 +370,16 @@ public class Lists {
 	}
 
 	/**
-	 * Check in the list.
+	 * Returns the index of this value in a list of values, or -1 if this value is
+	 * not in the list.
 	 *
 	 * @param <T>    The type to check.
 	 * @param value  The value to check.
 	 * @param values The list of values.
-	 * @return A boolean.
+	 * @return The index of this value in the list or -1.
 	 */
-	public static <T> boolean in(T value, List<T> values) {
-		return values.stream().anyMatch((v) -> (v.equals(value)));
+	public static <T> int indexOf(T value, List<T> values) {
+		return values.indexOf(value);
 	}
 
 	/**
@@ -367,19 +399,6 @@ public class Lists {
 			}
 		}
 		return -1;
-	}
-
-	/**
-	 * Returns the index of this value in a list of values, or -1 if this value is
-	 * not in the list.
-	 *
-	 * @param <T>    The type to check.
-	 * @param value  The value to check.
-	 * @param values The list of values.
-	 * @return The index of this value in the list or -1.
-	 */
-	public static <T> int indexOf(T value, List<T> values) {
-		return values.indexOf(value);
 	}
 
 	/**
@@ -413,6 +432,25 @@ public class Lists {
 	 */
 	public static <T> T removeLast(List<T> list) {
 		return list.remove(list.size() - 1);
+	}
+
+	/**
+	 * Reverse the list.
+	 * 
+	 * @param <T>  The type.
+	 * @param list The list to reverse.
+	 */
+	public static <T> void reverse(List<T> list) {
+		int size = list.size();
+		int head;
+		int tail;
+		for (int i = 0; i < size; i++) {
+			head = i;
+			tail = size - head - 1;
+			T e = list.get(head);
+			list.set(head, list.get(tail));
+			list.set(tail, e);
+		}
 	}
 
 	/**

@@ -173,6 +173,14 @@ public class Pool2DNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public String getExtendedDescription() {
+		return "";
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public int getInputSize() {
 		return inputRows * inputColumns;
 	}

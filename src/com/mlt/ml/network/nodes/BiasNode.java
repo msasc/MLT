@@ -95,6 +95,14 @@ public class BiasNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public String getExtendedDescription() {
+		return "";
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public int getInputSize() {
 		return 0;
 	}
@@ -116,7 +124,8 @@ public class BiasNode extends Node {
 		if (inputEdges.size() > 0) throw new IllegalStateException("No input edges allowed");
 		if (outputEdges.size() == 0) throw new IllegalStateException("Output edges empty");
 		if (outputEdges.size() > 1) throw new IllegalStateException("More than one output edge");
-		if (outputEdges.get(0).getSize() != weights.length) throw new IllegalStateException("Invalid output edge size");
+		if (outputEdges.get(0).getSize() != weights.length) throw new IllegalStateException(
+			"Invalid output edge size");
 		/* Initialize. */
 		Arrays.fill(weights, 1.0);
 	}

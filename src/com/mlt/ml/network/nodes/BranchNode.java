@@ -43,9 +43,9 @@ public class BranchNode extends Node {
 	/** Input-output size. */
 	private int size;
 	/** Forward function. */
-	private Collector forwardFunction;
+	private Collector<double[]> forwardFunction;
 	/** Backward function. */
-	private Collector backwardFunction;
+	private Collector<double[]> backwardFunction;
 
 	/**
 	 * Constructor used for restore.
@@ -62,7 +62,11 @@ public class BranchNode extends Node {
 	 * @param forwardFunction  Forward collector.
 	 * @param backwardFunction Backward collector.
 	 */
-	public BranchNode(String name, int size, Collector forwardFunction, Collector backwardFunction) {
+	public BranchNode(
+		String name,
+		int size,
+		Collector<double[]> forwardFunction,
+		Collector<double[]> backwardFunction) {
 		super();
 		setName(name);
 		this.size = size;
@@ -129,6 +133,14 @@ public class BranchNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public String getExtendedDescription() {
+		return "";
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public int getInputSize() {
 		return size;
 	}
@@ -184,12 +196,13 @@ public class BranchNode extends Node {
 	/**
 	 * {@inheritDoc}
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public void restore(InputStream is) throws IOException {
 		restoreProperties(is);
 		size = properties.getInteger("size");
-		forwardFunction = (Collector) properties.getObject("forward-function");
-		backwardFunction = (Collector) properties.getObject("backward-function");
+		forwardFunction = (Collector<double[]>) properties.getObject("forward-function");
+		backwardFunction = (Collector<double[]>) properties.getObject("backward-function");
 	}
 
 	/**

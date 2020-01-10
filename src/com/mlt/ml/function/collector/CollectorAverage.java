@@ -27,7 +27,7 @@ import com.mlt.util.Vector;
  *
  * @author Miquel Sas
  */
-public class CollectorAverage implements Collector {
+public class CollectorAverage implements Collector<double[]> {
 
 	/** Average type. */
 	public static enum Type {
@@ -52,7 +52,7 @@ public class CollectorAverage implements Collector {
 	public double[] collect(Collection<double[]> vectors) {
 		switch (type) {
 		case EMA:
-			return Vector.averageEMA(vectors);
+			return Vector.averageEMA_Bad(vectors);
 		case SMA:
 			return Vector.averageSMA(vectors);
 		case WMA:

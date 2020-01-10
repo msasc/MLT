@@ -56,7 +56,7 @@ public class SwitchNode extends BranchNode {
 	 * @param size             Node input-output size.
 	 * @param backwardFunction Backward collector function.
 	 */
-	public SwitchNode(String id, int size, Collector backwardFunction) {
+	public SwitchNode(String id, int size, Collector<double[]> backwardFunction) {
 		super(id, size, new CollectorTransfer(), backwardFunction);
 	}
 

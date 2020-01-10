@@ -123,6 +123,14 @@ public class ActivationNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public String getExtendedDescription() {
+		return "";
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public int getInputSize() {
 		return size;
 	}

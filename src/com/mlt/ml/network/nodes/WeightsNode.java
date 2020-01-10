@@ -25,7 +25,7 @@ import com.mlt.ml.function.IndexFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 import com.mlt.ml.network.Weights;
-import com.mlt.ml.network.nodes.optimizers.SGDOptimizer;
+import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
 
 /**
  * A matrix of weights node.
@@ -80,7 +80,7 @@ public class WeightsNode extends Node {
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
 
-		optimizer = new SGDOptimizer();
+		optimizer = new AdaOptimizer();
 		optimizer.setNode(this);
 	}
 
@@ -164,6 +164,14 @@ public class WeightsNode extends Node {
 			signal += (input * weight);
 		}
 		outputValues[out] = signal;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getExtendedDescription() {
+		return "";
 	}
 
 	/**

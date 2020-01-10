@@ -173,6 +173,14 @@ public class Filter1DNode extends Node {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getExtendedDescription() {
+		return "";
+	}
+
+	/**
 	 * {@inheritDocs}
 	 */
 	@Override

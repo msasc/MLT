@@ -24,7 +24,7 @@ import com.mlt.util.Vector;
  *
  * @author Miquel Sas
  */
-public class CollectorAddition implements Collector {
+public class CollectorAddition implements Collector<double[]> {
 
 	/**
 	 * Constructor.

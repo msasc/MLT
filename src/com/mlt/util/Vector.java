@@ -18,8 +18,10 @@
  */
 package com.mlt.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Operations on vectors.
@@ -64,6 +66,31 @@ public class Vector {
 	public static double[] add(double[]... vectors) {
 		return add(Lists.asList(vectors));
 	}
+	
+	/**
+	 * Return a vector which elements are the exponential (moving) average of the
+	 * elements of the argument list of vectors.
+	 * 
+	 * @param collection The list of vectors.
+	 * @return The average vector.
+	 */
+	public static double[] averageEMA(Collection<double[]> collection) {
+		if (collection.isEmpty()) {
+			throw new IllegalArgumentException("Empty list of vectors.");
+		}
+		List<double[]> vectors = new ArrayList<>(collection);
+		Lists.reverse(vectors);
+		double alpha = 2.0 / Double.valueOf(vectors.size() + 1);
+		double[] averages = new double[vectors.get(0).length];
+		for (int t = 0; t < vectors.size(); t++) {
+			double factor = alpha * Math.pow(1 - alpha, t);
+			double[] vector = vectors.get(t);
+			for (int i = 0; i < averages.length; i++) {
+				averages[i] += (factor * vector[i]);
+			}
+		}
+		return averages;
+	}
 
 	/**
 	 * Return a vector which elements are the exponential (moving) average of the
@@ -72,19 +99,18 @@ public class Vector {
 	 * @param vectors The list of vectors.
 	 * @return The average vector.
 	 */
-	public static double[] averageEMA(Collection<double[]> vectors) {
+	public static double[] averageEMA_Bad(Collection<double[]> vectors) {
 		if (vectors.isEmpty()) {
 			throw new IllegalArgumentException("Empty list of vectors.");
 		}
 		int size = -1;
-		double alpha = -1;
+		double alpha = 2.0 / Double.valueOf(vectors.size() + 1);
 		double[] averages = null;
 		Iterator<double[]> iter = vectors.iterator();
 		while (iter.hasNext()) {
 			double[] vector = iter.next();
 			if (averages == null) {
 				size = vector.length;
-				alpha = 2.0 / Double.valueOf(size);
 				averages = new double[size];
 			}
 			for (int i = 0; i < size; i++) {

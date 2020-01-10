@@ -23,7 +23,7 @@ import com.mlt.ml.function.Collector;
  *
  * @author Miquel Sas
  */
-public class CollectorTransfer implements Collector {
+public class CollectorTransfer implements Collector<double[]> {
 
 	/**
 	 * Constructor.

@@ -30,11 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.mlt.desktop.Alert;
 import com.mlt.desktop.FileChooser;
@@ -72,12 +68,6 @@ public class Trainer extends Task {
 		 */
 		@Override
 		public int compareTo(Performance p) {
-//			if (error.compareTo(p.error) < 0 && performance.compareTo(p.performance) > 0) {
-//				return -1;
-//			}
-//			if (error.compareTo(p.error) > 0 && performance.compareTo(p.performance) < 0) {
-//				return 1;
-//			}
 			if (performance.compareTo(p.performance) > 0) {
 				return -1;
 			}
@@ -110,106 +100,6 @@ public class Trainer extends Task {
 			b.append("%");
 			return b.toString();
 		}
-	}
-
-	/**
-	 * Structure with the cloned network to calculate performances concurrently.
-	 */
-	private class PerformanceNet implements Callable<Void> {
-		/** Cloned network. */
-		Network network;
-		/** Shared track. */
-		PerformanceTrack track;
-		/** Train flag. */
-		boolean train;
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public Void call() throws Exception {
-			while (true) {
-
-				/* Check cancel. */
-				if (isCancelled()) {
-					break;
-				}
-				if (isCancelRequested()) {
-					setCancelled();
-					break;
-				}
-
-				/* Get a valid index ony for this task. */
-				int index = -1;
-				try {
-					track.lock.lock();
-					if (track.index < track.source.size() - 1) {
-						track.index++;
-						index = track.index;
-						/* Trace message. */
-						double percent = (double) (index * 100) / (double) track.source.size();
-						StringBuilder msg = new StringBuilder();
-						msg.append("Calculating ");
-						msg.append(train ? "train" : "test");
-						msg.append(" performance: ");
-						msg.append(index);
-						msg.append(" of ");
-						msg.append(track.source.size());
-						msg.append(" (");
-						msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
-						msg.append("%)");
-						updateStatusProgress(
-							STATUS_PROCESSING,
-							PROGRESS_PROCESSING,
-							msg,
-							index,
-							track.source.size());
-					}
-				} finally {
-					track.lock.unlock();
-				}
-				if (index < 0) {
-					break;
-				}
-
-				/* Process the source index data. */
-				Pattern pattern = track.source.get(index);
-				double[] patternInput = pattern.getInputValues();
-				double[] patternOutput = pattern.getOutputValues();
-				double[] networkOutput = network.calculate(patternInput);
-				boolean match = pattern.matches(networkOutput);
-				double error = distance.distance(patternOutput, networkOutput);
-
-				/* Track result. */
-				try {
-					track.lock.lock();
-					if (match) {
-						track.matches += 1;
-					}
-					track.error += error;
-				} finally {
-					track.lock.unlock();
-				}
-			}
-			return null;
-		}
-	}
-
-	/**
-	 * Structure to track data and locks during a concurrent performance
-	 * calculation.
-	 */
-	private class PerformanceTrack {
-		/** Lock. */
-		Lock lock;
-		/** Pattern source. */
-		PatternSource source;
-		/** Index. */
-		int index;
-		/** Matches. */
-		int matches;
-		/** Cumulated error. */
-		double error;
 	}
 
 	/**
@@ -314,8 +204,13 @@ public class Trainer extends Task {
 	/** Performance history. */
 	private int performanceHistory = 4;
 
-	/** A flag to control concurrent performance calclation. */
-	private boolean concurrentPerformance = false;
+	/**
+	 * A boolean that indicates if network data should be saved.When the trainer is
+	 * executed in a report mode to track the network performance along a fixed
+	 * number of epochs and report each epoch data, there is no interest in saving
+	 * the network data.
+	 */
+	private boolean saveNetworkData = false;
 
 	/**
 	 * Constructor.
@@ -342,68 +237,8 @@ public class Trainer extends Task {
 	 * 
 	 * @param label The label.
 	 * @param train Train/test indicator.
-	 * @param A     boolean indicating whether the performance sould be calculated
-	 *              concurrently.
 	 */
-	private Performance calculatePerformance(String label, boolean train, boolean concurrent) {
-		if (concurrent) {
-			return calculatePerformancePool(label, train);
-		}
-		return calculatePerformanceRaw(label, train);
-	}
-
-	/**
-	 * Calculate the performance concurrently.
-	 * 
-	 * @param label The label.
-	 * @param train Train/test indicator.
-	 */
-	private Performance calculatePerformancePool(String label, boolean train) {
-		removeStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
-		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
-
-		/* Performance track. */
-		PerformanceTrack track = new PerformanceTrack();
-		track.lock = new ReentrantLock();
-		track.source = train ? sourceTrain : sourceTest;
-		track.index = -1;
-		track.matches = 0;
-		track.error = 0;
-
-		/* List of performance networks. */
-		List<PerformanceNet> pnets = new ArrayList<>();
-		while (pnets.size() < Runtime.getRuntime().availableProcessors()) {
-			PerformanceNet pnet = new PerformanceNet();
-			pnet.network = network.clone();
-			pnet.track = track;
-			pnet.train = train;
-			pnets.add(pnet);
-		}
-
-		/* Invoke. */
-		ForkJoinPool.commonPool().invokeAll(pnets);
-
-		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
-		double size = track.source.size();
-		double error = track.error / size;
-		double matches = track.matches;
-
-		Performance performance = new Performance();
-		performance.label = label;
-		performance.error = Numbers.getBigDecimal(error, errorDecimals);
-		performance.performance =
-			Numbers.getBigDecimal((matches * 100) / size, performanceDecimals);
-
-		return performance;
-	}
-
-	/**
-	 * Calculate the performance.
-	 * 
-	 * @param label The label.
-	 * @param train Train/test indicator.
-	 */
-	private Performance calculatePerformanceRaw(String label, boolean train) {
+	private Performance calculatePerformance(String label, boolean train) {
 		removeStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
 		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
 
@@ -525,8 +360,10 @@ public class Trainer extends Task {
 		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
 
 		/* Check restore or create a new file. */
-		if (!checkRestore()) {
-			return;
+		if (saveNetworkData) {
+			if (!checkRestore()) {
+				return;
+			}
 		}
 
 		/* Perfirnces history. */
@@ -534,8 +371,8 @@ public class Trainer extends Task {
 		List<Performance> testPerformances = new ArrayList<>();
 
 		/* Calculate train and test performance. */
-		trainPerformance = calculatePerformance("Train flat", true, concurrentPerformance);
-		testPerformance = calculatePerformance("Test", false, concurrentPerformance);
+		trainPerformance = calculatePerformance("Train flat", true);
+		testPerformance = calculatePerformance("Test", false);
 
 		/* Register performances and display them. */
 		trainPerformances.add(trainPerformance);
@@ -626,13 +463,12 @@ public class Trainer extends Task {
 
 			/* Current performances. */
 			String testLabel = "Test";
-//			Performance trainPerf = calculatePerformance(trainLabel, true, concurrentPerformance);
 			Performance trainPerf = new Performance();
 			trainPerf.label = scanFlat ? "Train flat" : "Train score";
 			trainPerf.error = Numbers.getBigDecimal(epochError / size, errorDecimals);
 			trainPerf.performance =
 				Numbers.getBigDecimal((matches * 100) / size, performanceDecimals);
-			Performance testPerf = calculatePerformance(testLabel, false, concurrentPerformance);
+			Performance testPerf = calculatePerformance(testLabel, false);
 
 			/*
 			 * Save data if both performances and errors are better. Save only if the scan
@@ -643,9 +479,11 @@ public class Trainer extends Task {
 				testPerf.isBetterThan(testPerformance)) {
 				trainPerformance = trainPerf;
 				testPerformance = testPerf;
-				updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, "Saving network...");
-				saveNetwork();
-				clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+				if (saveNetworkData) {
+					updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, "Saving network...");
+					saveNetwork();
+					clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+				}
 			}
 
 			/* Register performances and display them. */
@@ -779,7 +617,7 @@ public class Trainer extends Task {
 		double factor = (double) (pattern) / (double) size;
 		BigDecimal percent = new BigDecimal(100.0 * factor).setScale(2, RoundingMode.HALF_UP);
 		StringBuilder msg = new StringBuilder();
-		msg.append("Epoch " + epoch);
+		msg.append("Epoch " + epoch + " of " + epochs);
 		msg.append(" Pattern " + pattern);
 		msg.append(" of ");
 		msg.append(size);
@@ -842,15 +680,6 @@ public class Trainer extends Task {
 				}
 			}
 		}
-	}
-
-	/**
-	 * @param concurrent A boolean to set whether performance will be
-	 *                   calculated concurrently by a pool of cloned
-	 *                   networks.
-	 */
-	public void setConcurrentPerformance(boolean concurrent) {
-		this.concurrentPerformance = concurrent;
 	}
 
 	/**
@@ -965,23 +794,25 @@ public class Trainer extends Task {
 		if (sourceTest == null) {
 			sourceTest = sourceTrain;
 		}
-		if (filePath == null) {
-			throw new IllegalStateException(
-				"The file path is required to save the network data");
-		}
-		File path = new File(filePath);
-		if (!path.exists()) {
-			throw new IllegalStateException("The file path does not exist");
-		}
-		if (!path.isDirectory()) {
-			throw new IllegalStateException("The file path must be a directory");
-		}
-		if (fileRoot == null) {
-			throw new IllegalStateException(
-				"The file root is required to save the network data");
-		}
-		if (fileExtension == null) {
-			fileExtension = "dat";
+		if (saveNetworkData) {
+			if (filePath == null) {
+				throw new IllegalStateException(
+					"The file path is required to save the network data");
+			}
+			File path = new File(filePath);
+			if (!path.exists()) {
+				throw new IllegalStateException("The file path does not exist");
+			}
+			if (!path.isDirectory()) {
+				throw new IllegalStateException("The file path must be a directory");
+			}
+			if (fileRoot == null) {
+				throw new IllegalStateException(
+					"The file root is required to save the network data");
+			}
+			if (fileExtension == null) {
+				fileExtension = "dat";
+			}
 		}
 
 		/* Check shuffle supported. */

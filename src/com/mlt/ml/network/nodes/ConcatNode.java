@@ -25,7 +25,8 @@ import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 
 /**
- * A concatenation node receives several input edges (nodes) and produces a single output that concatenates all inputs.
+ * A concatenation node receives several input edges (nodes) and produces a
+ * single output that concatenates all inputs.
  *
  * @author Miquel Sas
  */
@@ -113,6 +114,14 @@ public class ConcatNode extends Node {
 			index += inputValues.length;
 		}
 		pushForward(outputValues);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getExtendedDescription() {
+		return "";
 	}
 
 	/**

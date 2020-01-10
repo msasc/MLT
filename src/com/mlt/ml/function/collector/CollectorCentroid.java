@@ -23,7 +23,7 @@ import com.mlt.ml.function.Collector;
  *
  * @author Miquel Sas
  */
-public class CollectorCentroid implements Collector {
+public class CollectorCentroid implements Collector<double[]> {
 
 	/**
 	 * Constructor.

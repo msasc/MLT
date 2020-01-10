@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 
@@ -77,13 +82,13 @@ public class MNISTTrainer {
 	}
 
 	private static Trainer getTrainerBP(int... sizes) {
-		
+
 		Trainer trainer = new Trainer();
 		trainer.setProgressModulus(100);
 		trainer.setEpochs(500);
 
 		Network network = new Network();
-		
+
 		StringBuilder name = new StringBuilder();
 		for (int i = 0; i < sizes.length; i++) {
 			if (i > 0) {
@@ -91,13 +96,15 @@ public class MNISTTrainer {
 			}
 			name.append("BP");
 			name.append(sizes[i]);
-			int inputSize = (i == 0 ? MNIST.INPUT_SIZE : sizes[i-1]);
+			int inputSize = (i == 0 ? MNIST.INPUT_SIZE : sizes[i - 1]);
 			int outputSize = sizes[i];
-			Activation activation = (i < sizes.length - 1 ? new ActivationSigmoid() : new ActivationSoftMax());
-			network.addBranch(Builder.branchPerceptron("", inputSize, outputSize, activation));
+			Activation activation =
+				(i < sizes.length - 1 ? new ActivationSigmoid() : new ActivationSoftMax());
+			String id = Integer.toString(i + 1);
+			network.addBranch(Builder.branchPerceptron(id, inputSize, outputSize, activation));
 		}
 		network.setName("MNIST-IN784-" + name.toString());
-		
+
 		trainer.setNetwork(network);
 
 		trainer.setPatternSourceTest(MNIST.getSource(new ArrayList<>(testImages)));

@@ -70,13 +70,13 @@ public class WeightsNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param name       Node name.
+	 * @param prefix     Node name prefix.
 	 * @param inputSize  Input size.
 	 * @param outputSize Output size.
 	 */
-	public WeightsNode(String name, int inputSize, int outputSize) {
+	public WeightsNode(String prefix, int inputSize, int outputSize) {
 		super();
-		setName(name);
+		setName(getName(prefix));
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
 

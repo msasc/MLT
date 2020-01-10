@@ -57,18 +57,18 @@ public class BranchNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param name             Node name.
+	 * @param prefix           Node name prefix.
 	 * @param size             The input-output size.
 	 * @param forwardFunction  Forward collector.
 	 * @param backwardFunction Backward collector.
 	 */
 	public BranchNode(
-		String name,
+		String prefix,
 		int size,
 		Collector<double[]> forwardFunction,
 		Collector<double[]> backwardFunction) {
 		super();
-		setName(name);
+		setName(getName(prefix));
 		this.size = size;
 		this.forwardFunction = forwardFunction;
 		this.backwardFunction = backwardFunction;

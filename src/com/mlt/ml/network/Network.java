@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -237,7 +239,7 @@ public class Network {
 	public double[] forward(double[] inputValues) {
 		return forward(inputValues, true);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -284,6 +286,23 @@ public class Network {
 			}
 		}
 		return outputValues;
+	}
+
+	/**
+	 * Return a network description for reporting.
+	 * 
+	 * @return The description.
+	 */
+	public String getDescription() {
+		StringWriter s = new StringWriter();
+		PrintWriter p = new PrintWriter(s);
+		p.println(getName());
+		p.println();
+		for (Node node : nodes) {
+			p.println(node.getDescription());
+		}
+		p.close();
+		return s.toString();
 	}
 
 	/**

@@ -181,7 +181,7 @@ public class Filter2DNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param name          Node name.
+	 * @param prefix        Node name prefix.
 	 * @param inputRows     Input rows.
 	 * @param inputColumns  Input columns.
 	 * @param filterRows    Filter rows.
@@ -190,11 +190,16 @@ public class Filter2DNode extends Node {
 	 * @param padding       Padding flag.
 	 * @param padValue      Pad value.
 	 */
-	public Filter2DNode(String name, int inputRows, int inputColumns, double[][] filter,
+	public Filter2DNode(
+		String prefix,
+		int inputRows,
+		int inputColumns,
+		double[][] filter,
 		boolean padding,
 		double padValue) {
 		super();
-		setName(name);
+		
+		setName(getName(prefix));
 
 		/* Rows and columns. */
 		this.filterRows = filter.length;

@@ -49,19 +49,19 @@ public class Builder {
 		List<Node> nodes = new ArrayList<>();
 		
 		Edge inputEdge = new Edge(inputSize);
-		WeightsNode weightsNode = new WeightsNode(id + "-Weights", inputSize, outputSize);
+		WeightsNode weightsNode = new WeightsNode(id, inputSize, outputSize);
 		weightsNode.addInputEdge(inputEdge);
 		nodes.add(weightsNode);
 		
-		BiasNode biasNode = new BiasNode(id + "-Bias", outputSize);
+		BiasNode biasNode = new BiasNode(id, outputSize);
 		nodes.add(biasNode);
 		
-		AdditionNode additionNode = new AdditionNode(id + "-Addition", outputSize);
+		AdditionNode additionNode = new AdditionNode(id, outputSize);
 		connect(outputSize, biasNode, additionNode);
 		connect(outputSize, weightsNode, additionNode);
 		nodes.add(additionNode);
 		
-		ActivationNode activationNode = new ActivationNode(id + "-Activation", outputSize, activation);
+		ActivationNode activationNode = new ActivationNode(id, outputSize, activation);
 		connect(outputSize, additionNode, activationNode);
 		Edge outputEdge = new Edge(outputSize);
 		activationNode.addOutputEdge(outputEdge);

@@ -49,13 +49,13 @@ public class ActivationNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param name       Node name.
+	 * @param prefix     Node name prefix.
 	 * @param size       The size of values that flow throw the node.
 	 * @param activation The activation function.
 	 */
-	public ActivationNode(String name, int size, Activation activation) {
+	public ActivationNode(String prefix, int size, Activation activation) {
 		super();
-		setName(name);
+		setName(getName(prefix));
 		this.size = size;
 		this.activation = activation;
 	}
@@ -151,10 +151,12 @@ public class ActivationNode extends Node {
 		/* Validate. */
 		if (inputEdges.size() == 0) throw new IllegalStateException("Input edges empty");
 		if (inputEdges.size() > 1) throw new IllegalStateException("More than one input edge");
-		if (inputEdges.get(0).getSize() != size) throw new IllegalStateException("Invalid input edge size");
+		if (inputEdges.get(0)
+			.getSize() != size) throw new IllegalStateException("Invalid input edge size");
 		if (outputEdges.size() == 0) throw new IllegalStateException("Output edges empty");
 		if (outputEdges.size() > 1) throw new IllegalStateException("More than one output edge");
-		if (outputEdges.get(0).getSize() != size) throw new IllegalStateException("Invalid output edge size");
+		if (outputEdges.get(0)
+			.getSize() != size) throw new IllegalStateException("Invalid output edge size");
 		if (activation == null) throw new IllegalStateException("Activation is null");
 	}
 

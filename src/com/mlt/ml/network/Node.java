@@ -34,6 +34,7 @@ import com.mlt.ml.function.Collector;
 import com.mlt.ml.network.nodes.WeightsOptimizer;
 import com.mlt.util.IO;
 import com.mlt.util.Properties;
+import com.mlt.util.Strings;
 
 /**
  * A node of a computational graph.
@@ -116,20 +117,17 @@ public abstract class Node {
 	public String getDescription() {
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
-
-		/* Node class name. */
-		p.print("Node class: " + getClass().getName());
-		p.println();
-		
-		/* Input and output sizes. */
-		p.print("Input size: ");
-		p.print(getInputSize());
-		p.print(", output size: ");
-		p.print(getOutputSize());
-		p.println();
-
-		/* Input and output edges. */
-		
+		p.print(getName());
+		p.print(" (In: ");
+		for (int i = 0; i < inputEdges.size(); i++) {
+			if (i > 0) p.print(", ");
+			p.print(inputEdges.get(i).getSize());
+		}
+		p.print(", Out: ");
+		for (int i = 0; i < outputEdges.size(); i++) {
+			if (i > 0) p.print(", ");
+			p.print(outputEdges.get(i).getSize());
+		}
 		p.close();
 		return s.toString();
 	}
@@ -164,7 +162,22 @@ public abstract class Node {
 	 */
 	public String getName() {
 		String name = properties.getString("name");
-		return (name == null ? "" : name);
+		return (name == null ? getName(null) : name);
+	}
+
+	/**
+	 * Return simple class name after removing the word "Node".
+	 * 
+	 * @return The simplified class name.
+	 */
+	protected String getName(String prefix) {
+		StringBuilder name = new StringBuilder();
+		if (prefix != null && !prefix.isEmpty()) {
+			name.append(prefix);
+			name.append("-");
+		}
+		name.append(Strings.replace(getClass().getSimpleName(), "Node", ""));
+		return name.toString();
 	}
 
 	/**

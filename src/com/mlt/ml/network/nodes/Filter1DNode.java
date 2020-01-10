@@ -66,22 +66,29 @@ public class Filter1DNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param name         Node name.
+	 * @param prefix       Node name prefix.
 	 * @param inputSize    Input size, necessary to validate the filter and
 	 *                     calculate the output size.
 	 * @param filterValues The filter.
 	 * @param padding      A boolean indicating whether padding should be applied.
 	 * @param padValue     Pad value.
 	 */
-	public Filter1DNode(String name, int inputSize, double[] filterValues, boolean padding,
+	public Filter1DNode(
+		String prefix,
+		int inputSize,
+		double[] filterValues,
+		boolean padding,
 		double padValue) {
+		
 		super();
+		
 		if (filterValues == null) throw new NullPointerException();
 		if (filterValues.length > inputSize) throw new IllegalArgumentException("Filter too big");
 		if (!Numbers.isOdd(filterValues.length)) throw new IllegalArgumentException(
 			"Filter length must be odd");
 
-		setName(name);
+		setName(getName(prefix));
+		
 		this.filterSize = filterValues.length;
 		this.filterValues = filterValues;
 		this.padding = padding;

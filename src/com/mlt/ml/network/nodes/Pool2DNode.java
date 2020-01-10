@@ -63,13 +63,18 @@ public class Pool2DNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param name         Node name.
+	 * @param prefix       Node prefix.
 	 * @param inputRows    Input rows.
 	 * @param inputColumns Input columns.
 	 * @param poolRows     Pool rows.
 	 * @param poolColumns  Pool columns.
 	 */
-	public Pool2DNode(String name, int inputRows, int inputColumns, int poolRows, int poolColumns) {
+	public Pool2DNode(
+		String prefix,
+		int inputRows,
+		int inputColumns,
+		int poolRows,
+		int poolColumns) {
 		super();
 
 		/* Pool rows must be a multiple of input rows. */
@@ -81,7 +86,7 @@ public class Pool2DNode extends Node {
 			throw new IllegalArgumentException("Invalid pool columns");
 		}
 
-		setName(name);
+		setName(getName(prefix));
 		this.inputRows = inputRows;
 		this.inputColumns = inputColumns;
 		this.poolRows = poolRows;

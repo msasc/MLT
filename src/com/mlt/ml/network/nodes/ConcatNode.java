@@ -45,11 +45,11 @@ public class ConcatNode extends Node {
 	/**
 	 * Constructor for restore.
 	 * 
-	 * @param name Node name.
+	 * @param prefix Node name prefix.
 	 */
-	public ConcatNode(String name) {
+	public ConcatNode(String prefix) {
 		super();
-		setName(name);
+		setName(getName(prefix));
 	}
 
 	/**

@@ -50,11 +50,11 @@ public class Pool1DNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param name      Node name.
+	 * @param prefix    Node name prefix.
 	 * @param inputSize Input size.
 	 * @param poolSize  Pool size.
 	 */
-	public Pool1DNode(String name, int inputSize, int poolSize) {
+	public Pool1DNode(String prefix, int inputSize, int poolSize) {
 		super();
 
 		/* Pool size must be a multiple of input size. */
@@ -62,7 +62,7 @@ public class Pool1DNode extends Node {
 			throw new IllegalArgumentException("Invalid pool size");
 		}
 
-		setName(name);
+		setName(getName(prefix));
 		this.inputSize = inputSize;
 		this.poolSize = poolSize;
 		this.outputSize = inputSize / poolSize;

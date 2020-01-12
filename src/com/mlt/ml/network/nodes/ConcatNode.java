@@ -43,16 +43,6 @@ public class ConcatNode extends Node {
 	}
 
 	/**
-	 * Constructor for restore.
-	 * 
-	 * @param prefix Node name prefix.
-	 */
-	public ConcatNode(String prefix) {
-		super();
-		setName(getName(prefix));
-	}
-
-	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -114,14 +104,6 @@ public class ConcatNode extends Node {
 			index += inputValues.length;
 		}
 		pushForward(outputValues);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getExtendedDescription() {
-		return "";
 	}
 
 	/**

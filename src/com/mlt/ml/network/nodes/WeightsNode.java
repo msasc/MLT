@@ -24,7 +24,7 @@ import java.io.OutputStream;
 import com.mlt.ml.function.IndexFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
-import com.mlt.ml.network.Weights;
+import com.mlt.ml.network.Gaussian;
 import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
 
 /**
@@ -70,13 +70,12 @@ public class WeightsNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix     Node name prefix.
 	 * @param inputSize  Input size.
 	 * @param outputSize Output size.
 	 */
-	public WeightsNode(String prefix, int inputSize, int outputSize) {
+	public WeightsNode(int inputSize, int outputSize) {
 		super();
-		setName(getName(prefix));
+		
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
 
@@ -167,14 +166,6 @@ public class WeightsNode extends Node {
 	}
 
 	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getExtendedDescription() {
-		return "";
-	}
-
-	/**
 	 * @return The input deltas.
 	 */
 	public double[] getInputDeltas() {
@@ -242,7 +233,7 @@ public class WeightsNode extends Node {
 		/* Initialize. */
 		weights = new double[inputSize][outputSize];
 		initializeVectorsAndFunctions();
-		Weights w = new Weights(true);
+		Gaussian w = new Gaussian(true);
 		for (int in = 0; in < inputSize; in++) {
 			for (int out = 0; out < outputSize; out++) {
 				weights[in][out] = w.nextGaussian();
@@ -259,6 +250,7 @@ public class WeightsNode extends Node {
 		outputValues = new double[outputSize];
 		backwardFunction = new IndexFunction(inputSize, (in) -> backward(in));
 		forwardFunction = new IndexFunction(outputSize, (out) -> forward(out));
+		optimizer.initializeOptimizer();
 	}
 
 	/**

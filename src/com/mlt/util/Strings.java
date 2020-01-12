@@ -319,6 +319,18 @@ public class Strings {
 	}
 
 	/**
+	 * Left pad a number. Parent Apache does not work as expected.
+	 *
+	 * @param num  The number to pad out, can not be null.
+	 * @param size The size to pad to
+	 * @return The left padded string.
+	 */
+	public static String leftPad(Number num, int size) {
+		if (num == null) throw new NullPointerException();
+		return leftPad(num.toString(), size, SPACE);
+	}
+
+	/**
 	 * Left pad a string. Parent Apache does not work as expected.
 	 *
 	 * @param str  The string to pad out, may be null.
@@ -511,6 +523,18 @@ public class Strings {
 			return null;
 		}
 		return new StringBuilder(str).reverse().toString();
+	}
+
+	/**
+	 * Right pad a number. Parent Apache does not work as expected.
+	 *
+	 * @param num  The number to pad out, can not be null.
+	 * @param size The size to pad to
+	 * @return The right padded string.
+	 */
+	public static String rightPad(Number num, int size) {
+		if (num == null) throw new NullPointerException();
+		return rightPad(num.toString(), size, SPACE);
 	}
 
 	/**

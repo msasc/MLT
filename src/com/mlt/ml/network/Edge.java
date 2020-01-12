@@ -185,6 +185,14 @@ public class Edge {
 		b.append("]");
 		return b.toString();
 	}
+	
+	/**
+	 * Initialize by clearing the queues.
+	 */
+	public void initialize() {
+		forwardQueue.clear();
+		backwardQueue.clear();
+	}
 
 	/**
 	 * Check whether the forward and backward queues are empty.

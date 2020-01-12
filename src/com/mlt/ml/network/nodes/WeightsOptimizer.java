@@ -60,6 +60,11 @@ public abstract class WeightsOptimizer {
 	 * backward per weight pass.
 	 */
 	public abstract void initializeBackward();
+	
+	/**
+	 * Initialize the optimizer.
+	 */
+	public abstract void initializeOptimizer();
 
 	/**
 	 * @param node The parent weights node.

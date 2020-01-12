@@ -22,7 +22,10 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -116,10 +119,8 @@ public class Trainer extends Task {
 					return true;
 				}
 				String name = file.getName();
-				if (fileExtension != null) {
-					if (!name.toLowerCase().endsWith("." + fileExtension.toLowerCase())) {
-						return false;
-					}
+				if (!name.toLowerCase().endsWith(".dat")) {
+					return false;
 				}
 				if (fileRoot != null) {
 					if (!name.toLowerCase().startsWith(fileRoot.toLowerCase())) {
@@ -192,9 +193,6 @@ public class Trainer extends Task {
 	private String filePath;
 	/** File root name. */
 	private String fileRoot;
-	/** File extension. */
-	private String fileExtension;
-
 	/** Distance function. */
 	private Distance distance = new DistanceEuclidean();
 	/** Last train performance. */
@@ -203,14 +201,24 @@ public class Trainer extends Task {
 	private Performance testPerformance;
 	/** Performance history. */
 	private int performanceHistory = 4;
+	/** History of train performances. */
+	private List<Performance> trainPerformances = new ArrayList<>();
+	/** History of test performances. */
+	private List<Performance> testPerformances = new ArrayList<>();
 
 	/**
 	 * A boolean that indicates if network data should be saved.When the trainer is
-	 * executed in a report mode to track the network performance along a fixed
-	 * number of epochs and report each epoch data, there is no interest in saving
-	 * the network data.
+	 * is used to performance report along a fixed number of epochs, there is no
+	 * interest in saving the network data.
 	 */
-	private boolean saveNetworkData = false;
+	private boolean saveNetworkData = true;
+	/**
+	 * A boolean that indicates that the training process will be used to generate a
+	 * performance report.
+	 */
+	private boolean generateReport = false;
+	/** The name of the report file. */
+	private String reportFile;
 
 	/**
 	 * Constructor.
@@ -351,6 +359,9 @@ public class Trainer extends Task {
 
 		/* Validate. */
 		validate();
+		
+		/* Initialize the network. */
+		network.initialize();
 
 		/* Clear messages. */
 		clearMessage();
@@ -358,6 +369,7 @@ public class Trainer extends Task {
 		clearStatusLabel(STATUS_TRAIN, LABEL_TRAIN);
 		clearStatusLabel(STATUS_TEST, LABEL_TEST);
 		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+		updateProgress(0, 0);
 
 		/* Check restore or create a new file. */
 		if (saveNetworkData) {
@@ -366,9 +378,9 @@ public class Trainer extends Task {
 			}
 		}
 
-		/* Perfirnces history. */
-		List<Performance> trainPerformances = new ArrayList<>();
-		List<Performance> testPerformances = new ArrayList<>();
+		/* Perfornces history. */
+		trainPerformances.clear();
+		testPerformances.clear();
 
 		/* Calculate train and test performance. */
 		trainPerformance = calculatePerformance("Train flat", true);
@@ -379,7 +391,7 @@ public class Trainer extends Task {
 		testPerformances.add(testPerformance);
 		updateStatusLabel(STATUS_TRAIN, LABEL_TRAIN, toString(trainPerformances));
 		updateStatusLabel(STATUS_TEST, LABEL_TEST, toString(testPerformances));
-		updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformance());
+		updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformanceMessage());
 
 		/* Iterate epochs. Start with a flat scan. */
 		calculateTotalWork();
@@ -491,14 +503,28 @@ public class Trainer extends Task {
 			testPerformances.add(testPerf);
 			updateStatusLabel(STATUS_TRAIN, LABEL_TRAIN, toString(trainPerformances));
 			updateStatusLabel(STATUS_TEST, LABEL_TEST, toString(testPerformances));
-			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformance());
+			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformanceMessage());
 
 			/* Change scan flag. */
 			scanFlat = score ? !scanFlat : true;
 		}
+
+		/* Compute has finished, generate a report if required. */
+		if (!isCancelled() && generateReport) {
+			if (reportFile == null) {
+				reportFile = "report";
+			}
+			File file = new File(filePath, reportFile + ".txt");
+			FileWriter fw = new FileWriter(file, true);
+			fw.append(getReport());
+			fw.close();
+		}
 	}
 
-	private String getBestPerformance() {
+	/**
+	 * @return The best performance message.
+	 */
+	private String getBestPerformanceMessage() {
 		StringBuilder msg = new StringBuilder();
 		msg.append("Best performance -> train (");
 		msg.append(trainPerformance);
@@ -506,62 +532,6 @@ public class Trainer extends Task {
 		msg.append(testPerformance);
 		msg.append(")");
 		return msg.toString();
-	}
-
-	/**
-	 * @param performances The list of performances.
-	 * @return The string displaying them.
-	 */
-	private String toString(List<Performance> performances) {
-		if (performances.size() > performanceHistory) {
-			performances.remove(0);
-		}
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < performances.size(); i++) {
-			if (i > 0) {
-				b.append(", ");
-			}
-			b.append("(");
-			b.append(performances.get(i).toString());
-			b.append(")");
-		}
-		return b.toString();
-	}
-
-	/**
-	 * @param size The size or number of indexes.
-	 * @return The list of flat indexes.
-	 */
-	private int[] getIndexesFlat(int size) {
-		int[] indexes = new int[size];
-		for (int i = 0; i < size; i++) {
-			indexes[i] = i;
-		}
-		return indexes;
-	}
-
-	/**
-	 * @param size     The size or number of indexes.
-	 * @param scoreMap The score map.
-	 * @return The list of score indexes.
-	 */
-	private int[] getIndexesScore(int size, TreeMap<Double, Integer> scoreMap) {
-		int scoreSize = ThreadLocalRandom.current().nextInt(size / 2) + 1;
-		int[] scoreIndexes = new int[scoreSize];
-		Iterator<Integer> iter = scoreMap.values().iterator();
-		int index = 0;
-		while (iter.hasNext()) {
-			scoreIndexes[index++] = iter.next();
-			if (index >= scoreSize) {
-				break;
-			}
-		}
-		List<Integer> indexes = new ArrayList<>();
-		while (indexes.size() < size) {
-			int i = ThreadLocalRandom.current().nextInt(scoreSize);
-			indexes.add(scoreIndexes[i]);
-		}
-		return Lists.toIntegerArray(indexes);
 	}
 
 	/**
@@ -608,6 +578,42 @@ public class Trainer extends Task {
 	}
 
 	/**
+	 * @param size The size or number of indexes.
+	 * @return The list of flat indexes.
+	 */
+	private int[] getIndexesFlat(int size) {
+		int[] indexes = new int[size];
+		for (int i = 0; i < size; i++) {
+			indexes[i] = i;
+		}
+		return indexes;
+	}
+
+	/**
+	 * @param size     The size or number of indexes.
+	 * @param scoreMap The score map.
+	 * @return The list of score indexes.
+	 */
+	private int[] getIndexesScore(int size, TreeMap<Double, Integer> scoreMap) {
+		int scoreSize = ThreadLocalRandom.current().nextInt(size / 2) + 1;
+		int[] scoreIndexes = new int[scoreSize];
+		Iterator<Integer> iter = scoreMap.values().iterator();
+		int index = 0;
+		while (iter.hasNext()) {
+			scoreIndexes[index++] = iter.next();
+			if (index >= scoreSize) {
+				break;
+			}
+		}
+		List<Integer> indexes = new ArrayList<>();
+		while (indexes.size() < size) {
+			int i = ThreadLocalRandom.current().nextInt(scoreSize);
+			indexes.add(scoreIndexes[i]);
+		}
+		return Lists.toIntegerArray(indexes);
+	}
+
+	/**
 	 * @param epoch   The epoch.
 	 * @param pattern The pattern index.
 	 * @param size    The size or number of patterns.
@@ -646,9 +652,41 @@ public class Trainer extends Task {
 		}
 		index++;
 		String fileName =
-			fileRoot + "-" + Strings.leftPad(Integer.toString(index), 2, "0") + "." + fileExtension;
+			fileRoot + "-" + Strings.leftPad(Integer.toString(index), 2, "0") + ".dat";
 		File file = new File(filePath, fileName);
 		return file;
+	}
+
+	/**
+	 * @return The current performance report.
+	 */
+	private String getReport() {
+
+		int size = trainPerformances.size();
+		int padError = errorDecimals + 4;
+		int padPerformance = performanceDecimals + 5;
+		int padIndex = Numbers.getDigits(size) + 2;
+		int padRule = padIndex + (2 * padError) + (2 * padPerformance);
+
+		StringWriter s = new StringWriter();
+		PrintWriter p = new PrintWriter(s);
+		p.println(Strings.repeat("-", padRule));
+		p.println(network.getDescription());
+		
+		for (int i = 0; i < size; i++) {
+			int index = i + 1;
+			Performance train = trainPerformances.get(i);
+			Performance test = testPerformances.get(i);
+			p.print(Strings.rightPad(index, padIndex));
+			p.print(Strings.leftPad(train.error, padError));
+			p.print(Strings.leftPad(train.performance, padPerformance));
+			p.print(Strings.leftPad(test.error, padError));
+			p.print(Strings.leftPad(test.performance, padPerformance));
+			p.println();
+		}
+		p.println();
+		p.close();
+		return s.toString();
 	}
 
 	/**
@@ -719,10 +757,13 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * @param fileExtension The file extension.
+	 * @param generateReport A boolean.
+	 * @param reportFile     The name of the report file.
 	 */
-	public void setFileExtension(String fileExtension) {
-		this.fileExtension = fileExtension;
+	public void setGenerateReport(boolean generateReport, String reportFile) {
+		this.generateReport = generateReport;
+		this.reportFile = reportFile;
+		this.saveNetworkData = !generateReport;
 	}
 
 	/**
@@ -782,6 +823,29 @@ public class Trainer extends Task {
 	}
 
 	/**
+	 * @param performances The list of performances.
+	 * @return The string displaying them.
+	 */
+	private String toString(List<Performance> performances) {
+		List<Performance> toList = new ArrayList<>();
+		int toLoad = Math.min(performances.size(), performanceHistory);
+		int size = performances.size();
+		for (int i = 0; i < toLoad; i++) {
+			toList.add(performances.get(size - toLoad + i));
+		}
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < toList.size(); i++) {
+			if (i > 0) {
+				b.append(", ");
+			}
+			b.append("(");
+			b.append(toList.get(i).toString());
+			b.append(")");
+		}
+		return b.toString();
+	}
+
+	/**
 	 * Validate the task after setting the network, the files and the sources.
 	 */
 	private void validate() {
@@ -809,9 +873,6 @@ public class Trainer extends Task {
 			if (fileRoot == null) {
 				throw new IllegalStateException(
 					"The file root is required to save the network data");
-			}
-			if (fileExtension == null) {
-				fileExtension = "dat";
 			}
 		}
 

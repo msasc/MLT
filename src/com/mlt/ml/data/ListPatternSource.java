@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2015 Miquel Sas
  * 
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  * 
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  * 
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 
@@ -28,6 +33,13 @@ public class ListPatternSource implements PatternSource {
 
 	/** The underlying pattern list. */
 	private List<Pattern> patterns;
+	/** The description. */
+	private String description;
+
+	/**
+	 * Contructor to clone the source.
+	 */
+	private ListPatternSource() {}
 
 	/**
 	 * Constructor.
@@ -64,8 +76,34 @@ public class ListPatternSource implements PatternSource {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public PatternSource clone() {
+		ListPatternSource source = new ListPatternSource();
+		source.patterns = new ArrayList<>(this.patterns);
+		source.description = this.description;
+		return source;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public Pattern get(int index) {
 		return patterns.get(index);
+	}
+
+	/**
+	 * @return The description.
+	 */
+	@Override
+	public String getDescription() {
+		return description;
+	}
+
+	/**
+	 * @param description The description.
+	 */
+	public void setDescription(String description) {
+		this.description = description;
 	}
 
 	/**

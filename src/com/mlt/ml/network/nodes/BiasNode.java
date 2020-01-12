@@ -45,12 +45,10 @@ public class BiasNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix Node name prefix.
-	 * @param size   The bias size.
+	 * @param size The bias size.
 	 */
-	public BiasNode(String prefix, int size) {
+	public BiasNode(int size) {
 		super();
-		setName(getName(prefix));
 		this.weights = new double[size];
 	}
 
@@ -89,14 +87,6 @@ public class BiasNode extends Node {
 	@Override
 	public void forward() {
 		pushForward(weights);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getExtendedDescription() {
-		return "";
 	}
 
 	/**

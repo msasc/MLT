@@ -288,20 +288,6 @@ class Graph {
 	}
 
 	/**
-	 * Return the input edge or null.
-	 * 
-	 * @param map The map of nodes.
-	 * @return The input edge or null.
-	 */
-	private static Edge getInputEdge(Map<String, Node> map) {
-		List<Edge> inputEdges = getInputEdges(map);
-		if (!inputEdges.isEmpty()) {
-			return inputEdges.get(0);
-		}
-		return null;
-	}
-
-	/**
 	 * Return a list with all input edges in the map of nodes.
 	 * 
 	 * @param map The map of nodes.
@@ -406,20 +392,6 @@ class Graph {
 	}
 
 	/**
-	 * Return the output edge or null.
-	 * 
-	 * @param map The map of nodes.
-	 * @return The output edge or null.
-	 */
-	private static Edge getOutputEdge(Map<String, Node> map) {
-		List<Edge> outputEdges = getOutputEdges(map);
-		if (!outputEdges.isEmpty()) {
-			return outputEdges.get(0);
-		}
-		return null;
-	}
-
-	/**
 	 * Return a list with all output edges in the map of nodes.
 	 * 
 	 * @param map The map of nodes.
@@ -465,7 +437,7 @@ class Graph {
 		if (insertIndex == Integer.MAX_VALUE) {
 			throw new IllegalStateException();
 		}
-		nodes.add(insertIndex - 1, node);
+		nodes.add(insertIndex, node);
 	}
 
 	/**
@@ -570,39 +542,72 @@ class Graph {
 	 */
 	void addBranch(List<Node> branch) {
 
-		/* Check wired. */
+		/*
+		 * Check wired.
+		 */
 		if (!isWired(branch)) {
 			throw new IllegalArgumentException("Branch with not all nodes wired");
 		}
 
-		/* A temporary map to handle the nodes of the branch. */
+		/*
+		 * A temporary map to handle the nodes of the branch.
+		 */
 		Map<String, Node> branchMap = new HashMap<>();
 		branch.forEach(node -> branchMap.put(node.getUUID(), node));
 
-		/* Check whether the branch has an input and an output edge. */
-		Edge branchInputEdge = getInputEdge(branchMap);
-		if (branchInputEdge == null) {
+		/*
+		 * Check whether the branch has one and only one input edge.
+		 */
+		List<Edge> inputEdges = getInputEdges(branchMap);
+		if (inputEdges.isEmpty()) {
 			throw new IllegalArgumentException("Branch without an input edge");
 		}
-		Edge branchOutputEdge = getOutputEdge(branchMap);
-		if (branchOutputEdge == null) {
-			throw new IllegalArgumentException("Branch without an output edge");
+		if (inputEdges.size() > 1) {
+			throw new IllegalArgumentException("Branch more than one input edge");
 		}
 
-		/* If the graph is empty, just add the branch. */
+		/*
+		 * Check that the branch has one and only one output edge.
+		 */
+		List<Edge> outputEdges = getOutputEdges(branchMap);
+		if (outputEdges.isEmpty()) {
+			throw new IllegalArgumentException("Branch without an output edge");
+		}
+		if (outputEdges.size() > 1) {
+			throw new IllegalArgumentException("Branch more than one output edge");
+		}
+
+		/*
+		 * Set the branch index and order.
+		 */
+		int index = getNextBranchIndex();
+		int order = 0;
+		for (Node node : branch) {
+			node.setBranch(index);
+			node.setOrder(order++);
+		}
+
+		/*
+		 * If the graph is empty, just add the branch
+		 */
 		if (nodesMap.isEmpty()) {
 			nodesMap.putAll(branchMap);
 			return;
 		}
 
-		/* Check graph output edge size vs branch input edge size. */
+		/*
+		 * Check graph output edge size vs branch input edge size.
+		 */
+		Edge branchInputEdge = inputEdges.get(0);
 		Edge graphOutputEdge = getOutputEdge();
 		if (graphOutputEdge.getSize() != branchInputEdge.getSize()) {
 			throw new IllegalArgumentException("Invalid branch input size");
 		}
 		int size = graphOutputEdge.getSize();
 
-		/* Remove edges from graph output and branch input, and connect them. */
+		/*
+		 * Remove edges from graph output and branch input, and connect them.
+		 */
 		Node graphOutputNode = graphOutputEdge.getInputNode();
 		Node branchInputNode = branchInputEdge.getOutputNode();
 		graphOutputNode.outputEdges.remove(graphOutputEdge);
@@ -611,7 +616,9 @@ class Graph {
 		graphOutputNode.addOutputEdge(edge);
 		branchInputNode.addInputEdge(edge);
 
-		/* Accept the resulting map. */
+		/*
+		 * Accept the resulting map.
+		 */
 		nodesMap.clear();
 		nodesMap.putAll(getNodesMap(graphOutputNode));
 	}
@@ -709,6 +716,41 @@ class Graph {
 		}
 
 		return concurrents;
+	}
+
+	/**
+	 * Return the list of branch indexes.
+	 * 
+	 * @return The list of branches.
+	 */
+	List<Integer> getBranches() {
+		List<Integer> branches = new ArrayList<>();
+		List<Node> nodes = getNodes();
+		for (Node node : nodes) {
+			if (!branches.contains(node.getBranch())) {
+				branches.add(node.getBranch());
+			}
+		}
+		branches.sort((i1, i2) -> Integer.compare(i1, i2));
+		return branches;
+	}
+
+	/**
+	 * Return the branch as a list of nodes.
+	 * 
+	 * @param index The index of the branch.
+	 * @return The list of nodes of the branch.
+	 */
+	List<Node> getBranch(int index) {
+		List<Node> nodes = getNodes();
+		List<Node> branch = new ArrayList<>();
+		for (Node node : nodes) {
+			if (node.getBranch() == index) {
+				branch.add(node);
+			}
+		}
+		branch.sort((n1, n2) -> Integer.compare(n1.getOrder(), n2.getOrder()));
+		return branch;
 	}
 
 	/**
@@ -841,6 +883,18 @@ class Graph {
 	}
 
 	/**
+	 * @return The next branch index.
+	 */
+	int getNextBranchIndex() {
+		int index = -1;
+		List<Node> nodes = getNodes();
+		for (Node node : nodes) {
+			index = Math.max(node.getBranch(), index);
+		}
+		return index + 1;
+	}
+
+	/**
 	 * Return the nodes in the map in a list ordered from input to output by the
 	 * distance to the input edge.
 	 * 
@@ -863,7 +917,7 @@ class Graph {
 		}
 		return null;
 	}
-	
+
 	/**
 	 * Restore the graph from an input stream.
 	 * 
@@ -871,7 +925,7 @@ class Graph {
 	 * @throws IOException
 	 */
 	void restore(InputStream is) throws IOException {
-		
+
 		/* Restore the list of nodes. */
 		List<Node> nodes = new ArrayList<>();
 		int countNodes = IO.readInt(is);
@@ -885,31 +939,31 @@ class Graph {
 				throw new IOException(exc);
 			}
 		}
-		
+
 		/* Ensure node with empty input and output edges. */
 		for (int i = 0; i < nodes.size(); i++) {
 			nodes.get(i).inputEdges.clear();
 			nodes.get(i).outputEdges.clear();
 		}
-		
+
 		/* Build a map of nodes by UUID. */
 		Map<String, Node> map = new HashMap<>();
 		for (int i = 0; i < nodes.size(); i++) {
 			map.put(nodes.get(i).getUUID(), nodes.get(i));
 		}
-		
+
 		/* Restore edges wiring them. */
 		int lengthUUID = nodes.get(0).getUUID().length();
 		int countEdges = IO.readInt(is);
 		for (int i = 0; i < countEdges; i++) {
-			
+
 			/* Edge size, recurrent, and UUID (in-out) */
 			int size = IO.readInt(is);
 			boolean recurrent = IO.readBoolean(is);
 			String uuid = IO.readString(is);
 			int inputNodeIndex = IO.readInt(is);
 			int outputNodeIndex = IO.readInt(is);
-			
+
 			/* Input and output node UUIDs. */
 			String inputNodeUUID = null;
 			String outputNodeUUID = null;
@@ -924,7 +978,7 @@ class Graph {
 					inputNodeUUID = uuid.substring(1, 1 + lengthUUID);
 				}
 			}
-			
+
 			/* Set the edge and wire. */
 			Edge edge = new Edge(size, recurrent);
 			if (inputNodeUUID != null) {
@@ -950,12 +1004,12 @@ class Graph {
 				edge.setOutputNode(outputNode);
 			}
 		}
-		
+
 		/* Set the map. */
 		nodesMap.clear();
 		nodesMap.putAll(map);
 	}
-	
+
 	/**
 	 * Save the graph to an output stream.
 	 * 
@@ -963,7 +1017,7 @@ class Graph {
 	 * @throws IOException
 	 */
 	void save(OutputStream os) throws IOException {
-		
+
 		/* Save the list of nodes. */
 		List<Node> nodes = getNodes();
 		IO.writeInt(os, nodes.size());
@@ -972,7 +1026,7 @@ class Graph {
 			IO.writeString(os, node.getClass().getName());
 			node.save(os);
 		}
-		
+
 		/* Save the list of edges. */
 		List<Edge> edges = getEdges();
 		IO.writeInt(os, edges.size());

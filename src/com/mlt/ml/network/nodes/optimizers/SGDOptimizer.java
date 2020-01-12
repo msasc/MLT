@@ -73,4 +73,10 @@ public class SGDOptimizer extends WeightsOptimizer {
 	 */
 	@Override
 	public void initializeBackward() {}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void initializeOptimizer() {}
 }

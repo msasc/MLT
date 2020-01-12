@@ -63,14 +63,12 @@ public class Pool2DNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix       Node prefix.
 	 * @param inputRows    Input rows.
 	 * @param inputColumns Input columns.
 	 * @param poolRows     Pool rows.
 	 * @param poolColumns  Pool columns.
 	 */
 	public Pool2DNode(
-		String prefix,
 		int inputRows,
 		int inputColumns,
 		int poolRows,
@@ -86,7 +84,6 @@ public class Pool2DNode extends Node {
 			throw new IllegalArgumentException("Invalid pool columns");
 		}
 
-		setName(getName(prefix));
 		this.inputRows = inputRows;
 		this.inputColumns = inputColumns;
 		this.poolRows = poolRows;
@@ -172,14 +169,6 @@ public class Pool2DNode extends Node {
 		}
 		int outputIndex = outputRow * outputColumns + outputColumn;
 		outputValues[outputIndex] = max;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getExtendedDescription() {
-		return "";
 	}
 
 	/**

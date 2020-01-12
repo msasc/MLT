@@ -50,11 +50,10 @@ public class Pool1DNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix    Node name prefix.
 	 * @param inputSize Input size.
 	 * @param poolSize  Pool size.
 	 */
-	public Pool1DNode(String prefix, int inputSize, int poolSize) {
+	public Pool1DNode(int inputSize, int poolSize) {
 		super();
 
 		/* Pool size must be a multiple of input size. */
@@ -62,7 +61,6 @@ public class Pool1DNode extends Node {
 			throw new IllegalArgumentException("Invalid pool size");
 		}
 
-		setName(getName(prefix));
 		this.inputSize = inputSize;
 		this.poolSize = poolSize;
 		this.outputSize = inputSize / poolSize;
@@ -139,14 +137,6 @@ public class Pool1DNode extends Node {
 			}
 		}
 		outputValues[outputIndex] = max;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getExtendedDescription() {
-		return "";
 	}
 
 	/**

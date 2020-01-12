@@ -295,7 +295,6 @@ public class AdaOptimizer extends WeightsOptimizer {
 	 */
 	public AdaOptimizer() {
 		super();
-		gradients = new Gradients();
 	}
 
 	/**
@@ -375,6 +374,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 			weightDeltas = new double[inputSize][outputSize];
 			Matrix.fill(weightDeltas, 0.0);
 
+			gradients = new Gradients();
 		}
 
 		/* Push and calculate gradients. */
@@ -383,4 +383,15 @@ public class AdaOptimizer extends WeightsOptimizer {
 		gradients.processQueueRaw();
 	}
 
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void initializeOptimizer() {
+		learningRates = null;
+		momentums = null;
+		weightDeltas = null;
+		gradients = null;
+	}
 }

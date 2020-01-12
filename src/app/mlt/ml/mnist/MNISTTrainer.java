@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.mlt.desktop.TaskFrame;
+import com.mlt.ml.data.PatternSource;
 import com.mlt.ml.data.mnist.MNIST;
 import com.mlt.ml.data.mnist.NumberImage;
 import com.mlt.ml.function.Activation;
@@ -49,8 +50,8 @@ public class MNISTTrainer {
 		Locale.setDefault(Locale.US);
 	}
 
-	private static List<NumberImage> testImages;
-	private static List<NumberImage> trainImages;
+	private static PatternSource srcTrain;
+	private static PatternSource srcTest;
 
 	/**
 	 * Start and launch the application.
@@ -60,15 +61,19 @@ public class MNISTTrainer {
 	public static void main(String[] args) {
 
 		/* List of images. */
-		testImages = null;
-		trainImages = null;
+		List<NumberImage> trainImages = null;
+		List<NumberImage> testImages = null;
 		try {
-			testImages = MNIST.getImagesTest();
 			trainImages = MNIST.getImagesTrain();
+			testImages = MNIST.getImagesTest();
 		} catch (IOException exc) {
 			Logs.catching(exc);
 			System.exit(1);
 		}
+		srcTrain = MNIST.getSource(new ArrayList<>(trainImages));
+		srcTrain.setDescription("MNIST-Train");
+		srcTest = MNIST.getSource(new ArrayList<>(testImages));
+		srcTest.setDescription("MNIST-Test");
 
 		List<Task> tasks = new ArrayList<>();
 		tasks.add(getTrainerBP(144, 10));
@@ -100,19 +105,22 @@ public class MNISTTrainer {
 			int outputSize = sizes[i];
 			Activation activation =
 				(i < sizes.length - 1 ? new ActivationSigmoid() : new ActivationSoftMax());
-			String id = Integer.toString(i + 1);
-			network.addBranch(Builder.branchPerceptron(id, inputSize, outputSize, activation));
+			network.addBranch(Builder.branchPerceptron(inputSize, outputSize, activation));
 		}
 		network.setName("MNIST-IN784-" + name.toString());
 
 		trainer.setNetwork(network);
 
-		trainer.setPatternSourceTest(MNIST.getSource(new ArrayList<>(testImages)));
-		trainer.setPatternSourceTraining(MNIST.getSource(new ArrayList<>(trainImages)));
+		trainer.setPatternSourceTraining(srcTrain.clone());
+		trainer.setPatternSourceTest(srcTest.clone());
 
 		trainer.setFilePath("res/network/");
 		trainer.setFileRoot(network.getName());
-		trainer.setFileExtension("dat");
+		
+		trainer.setShuffle(false);
+		trainer.setScore(false);
+		trainer.setEpochs(2);
+		trainer.setGenerateReport(true, "MNIST-Report");
 
 		trainer.setTitle(network.getName());
 

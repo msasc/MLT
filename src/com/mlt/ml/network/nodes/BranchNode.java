@@ -57,18 +57,15 @@ public class BranchNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix           Node name prefix.
 	 * @param size             The input-output size.
 	 * @param forwardFunction  Forward collector.
 	 * @param backwardFunction Backward collector.
 	 */
 	public BranchNode(
-		String prefix,
 		int size,
 		Collector<double[]> forwardFunction,
 		Collector<double[]> backwardFunction) {
 		super();
-		setName(getName(prefix));
 		this.size = size;
 		this.forwardFunction = forwardFunction;
 		this.backwardFunction = backwardFunction;
@@ -127,14 +124,6 @@ public class BranchNode extends Node {
 		}
 		double[] outputValues = forwardFunction.collect(inputValues);
 		pushForward(outputValues);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getExtendedDescription() {
-		return "";
 	}
 
 	/**

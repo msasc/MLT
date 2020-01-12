@@ -109,6 +109,20 @@ public abstract class Node {
 	public abstract void forward();
 
 	/**
+	 * @return The branch index of the branch, the order in which the branch was added.
+	 */
+	public int getBranch() {
+		return properties.getInteger("branch-index", -1);
+	}
+
+	/**
+	 * @return The order order of the node within its branch.
+	 */
+	public int getOrder() {
+		return properties.getInteger("branch-order", -1);
+	}
+
+	/**
 	 * Return a description made with the information available at this abstract
 	 * node level, and additionally the extended description of the node if any.
 	 * 
@@ -117,27 +131,39 @@ public abstract class Node {
 	public String getDescription() {
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
+		p.print(getBranch());
+		p.print(".");
+		p.print(getOrder());
+		p.print(" ");
 		p.print(getName());
-		p.print(" (In: ");
-		for (int i = 0; i < inputEdges.size(); i++) {
-			if (i > 0) p.print(", ");
-			p.print(inputEdges.get(i).getSize());
+
+		StringBuilder io = new StringBuilder();
+		if (!inputEdges.isEmpty()) {
+			io.append(" (I: ");
+			for (int i = 0; i < inputEdges.size(); i++) {
+				if (i > 0) io.append(", ");
+				io.append(inputEdges.get(i).getSize());
+			}
 		}
-		p.print(", Out: ");
-		for (int i = 0; i < outputEdges.size(); i++) {
-			if (i > 0) p.print(", ");
-			p.print(outputEdges.get(i).getSize());
+		if (!outputEdges.isEmpty()) {
+			if (io.length() == 0) {
+				io.append(" (O: ");
+			} else {
+				io.append(", O: ");
+			}
+			for (int i = 0; i < outputEdges.size(); i++) {
+				if (i > 0) io.append(", ");
+				io.append(outputEdges.get(i).getSize());
+			}
 		}
+		if (io.length() > 0) {
+			io.append(")");
+		}
+		p.print(io.toString());
+
 		p.close();
 		return s.toString();
 	}
-
-	/**
-	 * Return an extended description particular for the node type.
-	 * 
-	 * @return The extended description.
-	 */
-	public abstract String getExtendedDescription();
 
 	/**
 	 * Return an unmodifiable list of input edges.
@@ -161,23 +187,7 @@ public abstract class Node {
 	 * @return The name.
 	 */
 	public String getName() {
-		String name = properties.getString("name");
-		return (name == null ? getName(null) : name);
-	}
-
-	/**
-	 * Return simple class name after removing the word "Node".
-	 * 
-	 * @return The simplified class name.
-	 */
-	protected String getName(String prefix) {
-		StringBuilder name = new StringBuilder();
-		if (prefix != null && !prefix.isEmpty()) {
-			name.append(prefix);
-			name.append("-");
-		}
-		name.append(Strings.replace(getClass().getSimpleName(), "Node", ""));
-		return name.toString();
+		return Strings.replace(getClass().getSimpleName(), "Node", "");
 	}
 
 	/**
@@ -566,12 +576,17 @@ public abstract class Node {
 	}
 
 	/**
-	 * Set the node name.
-	 * 
-	 * @param name The name.
+	 * @param branchIndex The branch index.
 	 */
-	public void setName(String name) {
-		properties.setString("name", name);
+	public void setBranch(int branchIndex) {
+		properties.setInteger("branch-index", branchIndex);
+	}
+
+	/**
+	 * @param branchOrder The order of the node within the branch definition.
+	 */
+	public void setOrder(int branchOrder) {
+		properties.setInteger("branch-order", branchOrder);
 	}
 
 	/**

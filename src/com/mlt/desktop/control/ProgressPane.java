@@ -179,6 +179,7 @@ public class ProgressPane extends GridBagPane {
 			}
 			/* Convert workDone and totalWork to base 1000 */
 			if (totalWork <= 0) {
+				progressBar.setWorkDone(0);
 				return;
 			}
 			progressBar.setWorkDone((int) (10000 * workDone / totalWork));

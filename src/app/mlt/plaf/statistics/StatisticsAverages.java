@@ -1388,7 +1388,7 @@ public class StatisticsAverages extends Statistics {
 		network.setName(getNetworkName(sizes));
 
 		/* Layers. */
-		int inputSize, outputSize, index;
+		int inputSize, outputSize;
 		Activation activation;
 		for (int i = 0; i < sizes.length; i++) {
 			inputSize = -1;
@@ -1403,15 +1403,12 @@ public class StatisticsAverages extends Statistics {
 				activation = new ActivationSigmoid();
 			}
 			outputSize = sizes[i];
-			index = i;
-			network.addBranch(
-				Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
+			network.addBranch(Builder.branchPerceptron(inputSize, outputSize, activation));
 		}
 		inputSize = sizes[sizes.length - 1];
 		outputSize = getPatternOutputSize();
 		activation = new ActivationSoftMax();
-		index = sizes.length;
-		network.addBranch(Builder.branchPerceptron("L" + index, inputSize, outputSize, activation));
+		network.addBranch(Builder.branchPerceptron(inputSize, outputSize, activation));
 
 		return network;
 	}
@@ -2160,7 +2157,7 @@ public class StatisticsAverages extends Statistics {
 
 	/**
 	 * @return The he trainer to train the network..
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	private Trainer getTrainer() throws Exception {
 
@@ -2179,7 +2176,6 @@ public class StatisticsAverages extends Statistics {
 
 		trainer.setFilePath("res/network/");
 		trainer.setFileRoot(network.getName());
-		trainer.setFileExtension("dat");
 
 		trainer.setTitle(network.getName());
 

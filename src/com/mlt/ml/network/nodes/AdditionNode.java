@@ -37,10 +37,9 @@ public class AdditionNode extends BranchNode {
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix Node name prefix.
-	 * @param size   Size.
+	 * @param size Size.
 	 */
-	public AdditionNode(String prefix, int size) {
-		super(prefix, size, new CollectorAddition(), new CollectorTransfer());
+	public AdditionNode(int size) {
+		super(size, new CollectorAddition(), new CollectorTransfer());
 	}
 }

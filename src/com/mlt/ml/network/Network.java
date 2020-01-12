@@ -158,6 +158,7 @@ public class Network {
 	private List<Concurrent> backwardConcurrents;
 	/** List of forward concurrent branches, cached from the graph. */
 	private List<Concurrent> forwardConcurrents;
+	
 	/** List of nodes, cached from the graph. */
 	private List<Node> nodes;
 	/** List of edges, cached from the graph. */
@@ -195,7 +196,16 @@ public class Network {
 	 * @param branch The list of nodes.
 	 */
 	public void addBranch(List<Node> branch) {
+
+		/*
+		 * Add the branch to the graph. The graph validates that the branch is wired and
+		 * has one and only one input and one and only one output edge. It also
+		 * validates that the first node of the branch is the input node, and the last
+		 * node the output node. Then, if there are more branches, wires this one to the
+		 * graph output node, else, it simply add the branch.
+		 */
 		graph.addBranch(branch);
+
 		/* Cached data. */
 		inputEdge = graph.getInputEdge();
 		outputEdge = graph.getOutputEdge();
@@ -296,11 +306,19 @@ public class Network {
 	public String getDescription() {
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
+		
 		p.println(getName());
-		p.println();
-		for (Node node : nodes) {
-			p.println(node.getDescription());
+		
+		List<Integer> branchIndexes = graph.getBranches();
+		for (Integer index : branchIndexes) {
+			List<Node> branch = graph.getBranch(index);
+			for (Node node : branch) {
+				p.println();
+				p.print(node.getDescription());
+			}
+			p.println();
 		}
+		
 		p.close();
 		return s.toString();
 	}
@@ -368,6 +386,14 @@ public class Network {
 	 */
 	public double[] getOutputValues() {
 		return outputEdge.getForwardData();
+	}
+
+	/**
+	 * Initialize the network nodes.
+	 */
+	public void initialize() {
+		edges.forEach(edge -> edge.initialize());
+		nodes.forEach(node -> node.initialize());
 	}
 
 	/**

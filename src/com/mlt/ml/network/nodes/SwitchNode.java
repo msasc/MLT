@@ -42,22 +42,20 @@ public class SwitchNode extends BranchNode {
 	/**
 	 * Constructor with a default backward function of addition.
 	 * 
-	 * @param prefix Node id prefix.
 	 * @param size   The node input-output size.
 	 */
-	public SwitchNode(String prefix, int size) {
-		this(prefix, size, new CollectorAddition());
+	public SwitchNode(int size) {
+		this(size, new CollectorAddition());
 	}
 
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix           Node id prefix.
 	 * @param size             Node input-output size.
 	 * @param backwardFunction Backward collector function.
 	 */
-	public SwitchNode(String prefix, int size, Collector<double[]> backwardFunction) {
-		super(prefix, size, new CollectorTransfer(), backwardFunction);
+	public SwitchNode(int size, Collector<double[]> backwardFunction) {
+		super(size, new CollectorTransfer(), backwardFunction);
 	}
 
 	/**

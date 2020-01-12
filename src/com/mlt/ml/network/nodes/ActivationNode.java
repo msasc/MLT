@@ -49,13 +49,11 @@ public class ActivationNode extends Node {
 	/**
 	 * Constructor.
 	 * 
-	 * @param prefix     Node name prefix.
 	 * @param size       The size of values that flow throw the node.
 	 * @param activation The activation function.
 	 */
-	public ActivationNode(String prefix, int size, Activation activation) {
+	public ActivationNode(int size, Activation activation) {
 		super();
-		setName(getName(prefix));
 		this.size = size;
 		this.activation = activation;
 	}
@@ -117,14 +115,6 @@ public class ActivationNode extends Node {
 		double[] triggerValues = inputEdge.getForwardData();
 		double[] outputValues = activation.activations(triggerValues);
 		pushForward(outputValues);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getExtendedDescription() {
-		return "";
 	}
 
 	/**

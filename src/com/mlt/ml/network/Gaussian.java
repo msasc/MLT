@@ -33,11 +33,11 @@ import com.mlt.util.Logs;
  * Helper used to generate Gaussian values to initialize weights, either by
  * using a Random generator or a stored file of gaussians in order to initialize
  * wieghts always with the same value and thus be able to compare performances
- * from the same basis.
+ * on the same basis.
  *
  * @author Miquel Sas
  */
-public class Weights {
+public class Gaussian {
 
 	private String filePath = "res/network/";
 	private String fileName = "weights.dat";
@@ -52,7 +52,7 @@ public class Weights {
 	 * @param fixed A boolean that indicates whether gaussian values will be fixed,
 	 *              retrieves from a file, or new randomly generated.
 	 */
-	public Weights(boolean fixed) {
+	public Gaussian(boolean fixed) {
 		this.fixed = fixed;
 	}
 

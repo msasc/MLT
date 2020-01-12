@@ -29,7 +29,9 @@ import com.mlt.ml.network.nodes.BiasNode;
 import com.mlt.ml.network.nodes.WeightsNode;
 
 /**
- * Builder of network components.
+ * Builder of network branches. A branch is a list of nodes starting at the
+ * unique input node of the branch and ending at the unique output node of the
+ * branch.
  *
  * @author Miquel Sas
  */
@@ -38,35 +40,37 @@ public class Builder {
 	 * Return a list of nodes, ordered from input to output, wired as a perceptron
 	 * branch or layer.
 	 * 
-	 * @param id         A prefix id to build node names.
 	 * @param inputSize  Input size.
 	 * @param outputSize Output size.
 	 * @param activation Activation.
-	 * @return
+	 * @return The list of nodes as branch.
 	 */
-	public static List<Node> branchPerceptron(String id, int inputSize, int outputSize, Activation activation) {
-		
+	public static List<Node> branchPerceptron(
+		int inputSize,
+		int outputSize,
+		Activation activation) {
+
 		List<Node> nodes = new ArrayList<>();
-		
+
 		Edge inputEdge = new Edge(inputSize);
-		WeightsNode weightsNode = new WeightsNode(id, inputSize, outputSize);
+		WeightsNode weightsNode = new WeightsNode(inputSize, outputSize);
 		weightsNode.addInputEdge(inputEdge);
 		nodes.add(weightsNode);
-		
-		BiasNode biasNode = new BiasNode(id, outputSize);
+
+		BiasNode biasNode = new BiasNode(outputSize);
 		nodes.add(biasNode);
-		
-		AdditionNode additionNode = new AdditionNode(id, outputSize);
+
+		AdditionNode additionNode = new AdditionNode(outputSize);
 		connect(outputSize, biasNode, additionNode);
 		connect(outputSize, weightsNode, additionNode);
 		nodes.add(additionNode);
-		
-		ActivationNode activationNode = new ActivationNode(id, outputSize, activation);
+
+		ActivationNode activationNode = new ActivationNode(outputSize, activation);
 		connect(outputSize, additionNode, activationNode);
 		Edge outputEdge = new Edge(outputSize);
 		activationNode.addOutputEdge(outputEdge);
 		nodes.add(activationNode);
-		
+
 		nodes.forEach(node -> node.initialize());
 		return nodes;
 	}
@@ -81,6 +85,7 @@ public class Builder {
 	private static void connect(int size, Node inputNode, Node outputNode) {
 		connect(size, inputNode, outputNode, false);
 	}
+
 	/**
 	 * Connect two nodes of a network with an edge of the given size.
 	 * 

@@ -90,14 +90,19 @@ public class AdaOptimizer extends WeightsOptimizer {
 
 		/** Queue of input gradients. */
 		private FixedSizeList<double[][]> inputQueue;
-		/** Size of the raw queue. */
+		/** Size of the input queue. */
 		private int inputQueueSize = 5;
 		/** Queue of output gradients. */
 		private FixedSizeList<double[][]> outputQueue;
-		/** Size of the raw queue. */
+		/** Size of the output queue. */
 		private int outputQueueSize = 5;
+		/** Queue of gradients deltas. */
+		private FixedSizeList<double[][]> deltasQueue;
+		/** Size of the deltas queue. */
+		private int deltasQueueSize = 5;
+		
 		/** Collector type. */
-		private CollectorType type = CollectorType.SMA;
+		private CollectorType type = CollectorType.WMA;
 		/** List of collectors to process concurrently. */
 		private List<Collector> collectors;
 		/** List of functions to calculate gradients. */
@@ -109,24 +114,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 		private Gradients() {
 			inputQueue = new FixedSizeList<>(inputQueueSize);
 			outputQueue = new FixedSizeList<>(outputQueueSize);
-		}
-
-		/**
-		 * Add gradients to the input queue.
-		 * 
-		 * @param gradients The gradients.
-		 */
-		private void addInput(double[][] gradients) {
-			inputQueue.add(gradients);
-		}
-
-		/**
-		 * Add gradients to the output queue.
-		 * 
-		 * @param gradients The gradients.
-		 */
-		private void addOutput(double[][] gradients) {
-			outputQueue.add(gradients);
+			deltasQueue = new FixedSizeList<>(deltasQueueSize);
 		}
 
 		/**
@@ -225,6 +213,19 @@ public class AdaOptimizer extends WeightsOptimizer {
 				}
 			}
 		}
+		
+		/**
+		 * Initialize and add a deltas matrix.
+		 */
+		private void processDeltas() {
+
+			/* Input and output sizes. */
+			int inputSize = getNode().getInputSize();
+			int outputSize = getNode().getOutputSize();
+			
+			/* Add a clean deltas matrix. */
+			deltasQueue.add(new double[inputSize][outputSize]);
+		}
 
 		/**
 		 * Calculate the gradiens and let the result in the gradients member.
@@ -252,18 +253,18 @@ public class AdaOptimizer extends WeightsOptimizer {
 			ForkJoinPool.commonPool().invokeAll(calculators);
 
 			/* Add input gradients. */
-			addInput(matrix);
+			inputQueue.add(matrix);
 		}
 
 		/**
 		 * Process the queue of raw gradients and store the result in the gradients
 		 * member.
 		 */
-		private void processQueueRaw() {
+		private void processInputQueue() {
 
 			/* Type == NONE, just retrieve the last one. */
 			if (type == CollectorType.NONE) {
-				addOutput(inputQueue.getLast());
+				outputQueue.add(inputQueue.getLast());
 				return;
 			}
 
@@ -288,7 +289,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 			ForkJoinPool.commonPool().invokeAll(collectors);
 
 			/* Add gradients to the output queue. */
-			addOutput(matrix);
+			outputQueue.add(matrix);
 		}
 	}
 
@@ -303,9 +304,6 @@ public class AdaOptimizer extends WeightsOptimizer {
 	private double[][] learningRates;
 	/** Momentums. */
 	private double[][] momentums;
-	/** Last weight deltas to apply to momentums. */
-	private double[][] weightDeltas;
-
 	/** Gradients manager (worker). */
 	private Gradients gm;
 
@@ -334,6 +332,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 		double[] outputDeltas = getNode().getOutputDeltas();
 		double[][] weights = getNode().getWeights();
 		double[][] gradients = gm.outputQueue.getLast();
+		double[][] weightDeltas = gm.deltasQueue.getLast();
 
 		/* Iterate input indexes from start to end. */
 		for (int in = start; in <= end; in++) {
@@ -416,17 +415,15 @@ public class AdaOptimizer extends WeightsOptimizer {
 			momentums = new double[inputSize][outputSize];
 			Matrix.fill(momentums, 0.0);
 
-			/* Last weight deltas. */
-			weightDeltas = new double[inputSize][outputSize];
-			Matrix.fill(weightDeltas, 0.0);
-
 			gm = new Gradients();
 		}
 
 		/* Calculate gradients and add them to the input queue. */
 		gm.processGradients();
 		/* Process the input queue and add the result to the output queue. */
-		gm.processQueueRaw();
+		gm.processInputQueue();
+		/* Initialize and add a deltas matrix. */
+		gm.processDeltas();
 	}
 
 	/**
@@ -436,7 +433,6 @@ public class AdaOptimizer extends WeightsOptimizer {
 	public void initializeOptimizer() {
 		learningRates = null;
 		momentums = null;
-		weightDeltas = null;
 		gm = null;
 	}
 }

@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.mlt.ml.function.IndexFunction;
+import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 
@@ -45,7 +45,7 @@ public class Pool1DNode extends Node {
 	private double[] outputValues;
 
 	/** Forward function. */
-	private IndexFunction forwardFunction;
+	private RangeFunction forwardFunction;
 
 	/**
 	 * Constructor.
@@ -67,7 +67,7 @@ public class Pool1DNode extends Node {
 		this.outputValues = new double[outputSize];
 
 		/* Initialize the function. */
-		forwardFunction = new IndexFunction(outputSize, (out) -> forward(out));
+		forwardFunction = new RangeFunction(outputSize, (s, e) -> forward(s, e));
 	}
 
 	/**
@@ -125,18 +125,21 @@ public class Pool1DNode extends Node {
 	/**
 	 * Forward to process in parallel.
 	 * 
-	 * @param outputIndex Index in the result vector.
+	 * @param startIndex Start index in the result vector.
+	 * @param endIndex   End index in the result vector.
 	 */
-	private void forward(int outputIndex) {
-		double max = Double.NEGATIVE_INFINITY;
-		for (int poolIndex = 0; poolIndex < poolSize; poolIndex++) {
-			int inputIndex = outputIndex * poolSize + poolIndex;
-			double inputValue = inputValues[inputIndex];
-			if (inputValue > max) {
-				max = inputValue;
+	private void forward(int startIndex, int endIndex) {
+		for (int outputIndex = startIndex; outputIndex <= endIndex; outputIndex++) {
+			double max = Double.NEGATIVE_INFINITY;
+			for (int poolIndex = 0; poolIndex < poolSize; poolIndex++) {
+				int inputIndex = outputIndex * poolSize + poolIndex;
+				double inputValue = inputValues[inputIndex];
+				if (inputValue > max) {
+					max = inputValue;
+				}
 			}
+			outputValues[outputIndex] = max;
 		}
-		outputValues[outputIndex] = max;
 	}
 
 	/**
@@ -172,7 +175,7 @@ public class Pool1DNode extends Node {
 		outputSize = properties.getInteger("output-size");
 
 		this.outputValues = new double[outputSize];
-		forwardFunction = new IndexFunction(outputSize, (out) -> forward(out));
+		forwardFunction = new RangeFunction(outputSize, (s, e) -> forward(s, e));
 	}
 
 	/**

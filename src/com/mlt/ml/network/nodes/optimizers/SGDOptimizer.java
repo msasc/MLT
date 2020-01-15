@@ -40,7 +40,7 @@ public class SGDOptimizer extends WeightsOptimizer {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void backward(int in) {
+	public void backward(int start, int end) {
 
 		double[] inputDeltas = getNode().getInputDeltas();
 		double[] inputValues = getNode().getInputValues();
@@ -48,18 +48,20 @@ public class SGDOptimizer extends WeightsOptimizer {
 		double[][] weights = getNode().getWeights();
 		int outputSize = getNode().getOutputSize();
 
-		double inputValue = inputValues[in];
-		double inputDelta = 0;
-		for (int out = 0; out < outputSize; out++) {
-			double outputDelta = outputDeltas[out];
-			double weight = weights[in][out];
-			inputDelta += (weight * outputDelta);
-			/* Weight delta. */
-			double gradient = outputDelta * inputValue;
-			double weightDelta = learningRate * gradient;
-			weights[in][out] += weightDelta;
+		for (int in = start; in <= end; in++) {
+			double inputValue = inputValues[in];
+			double inputDelta = 0;
+			for (int out = 0; out < outputSize; out++) {
+				double outputDelta = outputDeltas[out];
+				double weight = weights[in][out];
+				inputDelta += (weight * outputDelta);
+				/* Weight delta. */
+				double gradient = outputDelta * inputValue;
+				double weightDelta = learningRate * gradient;
+				weights[in][out] += weightDelta;
+			}
+			inputDeltas[in] = inputDelta;
 		}
-		inputDeltas[in] = inputDelta;
 	}
 
 	/**
@@ -67,6 +69,14 @@ public class SGDOptimizer extends WeightsOptimizer {
 	 */
 	@Override
 	public void finalizeBackward() {}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getDescription() {
+		return null;
+	}
 
 	/**
 	 * {@inheritDoc}

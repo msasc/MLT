@@ -109,7 +109,8 @@ public abstract class Node {
 	public abstract void forward();
 
 	/**
-	 * @return The branch index of the branch, the order in which the branch was added.
+	 * @return The branch index of the branch, the order in which the branch was
+	 *         added.
 	 */
 	public int getBranch() {
 		return properties.getInteger("branch-index", -1);
@@ -163,6 +164,16 @@ public abstract class Node {
 
 		p.close();
 		return s.toString();
+	}
+
+	/**
+	 * Return an extended description, for instance, if the node has an optimizer,
+	 * the description of the optimizer.
+	 * 
+	 * @return The extended description.
+	 */
+	public String getExtendedDescription() {
+		return null;
 	}
 
 	/**

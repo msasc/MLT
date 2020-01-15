@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.mlt.ml.function.IndexFunction;
+import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
-import com.mlt.ml.network.Node;
 import com.mlt.ml.network.Gaussian;
+import com.mlt.ml.network.Node;
 import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
 
 /**
@@ -56,9 +56,9 @@ public class WeightsNode extends Node {
 	private WeightsOptimizer optimizer;
 
 	/** Backward function. */
-	private IndexFunction backwardFunction;
+	private RangeFunction backwardFunction;
 	/** Forward function. */
-	private IndexFunction forwardFunction;
+	private RangeFunction forwardFunction;
 
 	/**
 	 * Constructor used to restore.
@@ -75,7 +75,7 @@ public class WeightsNode extends Node {
 	 */
 	public WeightsNode(int inputSize, int outputSize) {
 		super();
-		
+
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
 
@@ -134,10 +134,11 @@ public class WeightsNode extends Node {
 	/**
 	 * Backward process from input indexes start to end.
 	 * 
-	 * @param in Input index.
+	 * @param start Start input index.
+	 * @param end   End input index.
 	 */
-	private void backward(int in) {
-		optimizer.backward(in);
+	private void backward(int start, int end) {
+		optimizer.backward(start, end);
 	}
 
 	/**
@@ -153,16 +154,27 @@ public class WeightsNode extends Node {
 	/**
 	 * Forward process from output indexes start to end.
 	 * 
-	 * @param out Output index.
+	 * @param start Start output index.
+	 * @param end   End output index.
 	 */
-	private void forward(int out) {
-		double signal = 0;
-		for (int in = 0; in < inputSize; in++) {
-			double input = inputValues[in];
-			double weight = weights[in][out];
-			signal += (input * weight);
+	private void forward(int start, int end) {
+		for (int out = start; out <= end; out++) {
+			double signal = 0;
+			for (int in = 0; in < inputSize; in++) {
+				double input = inputValues[in];
+				double weight = weights[in][out];
+				signal += (input * weight);
+			}
+			outputValues[out] = signal;
 		}
-		outputValues[out] = signal;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getExtendedDescription() {
+		return optimizer.getDescription();
 	}
 
 	/**
@@ -248,8 +260,8 @@ public class WeightsNode extends Node {
 		inputDeltas = new double[inputSize];
 		inputValues = new double[inputSize];
 		outputValues = new double[outputSize];
-		backwardFunction = new IndexFunction(inputSize, (in) -> backward(in));
-		forwardFunction = new IndexFunction(outputSize, (out) -> forward(out));
+		backwardFunction = new RangeFunction(inputSize, (start, end) -> backward(start, end));
+		forwardFunction = new RangeFunction(outputSize, (start, end) -> forward(start, end));
 		optimizer.initializeOptimizer();
 	}
 

@@ -90,7 +90,6 @@ public class MNISTTrainer {
 
 		Trainer trainer = new Trainer();
 		trainer.setProgressModulus(100);
-		trainer.setEpochs(500);
 
 		Network network = new Network();
 
@@ -119,7 +118,7 @@ public class MNISTTrainer {
 		
 		trainer.setShuffle(false);
 		trainer.setScore(false);
-		trainer.setEpochs(2);
+		trainer.setEpochs(10);
 		trainer.setGenerateReport(true, "MNIST-Report");
 
 		trainer.setTitle(network.getName());

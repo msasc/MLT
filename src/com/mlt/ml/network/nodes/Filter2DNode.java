@@ -28,7 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
 
-import com.mlt.ml.function.IndexFunction;
+import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 import com.mlt.util.Numbers;
@@ -149,7 +149,7 @@ public class Filter2DNode extends Node {
 	/** Filter values. */
 	private double[] filterValues;
 	/** Forward function. */
-	private IndexFunction forwardFunction;
+	private RangeFunction forwardFunction;
 	/** Input columns. */
 	private int inputColumns;
 	/** Input rows. */
@@ -189,14 +189,11 @@ public class Filter2DNode extends Node {
 	 * @param padding       Padding flag.
 	 * @param padValue      Pad value.
 	 */
-	public Filter2DNode(
-		int inputRows,
-		int inputColumns,
-		double[][] filter,
+	public Filter2DNode(int inputRows, int inputColumns, double[][] filter,
 		boolean padding,
 		double padValue) {
 		super();
-		
+
 		/* Rows and columns. */
 		this.filterRows = filter.length;
 		this.filterColumns = filter[0].length;
@@ -226,7 +223,7 @@ public class Filter2DNode extends Node {
 
 		this.outputValues = new double[outputRows * outputColumns];
 		/* Initialize the function. */
-		forwardFunction = new IndexFunction(outputRows * outputColumns, (index) -> forward(index));
+		forwardFunction = new RangeFunction(outputRows * outputColumns, (s, e) -> forward(s, e));
 	}
 
 	/**
@@ -284,31 +281,34 @@ public class Filter2DNode extends Node {
 	/**
 	 * Forward to process in parallel.
 	 * 
-	 * @param index Index in the result vector.
+	 * @param startIndex Start index in the result vector.
+	 * @param endIndex   End index in the result vector.
 	 */
-	private void forward(int index) {
-		int outputRow = index / outputColumns;
-		int outputColumn = index % outputColumns;
-		double outputValue = 0;
-		for (int filterRow = 0; filterRow < filterRows; filterRow++) {
-			for (int filterColumn = 0; filterColumn < filterColumns; filterColumn++) {
-				int inputRow = outputRow + filterRow - padRows;
-				int inputColumn = outputColumn + filterColumn - padColumns;
-				double inputValue = 0;
-				if (inputRow < 0 || inputColumn < 0 || inputRow >= inputRows
-					|| inputColumn >= inputColumns) {
-					inputValue = padValue;
-				} else {
-					int inputIndex = inputRow * inputColumns + inputColumn;
-					inputValue = inputValues[inputIndex];
+	private void forward(int startIndex, int endIndex) {
+		for (int index = startIndex; index <= endIndex; index++) {
+			int outputRow = index / outputColumns;
+			int outputColumn = index % outputColumns;
+			double outputValue = 0;
+			for (int filterRow = 0; filterRow < filterRows; filterRow++) {
+				for (int filterColumn = 0; filterColumn < filterColumns; filterColumn++) {
+					int inputRow = outputRow + filterRow - padRows;
+					int inputColumn = outputColumn + filterColumn - padColumns;
+					double inputValue = 0;
+					if (inputRow < 0 || inputColumn < 0 || inputRow >= inputRows
+						|| inputColumn >= inputColumns) {
+						inputValue = padValue;
+					} else {
+						int inputIndex = inputRow * inputColumns + inputColumn;
+						inputValue = inputValues[inputIndex];
+					}
+					int filterIndex = filterRow * filterColumns + filterColumn;
+					double filterValue = filterValues[filterIndex];
+					outputValue += (inputValue * filterValue);
 				}
-				int filterIndex = filterRow * filterColumns + filterColumn;
-				double filterValue = filterValues[filterIndex];
-				outputValue += (inputValue * filterValue);
 			}
+			int outputIndex = outputRow * outputColumns + outputColumn;
+			outputValues[outputIndex] = outputValue;
 		}
-		int outputIndex = outputRow * outputColumns + outputColumn;
-		outputValues[outputIndex] = outputValue;
 	}
 
 	/**
@@ -399,7 +399,7 @@ public class Filter2DNode extends Node {
 
 		outputValues = new double[outputRows * outputColumns];
 		/* Initialize the function. */
-		forwardFunction = new IndexFunction(outputRows * outputColumns, (index) -> forward(index));
+		forwardFunction = new RangeFunction(outputRows * outputColumns, (s, e) -> forward(s, e));
 	}
 
 	/**

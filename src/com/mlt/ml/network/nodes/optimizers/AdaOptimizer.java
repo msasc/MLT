@@ -17,12 +17,15 @@
 
 package com.mlt.ml.network.nodes.optimizers;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 
+import com.mlt.ml.function.Range;
 import com.mlt.ml.network.nodes.WeightsOptimizer;
 import com.mlt.util.FixedSizeList;
 import com.mlt.util.Matrix;
@@ -35,23 +38,23 @@ import com.mlt.util.Matrix;
 public class AdaOptimizer extends WeightsOptimizer {
 
 	/**
-	 * Structure with gradients data.
+	 * Gradients manager.
 	 */
-	class Gradients {
+	private class Gradients {
 
 		/**
 		 * Callable to calculate the gradients concurrently.
 		 */
-		class Calculator implements Callable<Void> {
-			int in;
+		private class Calculator implements Callable<Void> {
+			private Range range;
 
-			Calculator(int in) {
-				this.in = in;
+			private Calculator(Range range) {
+				this.range = range;
 			}
 
 			@Override
 			public Void call() throws Exception {
-				gradients(in);
+				gradients(range.getStart(), range.getEnd());
 				return null;
 			}
 		}
@@ -59,24 +62,24 @@ public class AdaOptimizer extends WeightsOptimizer {
 		/**
 		 * Callable function to collect the gradients from the raw queue.
 		 */
-		class Collector implements Callable<Void> {
-			int in;
+		private class Collector implements Callable<Void> {
+			private Range range;
 
-			Collector(int in) {
-				this.in = in;
+			private Collector(Range range) {
+				this.range = range;
 			}
 
 			@Override
 			public Void call() throws Exception {
 				switch (type) {
 				case ADD:
-					gradientsADD(in);
+					gradientsADD(range.getStart(), range.getEnd());
 					break;
 				case SMA:
-					gradientsSMA(in);
+					gradientsSMA(range.getStart(), range.getEnd());
 					break;
 				case WMA:
-					gradientsWMA(in);
+					gradientsWMA(range.getStart(), range.getEnd());
 					break;
 				default:
 					break;
@@ -85,37 +88,148 @@ public class AdaOptimizer extends WeightsOptimizer {
 			}
 		}
 
-		/** Queue of raw gradients. */
-		FixedSizeList<double[][]> queueRaw;
+		/** Queue of input gradients. */
+		private FixedSizeList<double[][]> inputQueue;
+		/** Size of the raw queue. */
+		private int inputQueueSize = 5;
+		/** Queue of output gradients. */
+		private FixedSizeList<double[][]> outputQueue;
+		/** Size of the raw queue. */
+		private int outputQueueSize = 5;
 		/** Collector type. */
-		CollectorType type = CollectorType.NONE;
+		private CollectorType type = CollectorType.SMA;
 		/** List of collectors to process concurrently. */
-		List<Collector> collectors;
+		private List<Collector> collectors;
 		/** List of functions to calculate gradients. */
-		List<Calculator> calculators;
-		/** Gradients concurrently calculated/collected. */
-		double[][] gradients;
+		private List<Calculator> calculators;
 
 		/**
 		 * Constructor.
 		 */
-		Gradients() {
-			queueRaw = new FixedSizeList<>(historySize);
+		private Gradients() {
+			inputQueue = new FixedSizeList<>(inputQueueSize);
+			outputQueue = new FixedSizeList<>(outputQueueSize);
 		}
 
 		/**
-		 * Add gradients to the raw queue.
+		 * Add gradients to the input queue.
 		 * 
 		 * @param gradients The gradients.
 		 */
-		void addRaw(double[][] gradients) {
-			queueRaw.add(gradients);
+		private void addInput(double[][] gradients) {
+			inputQueue.add(gradients);
+		}
+
+		/**
+		 * Add gradients to the output queue.
+		 * 
+		 * @param gradients The gradients.
+		 */
+		private void addOutput(double[][] gradients) {
+			outputQueue.add(gradients);
+		}
+
+		/**
+		 * @param start Start input index.
+		 * @param end   End input index.
+		 */
+		private void gradients(int start, int end) {
+			int outputSize = getNode().getOutputSize();
+			double[] inputValues = getNode().getInputValues();
+			double[] outputDeltas = getNode().getOutputDeltas();
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					matrix[in][out] = inputValues[in] * outputDeltas[out];
+				}
+			}
+		}
+
+		/**
+		 * Consurrently (by input index) calculates the addition of the raw gradients
+		 * queue.
+		 * 
+		 * @param start Start input index.
+		 * @param end   End input index.
+		 */
+		private void gradientsADD(int start, int end) {
+			if (inputQueue.isEmpty()) {
+				return;
+			}
+			int outputSize = getNode().getOutputSize();
+			Iterator<double[][]> iter = inputQueue.iterator();
+			while (iter.hasNext()) {
+				double[][] gradients = iter.next();
+				for (int in = start; in <= end; in++) {
+					for (int out = 0; out < outputSize; out++) {
+						matrix[in][out] += gradients[in][out];
+					}
+				}
+			}
+		}
+
+		/**
+		 * Consurrently (by input index) calculates the SMA of the raw gradients queue.
+		 * 
+		 * @param start Start input index.
+		 * @param end   End input index.
+		 */
+		private void gradientsSMA(int start, int end) {
+			if (inputQueue.isEmpty()) {
+				return;
+			}
+			int outputSize = getNode().getOutputSize();
+			Iterator<double[][]> iter = inputQueue.iterator();
+			while (iter.hasNext()) {
+				double[][] gradients = iter.next();
+				for (int in = start; in <= end; in++) {
+					for (int out = 0; out < outputSize; out++) {
+						matrix[in][out] += gradients[in][out];
+					}
+				}
+			}
+			double size = ((double) inputQueue.size());
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					matrix[in][out] /= size;
+				}
+			}
+		}
+
+		/**
+		 * Consurrently (by input index) calculates the WMA of the raw gradients queue.
+		 * 
+		 * @param start Start input index.
+		 * @param end   End input index.
+		 */
+		private void gradientsWMA(int start, int end) {
+			if (inputQueue.isEmpty()) {
+				return;
+			}
+			int outputSize = getNode().getOutputSize();
+			Iterator<double[][]> iter = inputQueue.iterator();
+			double weight = 1;
+			double total = 0;
+			while (iter.hasNext()) {
+				double[][] gradients = iter.next();
+				for (int in = start; in <= end; in++) {
+					for (int out = 0; out < outputSize; out++) {
+						matrix[in][out] += (gradients[in][out] * weight);
+					}
+				}
+				total += weight;
+				weight += 1;
+			}
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					matrix[in][out] /= total;
+				}
+			}
 		}
 
 		/**
 		 * Calculate the gradiens and let the result in the gradients member.
 		 */
-		void processGradients() {
+		private void processGradients() {
 
 			/* Input and output sizes. */
 			int inputSize = getNode().getInputSize();
@@ -124,27 +238,32 @@ public class AdaOptimizer extends WeightsOptimizer {
 			/* Initialize the list of calculators if required. */
 			if (calculators == null) {
 				calculators = new ArrayList<>();
-				for (int in = 0; in < inputSize; in++) {
-					calculators.add(new Calculator(in));
+				int module = Runtime.getRuntime().availableProcessors();
+				List<Range> ranges = Range.getRanges(inputSize, module);
+				for (Range range : ranges) {
+					calculators.add(new Calculator(range));
 				}
 			}
 
 			/* Initialize the result gradients. */
-			gradients = new double[inputSize][outputSize];
+			matrix = new double[inputSize][outputSize];
 
 			/* Process functions. */
 			ForkJoinPool.commonPool().invokeAll(calculators);
+
+			/* Add input gradients. */
+			addInput(matrix);
 		}
 
 		/**
 		 * Process the queue of raw gradients and store the result in the gradients
 		 * member.
 		 */
-		void processQueueRaw() {
+		private void processQueueRaw() {
 
 			/* Type == NONE, just retrieve the last one. */
 			if (type == CollectorType.NONE) {
-				gradients = queueRaw.getLast();
+				addOutput(inputQueue.getLast());
 				return;
 			}
 
@@ -155,118 +274,21 @@ public class AdaOptimizer extends WeightsOptimizer {
 			/* Initialize the list of collectors if required. */
 			if (collectors == null) {
 				collectors = new ArrayList<>();
-				for (int in = 0; in < inputSize; in++) {
-					collectors.add(new Collector(in));
+				int module = Runtime.getRuntime().availableProcessors();
+				List<Range> ranges = Range.getRanges(inputSize, module);
+				for (Range range : ranges) {
+					collectors.add(new Collector(range));
 				}
 			}
 
 			/* Initialize the result gradients. */
-			gradients = new double[inputSize][outputSize];
+			matrix = new double[inputSize][outputSize];
 
 			/* Process functions. */
 			ForkJoinPool.commonPool().invokeAll(collectors);
-		}
 
-		/**
-		 * @param in The input index of the gradients to process.
-		 */
-		void gradients(int in) {
-			int outputSize = getNode().getOutputSize();
-			double[] inputValues = getNode().getInputValues();
-			double[] outputDeltas = getNode().getOutputDeltas();
-			for (int out = 0; out < outputSize; out++) {
-				gradients[in][out] = inputValues[in] * outputDeltas[out];
-			}
-		}
-
-		/**
-		 * Consurrently (by input index) calculates the addition of the raw gradients
-		 * queue.
-		 * 
-		 * @param in The input index of the gradients to process.
-		 */
-		void gradientsADD(int in) {
-			if (queueRaw.isEmpty()) {
-				return;
-			}
-			int outputSize = getNode().getOutputSize();
-			Iterator<double[][]> iter = queueRaw.iterator();
-			while (iter.hasNext()) {
-				double[][] matrix = iter.next();
-				for (int out = 0; out < outputSize; out++) {
-					gradients[in][out] += matrix[in][out];
-				}
-			}
-		}
-
-		/**
-		 * Consurrently (by input index) calculates the EMA of the raw gradients queue.
-		 * 
-		 * @param in The input index of the gradients to process.
-		 */
-		void gradientsEMA(int in) {
-			if (queueRaw.isEmpty()) {
-				return;
-			}
-			int outputSize = getNode().getOutputSize();
-			Iterator<double[][]> iter = queueRaw.iterator();
-			while (iter.hasNext()) {
-				double[][] matrix = iter.next();
-				for (int out = 0; out < outputSize; out++) {
-					gradients[in][out] += matrix[in][out];
-				}
-			}
-			for (int out = 0; out < outputSize; out++) {
-				gradients[in][out] /= ((double) queueRaw.size());
-			}
-		}
-
-		/**
-		 * Consurrently (by input index) calculates the SMA of the raw gradients queue.
-		 * 
-		 * @param in The input index of the gradients to process.
-		 */
-		void gradientsSMA(int in) {
-			if (queueRaw.isEmpty()) {
-				return;
-			}
-			int outputSize = getNode().getOutputSize();
-			Iterator<double[][]> iter = queueRaw.iterator();
-			while (iter.hasNext()) {
-				double[][] matrix = iter.next();
-				for (int out = 0; out < outputSize; out++) {
-					gradients[in][out] += matrix[in][out];
-				}
-			}
-			for (int out = 0; out < outputSize; out++) {
-				gradients[in][out] /= ((double) queueRaw.size());
-			}
-		}
-
-		/**
-		 * Consurrently (by input index) calculates the WMA of the raw gradients queue.
-		 * 
-		 * @param in The input index of the gradients to process.
-		 */
-		void gradientsWMA(int in) {
-			if (queueRaw.isEmpty()) {
-				return;
-			}
-			int outputSize = getNode().getOutputSize();
-			Iterator<double[][]> iter = queueRaw.iterator();
-			double weight = 1;
-			double total = 0;
-			while (iter.hasNext()) {
-				double[][] matrix = iter.next();
-				for (int out = 0; out < outputSize; out++) {
-					gradients[in][out] += (matrix[in][out] * weight);
-				}
-				total += weight;
-				weight += 1;
-			}
-			for (int out = 0; out < outputSize; out++) {
-				gradients[in][out] /= total;
-			}
+			/* Add gradients to the output queue. */
+			addOutput(matrix);
 		}
 	}
 
@@ -284,11 +306,14 @@ public class AdaOptimizer extends WeightsOptimizer {
 	/** Last weight deltas to apply to momentums. */
 	private double[][] weightDeltas;
 
-	/** Gradients worker. */
-	private Gradients gradients;
+	/** Gradients manager (worker). */
+	private Gradients gm;
 
-	/** Size of queues. */
-	private int historySize = 5;
+	/**
+	 * Transient matrix use in concurrent calculations. The matrix is first
+	 * initialized, and concurrent processes acces only a range of indexes.
+	 */
+	private double[][] matrix;
 
 	/**
 	 * Constructor.
@@ -301,46 +326,51 @@ public class AdaOptimizer extends WeightsOptimizer {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void backward(int in) {
+	public void backward(int start, int end) {
 
 		/* Necessary data from the weights node. */
 		int outputSize = getNode().getOutputSize();
 		double[] inputDeltas = getNode().getInputDeltas();
 		double[] outputDeltas = getNode().getOutputDeltas();
 		double[][] weights = getNode().getWeights();
+		double[][] gradients = gm.outputQueue.getLast();
 
-		/* Input value and initialize the input delta. */
-		double inputDelta = 0;
+		/* Iterate input indexes from start to end. */
+		for (int in = start; in <= end; in++) {
 
-		/* Iterate all output indexes for each input index. */
-		for (int out = 0; out < outputSize; out++) {
+			/* Input value and initialize the input delta. */
+			double inputDelta = 0;
 
-			double outputDelta = outputDeltas[out];
-			double weight = weights[in][out];
-			inputDelta += (weight * outputDelta);
+			/* Iterate all output indexes for each input index. */
+			for (int out = 0; out < outputSize; out++) {
 
-			/* Output delta and gradient (input value * output delta). */
-			double gradient = gradients.gradients[in][out];
+				double outputDelta = outputDeltas[out];
+				double weight = weights[in][out];
+				inputDelta += (weight * outputDelta);
 
-			/* Current learning rate and momentum and last weight delta. */
-			double learningRate = learningRates[in][out];
-			double momentum = momentums[in][out];
-			double lastDelta = weightDeltas[in][out];
+				/* Output delta and gradient (input value * output delta). */
+				double gradient = gradients[in][out];
 
-			/* Calculate the weight delta. */
-			double prevDelta = momentum * lastDelta;
-			double nextDelta = (1 - momentum) * (learningRate * gradient);
-			double weightDelta = prevDelta + nextDelta;
+				/* Current learning rate and momentum and last weight delta. */
+				double learningRate = learningRates[in][out];
+				double momentum = momentums[in][out];
+				double lastDelta = weightDeltas[in][out];
 
-			/* Apply weight delta to weight. */
-			weights[in][out] += weightDelta;
+				/* Calculate the weight delta. */
+				double prevDelta = momentum * lastDelta;
+				double nextDelta = (1 - momentum) * (learningRate * gradient);
+				double weightDelta = prevDelta + nextDelta;
 
-			/* Save weight delta and gradient for next iteration. */
-			weightDeltas[in][out] = weightDelta;
+				/* Apply weight delta to weight. */
+				weights[in][out] += weightDelta;
+
+				/* Save weight delta and gradient for next iteration. */
+				weightDeltas[in][out] = weightDelta;
+			}
+
+			/* Save input delta for intermediate layers. */
+			inputDeltas[in] = inputDelta;
 		}
-
-		/* Save input delta for intermediate layers. */
-		inputDeltas[in] = inputDelta;
 	}
 
 	/**
@@ -348,6 +378,22 @@ public class AdaOptimizer extends WeightsOptimizer {
 	 */
 	@Override
 	public void finalizeBackward() {}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getDescription() {
+		StringWriter s = new StringWriter();
+		PrintWriter p = new PrintWriter(s);
+		p.print("GQ: ");
+		p.print(gm.type);
+		if (gm.type != CollectorType.NONE) {
+			p.print(" RS: " + gm.inputQueueSize);
+		}
+		p.close();
+		return s.toString();
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -374,15 +420,14 @@ public class AdaOptimizer extends WeightsOptimizer {
 			weightDeltas = new double[inputSize][outputSize];
 			Matrix.fill(weightDeltas, 0.0);
 
-			gradients = new Gradients();
+			gm = new Gradients();
 		}
 
-		/* Push and calculate gradients. */
-		gradients.processGradients();
-		gradients.addRaw(gradients.gradients);
-		gradients.processQueueRaw();
+		/* Calculate gradients and add them to the input queue. */
+		gm.processGradients();
+		/* Process the input queue and add the result to the output queue. */
+		gm.processQueueRaw();
 	}
-
 
 	/**
 	 * {@inheritDoc}
@@ -392,6 +437,6 @@ public class AdaOptimizer extends WeightsOptimizer {
 		learningRates = null;
 		momentums = null;
 		weightDeltas = null;
-		gradients = null;
+		gm = null;
 	}
 }

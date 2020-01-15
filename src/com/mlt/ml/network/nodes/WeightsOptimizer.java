@@ -35,6 +35,11 @@ public abstract class WeightsOptimizer {
 	}
 
 	/**
+	 * @return A description of the optimizer and its parameters.
+	 */
+	public abstract String getDescription();
+
+	/**
 	 * @return The parent weights node.
 	 */
 	protected WeightsNode getNode() {
@@ -45,9 +50,10 @@ public abstract class WeightsOptimizer {
 	 * Backward process for the weights for a range of input indexes, updateing the
 	 * weight and calculating the input delta.
 	 * 
-	 * @param in Input index.
+	 * @param start Start input index.
+	 * @param end   End input index.
 	 */
-	public abstract void backward(int in);
+	public abstract void backward(int start, int end);
 
 	/**
 	 * Perform any required finalization after the concurrent call to the
@@ -60,7 +66,7 @@ public abstract class WeightsOptimizer {
 	 * backward per weight pass.
 	 */
 	public abstract void initializeBackward();
-	
+
 	/**
 	 * Initialize the optimizer.
 	 */

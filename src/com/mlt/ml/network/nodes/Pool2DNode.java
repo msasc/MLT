@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.mlt.ml.function.IndexFunction;
+import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Node;
 
@@ -51,7 +51,7 @@ public class Pool2DNode extends Node {
 	private double[] outputValues;
 
 	/** Forward function. */
-	private IndexFunction forwardFunction;
+	private RangeFunction forwardFunction;
 
 	/**
 	 * Default constructor to restore.
@@ -68,11 +68,7 @@ public class Pool2DNode extends Node {
 	 * @param poolRows     Pool rows.
 	 * @param poolColumns  Pool columns.
 	 */
-	public Pool2DNode(
-		int inputRows,
-		int inputColumns,
-		int poolRows,
-		int poolColumns) {
+	public Pool2DNode(int inputRows, int inputColumns, int poolRows, int poolColumns) {
 		super();
 
 		/* Pool rows must be a multiple of input rows. */
@@ -150,25 +146,28 @@ public class Pool2DNode extends Node {
 	/**
 	 * Forward to process in parallel.
 	 * 
-	 * @param index Index in the result vector.
+	 * @param startIndex Start index in the result vector.
+	 * @param endIndex   End index in the result vector.
 	 */
-	private void forward(int index) {
-		int outputRow = index / outputColumns;
-		int outputColumn = index % outputColumns;
-		double max = Double.NEGATIVE_INFINITY;
-		for (int poolRow = 0; poolRow < poolRows; poolRow++) {
-			for (int poolColumn = 0; poolColumn < poolColumns; poolColumn++) {
-				int inputRow = outputRow * poolRows + poolRow;
-				int inputColumn = outputColumn * poolColumns + poolColumn;
-				int inputIndex = inputRow * inputColumns + inputColumn;
-				double inputValue = inputValues[inputIndex];
-				if (inputValue > max) {
-					max = inputValue;
+	private void forward(int startIndex, int endIndex) {
+		for (int index = startIndex; index <= endIndex; index++) {
+			int outputRow = index / outputColumns;
+			int outputColumn = index % outputColumns;
+			double max = Double.NEGATIVE_INFINITY;
+			for (int poolRow = 0; poolRow < poolRows; poolRow++) {
+				for (int poolColumn = 0; poolColumn < poolColumns; poolColumn++) {
+					int inputRow = outputRow * poolRows + poolRow;
+					int inputColumn = outputColumn * poolColumns + poolColumn;
+					int inputIndex = inputRow * inputColumns + inputColumn;
+					double inputValue = inputValues[inputIndex];
+					if (inputValue > max) {
+						max = inputValue;
+					}
 				}
 			}
+			int outputIndex = outputRow * outputColumns + outputColumn;
+			outputValues[outputIndex] = max;
 		}
-		int outputIndex = outputRow * outputColumns + outputColumn;
-		outputValues[outputIndex] = max;
 	}
 
 	/**
@@ -215,7 +214,7 @@ public class Pool2DNode extends Node {
 	 * Initialize the forward parallel function.
 	 */
 	private void initializeFunction() {
-		forwardFunction = new IndexFunction(outputRows * outputColumns, (i) -> forward(i));
+		forwardFunction = new RangeFunction(outputRows * outputColumns, (s, e) -> forward(s, e));
 	}
 
 	/**

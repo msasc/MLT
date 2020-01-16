@@ -2,21 +2,31 @@ package test;
 
 import java.util.Iterator;
 
-import com.mlt.util.FixedSizeList;
+import com.mlt.util.FixedSizeQueue;
 
 public class TestFSQueue {
 
 	public static void main(String[] args) {
-		FixedSizeList<Integer> q = new FixedSizeList<>(10);
+		FixedSizeQueue<Integer> q = new FixedSizeQueue<>(10);
 		for (int i = 0; i < 30; i++) {
-			q.add(i);
+			q.addLast(i);
 			System.out.println(q.toString());
 		}
 		System.out.println("--------------------------------------------------");
-		Iterator<Integer> iter = q.iterator();
-		while (iter.hasNext()) {
-			System.out.println(iter.next());
-			iter.remove();
+		q.clear();
+		for (int i = 0; i < 30; i++) {
+			q.addFirst(i);
+			System.out.println(q.toString());
+		}
+		System.out.println("--------------------------------------------------");
+		Iterator<Integer> asc = q.ascendingIterator();
+		while (asc.hasNext()) {
+			System.out.println(asc.next());
+		}
+		System.out.println("--------------------------------------------------");
+		Iterator<Integer> desc = q.descendingIterator();
+		while (desc.hasNext()) {
+			System.out.println(desc.next());
 		}
 	}
 

@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.mlt.util.FixedSizeList;
+import com.mlt.util.FixedSizeQueue;
 
 /**
  * Defines a smoothed average used as a movement descriptor.
@@ -30,7 +30,7 @@ import com.mlt.util.FixedSizeList;
  */
 public class Average implements Comparable<Average> {
 
-	private static double getAverage(Type type, int period, FixedSizeList<Double> buffer) {
+	private static double getAverage(Type type, int period, FixedSizeQueue<Double> buffer) {
 		int startIndex = (buffer.size() < period ? 0 : buffer.size() - period);
 		int endIndex = buffer.size() - 1;
 		switch (type) {
@@ -45,7 +45,7 @@ public class Average implements Comparable<Average> {
 	private static double getAverageSMA(
 		int startIndex,
 		int endIndex,
-		FixedSizeList<Double> buffer) {
+		FixedSizeQueue<Double> buffer) {
 
 		double average = 0;
 		for (int index = startIndex; index <= endIndex; index++) {
@@ -58,7 +58,7 @@ public class Average implements Comparable<Average> {
 	private static double getAverageWMA(
 		int startIndex,
 		int endIndex,
-		FixedSizeList<Double> buffer) {
+		FixedSizeQueue<Double> buffer) {
 
 		double average = 0;
 		double weight = 1;
@@ -88,7 +88,7 @@ public class Average implements Comparable<Average> {
 	private Type type = Type.SMA;
 
 	/** Smooth buffers. */
-	private List<FixedSizeList<Double>> smoothBuffers;
+	private List<FixedSizeQueue<Double>> smoothBuffers;
 
 	/**
 	 * Constructor.
@@ -146,11 +146,11 @@ public class Average implements Comparable<Average> {
 	 * @param buffer The fixed size list buffer of values to average.
 	 * @return The average value, conveniently smoothed.
 	 */
-	public double getAverage(FixedSizeList<Double> buffer) {
+	public double getAverage(FixedSizeQueue<Double> buffer) {
 		double average = getAverage(type, period, buffer);
 		for (int i = 0; i < smooths.length; i++) {
 			int smooth = smooths[i];
-			FixedSizeList<Double> smoothBuffer = getSmoothBuffers().get(i);
+			FixedSizeQueue<Double> smoothBuffer = getSmoothBuffers().get(i);
 			smoothBuffer.add(average);
 			average = getAverage(type, smooth, smoothBuffer);
 		}
@@ -169,11 +169,11 @@ public class Average implements Comparable<Average> {
 	/**
 	 * @return The list of smooth buffers.
 	 */
-	private List<FixedSizeList<Double>> getSmoothBuffers() {
+	private List<FixedSizeQueue<Double>> getSmoothBuffers() {
 		if (smoothBuffers == null) {
 			smoothBuffers = new ArrayList<>();
 			for (int i = 0; i < smooths.length; i++) {
-				smoothBuffers.add(new FixedSizeList<>(smooths[i]));
+				smoothBuffers.add(new FixedSizeQueue<>(smooths[i]));
 			}
 		}
 		return smoothBuffers;

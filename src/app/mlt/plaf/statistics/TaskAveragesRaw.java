@@ -35,7 +35,7 @@ import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Period;
 import com.mlt.task.Concurrent;
-import com.mlt.util.FixedSizeList;
+import com.mlt.util.FixedSizeQueue;
 import com.mlt.util.Numbers;
 
 import app.mlt.plaf.DB;
@@ -114,8 +114,8 @@ public class TaskAveragesRaw extends TaskAverages {
 		/* Buffers. */
 		List<Average> averages = stats.getAverages();
 		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
-		FixedSizeList<Double> avgBuffer = new FixedSizeList<>(maxPeriod);
-		FixedSizeList<Record> rcBuffer = new FixedSizeList<>(maxPeriod);
+		FixedSizeQueue<Double> avgBuffer = new FixedSizeQueue<>(maxPeriod);
+		FixedSizeQueue<Record> rcBuffer = new FixedSizeQueue<>(maxPeriod);
 
 		/* Iterate ticker. */
 		Record rcSrcPrev = null;
@@ -240,7 +240,7 @@ public class TaskAveragesRaw extends TaskAverages {
 	 * @param buffer Buffer of records.
 	 * @return The list of candles between periods.
 	 */
-	private List<Data> getCandles(int size, int count, FixedSizeList<Record> buffer) {
+	private List<Data> getCandles(int size, int count, FixedSizeQueue<Record> buffer) {
 		List<Data> candles = new ArrayList<>();
 		for (int i = 0; i < count; i++) {
 			int start = buffer.size() - (size * (i + 1));

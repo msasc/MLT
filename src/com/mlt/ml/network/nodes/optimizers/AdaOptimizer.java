@@ -27,7 +27,7 @@ import java.util.concurrent.ForkJoinPool;
 
 import com.mlt.ml.function.Range;
 import com.mlt.ml.network.nodes.WeightsOptimizer;
-import com.mlt.util.FixedSizeList;
+import com.mlt.util.FixedSizeQueue;
 import com.mlt.util.Matrix;
 
 /**
@@ -89,20 +89,20 @@ public class AdaOptimizer extends WeightsOptimizer {
 		}
 
 		/** Queue of input gradients. */
-		private FixedSizeList<double[][]> inputQueue;
+		private FixedSizeQueue<double[][]> inputQueue;
 		/** Size of the input queue. */
 		private int inputQueueSize = 5;
 		/** Queue of output gradients. */
-		private FixedSizeList<double[][]> outputQueue;
+		private FixedSizeQueue<double[][]> outputQueue;
 		/** Size of the output queue. */
 		private int outputQueueSize = 5;
 		/** Queue of gradients deltas. */
-		private FixedSizeList<double[][]> deltasQueue;
+		private FixedSizeQueue<double[][]> deltasQueue;
 		/** Size of the deltas queue. */
 		private int deltasQueueSize = 5;
 		
 		/** Collector type. */
-		private CollectorType type = CollectorType.WMA;
+		private CollectorType type = CollectorType.NONE;
 		/** List of collectors to process concurrently. */
 		private List<Collector> collectors;
 		/** List of functions to calculate gradients. */
@@ -112,9 +112,9 @@ public class AdaOptimizer extends WeightsOptimizer {
 		 * Constructor.
 		 */
 		private Gradients() {
-			inputQueue = new FixedSizeList<>(inputQueueSize);
-			outputQueue = new FixedSizeList<>(outputQueueSize);
-			deltasQueue = new FixedSizeList<>(deltasQueueSize);
+			inputQueue = new FixedSizeQueue<>(inputQueueSize);
+			outputQueue = new FixedSizeQueue<>(outputQueueSize);
+			deltasQueue = new FixedSizeQueue<>(deltasQueueSize);
 		}
 
 		/**
@@ -332,7 +332,13 @@ public class AdaOptimizer extends WeightsOptimizer {
 		double[] outputDeltas = getNode().getOutputDeltas();
 		double[][] weights = getNode().getWeights();
 		double[][] gradients = gm.outputQueue.getLast();
-		double[][] weightDeltas = gm.deltasQueue.getLast();
+		double[][] previousWeightDeltas = null;
+		if (gm.deltasQueue.size() == 1) {
+			previousWeightDeltas = gm.deltasQueue.getLast(0);
+		} else {
+			previousWeightDeltas = gm.deltasQueue.getLast(1);
+		}
+		double[][] currentWeightDeltas = gm.deltasQueue.getLast(0);
 
 		/* Iterate input indexes from start to end. */
 		for (int in = start; in <= end; in++) {
@@ -353,7 +359,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 				/* Current learning rate and momentum and last weight delta. */
 				double learningRate = learningRates[in][out];
 				double momentum = momentums[in][out];
-				double lastDelta = weightDeltas[in][out];
+				double lastDelta = previousWeightDeltas[in][out];
 
 				/* Calculate the weight delta. */
 				double prevDelta = momentum * lastDelta;
@@ -364,7 +370,7 @@ public class AdaOptimizer extends WeightsOptimizer {
 				weights[in][out] += weightDelta;
 
 				/* Save weight delta and gradient for next iteration. */
-				weightDeltas[in][out] = weightDelta;
+				currentWeightDeltas[in][out] = weightDelta;
 			}
 
 			/* Save input delta for intermediate layers. */

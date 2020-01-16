@@ -82,4 +82,18 @@ public interface Queue<E> extends List<E> {
 	 * @return The element.
 	 */
 	E getLast(int index);
+
+	/**
+	 * Remove the first element.
+	 * 
+	 * @return The removed element.
+	 */
+	E removeFirst();
+
+	/**
+	 * Remove the last element.
+	 * 
+	 * @return The removed element.
+	 */
+	E removeLast();
 }

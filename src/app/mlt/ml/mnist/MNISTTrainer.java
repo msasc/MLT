@@ -76,8 +76,7 @@ public class MNISTTrainer {
 		srcTest.setDescription("MNIST-Test");
 
 		List<Task> tasks = new ArrayList<>();
-		tasks.add(getTrainerBP(144, 10));
-		tasks.add(getTrainerBP(256, 144, 10));
+		tasks.add(getTrainerBP(128, 10));
 
 		TaskFrame frame = new TaskFrame();
 		frame.setTitle("MNIST Trainer");

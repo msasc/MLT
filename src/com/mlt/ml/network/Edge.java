@@ -17,8 +17,8 @@
 
 package com.mlt.ml.network;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import com.mlt.util.ArrayQueue;
+import com.mlt.util.Queue;
 
 /**
  * An edge of a computational graph.
@@ -60,9 +60,9 @@ public class Edge {
 	private int size;
 
 	/** Deque to maintain the backward queue (deltas). */
-	private Deque<double[]> backwardQueue = new ArrayDeque<>();
+	private Queue<double[]> backwardQueue = new ArrayQueue<>();
 	/** Deque to maintain the forward queue (values). */
-	private Deque<double[]> forwardQueue = new ArrayDeque<>();
+	private Queue<double[]> forwardQueue = new ArrayQueue<>();
 
 	/**
 	 * A boolean that indicates whether the edge starts a recurrent path.

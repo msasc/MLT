@@ -13,6 +13,13 @@ public class TestQueue {
 		for (int i = 0; i < q.size(); i++) {
 			System.out.println(q.get(i));
 		}
+		for (int i = q.size() - 1; i >= 201; i--) {
+			q.remove(i);
+		}
+		System.out.println("----------------");
+		for (int i = 0; i < q.size(); i++) {
+			System.out.println(q.get(i));
+		}
 	}
 
 }

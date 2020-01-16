@@ -336,6 +336,22 @@ public class FixedSizeQueue<E> extends AbstractList<E> implements Queue<E> {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public E removeFirst() {
+		return remove(0);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public E removeLast() {
+		return remove(size() - 1);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public int size() {
 		if (firstIndex == -1 && lastIndex == -1) {
 			return 0;

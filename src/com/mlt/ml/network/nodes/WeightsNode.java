@@ -20,25 +20,63 @@ package com.mlt.ml.network.nodes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Iterator;
 
 import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Gaussian;
 import com.mlt.ml.network.Node;
-import com.mlt.ml.network.nodes.optimizers.AdaOptimizer;
+import com.mlt.util.FixedSizeQueue;
+import com.mlt.util.Matrix;
+import com.mlt.util.Queue;
 
 /**
- * A matrix of weights node.
- * <p>
- * Accessors for input and anput size, weights, input and output values and
- * deltas, are provided to be used by the weights optimizer.
+ * Weights node with adaptative optimizers using stochastic gradient descent
+ * back propagation.
  *
  * @author Miquel Sas
  */
 public class WeightsNode extends Node {
 
+	/**
+	 * Enumerates the gradients softeners.
+	 */
+	public static enum GradientSoftener {
+		NONE, SMA, WMA
+	}
+
+	/** Input size. */
+	private int inputSize;
+	/** Output size. */
+	private int outputSize;
 	/** Matrix of weights (in-out). */
 	private double[][] weights;
+	/** Learning rates. */
+	private double[][] learningRates;
+	/** Momentums. */
+	private double[][] momentums;
+
+	/** Backward function. */
+	private RangeFunction backwardFunction;
+	/** Forward function. */
+	private RangeFunction forwardFunction;
+	/** Gradients calculator function. */
+	private RangeFunction gradientsInputFunction;
+	/** Gradients collector function. */
+	private RangeFunction gradientsOutputFunction;
+
+	/** Queue of input gradients. */
+	private Queue<double[][]> gradientsInputQueue;
+	/** Queue of output gradients. */
+	private Queue<double[][]> gradientsOutputQueue;
+	/** Queue of gradients deltas. */
+	private Queue<double[][]> gradientsDeltasQueue;
+
+	/** Default size for all queues. */
+	private int queueSize = 5;
+	/** Gradients softnener. */
+	private GradientSoftener gradientsSoftener = GradientSoftener.WMA;
+
 	/** Cached input deltas, to be accessed concurrently. */
 	private double[] inputDeltas;
 	/** Cached input values, to be accessed concurrently. */
@@ -47,18 +85,8 @@ public class WeightsNode extends Node {
 	private double[] outputDeltas;
 	/** Cached output values, to be accessed concurrently. */
 	private double[] outputValues;
-	/** Input size. */
-	private int inputSize;
-	/** Output size. */
-	private int outputSize;
-
-	/** Weights optimizer. */
-	private WeightsOptimizer optimizer;
-
-	/** Backward function. */
-	private RangeFunction backwardFunction;
-	/** Forward function. */
-	private RangeFunction forwardFunction;
+	/** Cached matrix accessed concurrently. */
+	private double[][] matrix;
 
 	/**
 	 * Constructor used to restore.
@@ -75,12 +103,8 @@ public class WeightsNode extends Node {
 	 */
 	public WeightsNode(int inputSize, int outputSize) {
 		super();
-
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
-
-		optimizer = new AdaOptimizer();
-		optimizer.setNode(this);
 	}
 
 	/**
@@ -121,13 +145,32 @@ public class WeightsNode extends Node {
 		if (inputEdges.get(0).isRecurrent()) {
 			return;
 		}
+
+		/* Retrieve input values and output deltas. */
 		inputValues = inputEdges.get(0).getForwardData();
 		outputDeltas = outputEdges.get(0).getBackwardData();
 
-		optimizer.initializeBackward();
-		backwardFunction.process();
-		optimizer.finalizeBackward();
+		/* Calculate and add gradients to the input queue. */
+		matrix = new double[inputSize][outputSize];
+		gradientsInputFunction.process();
+		gradientsInputQueue.addLast(matrix);
 
+		/* Process (collector) the input queue and add to the output queue. */
+		if (gradientsSoftener == GradientSoftener.NONE) {
+			matrix = gradientsInputQueue.getLast();
+		} else {
+			matrix = new double[inputSize][outputSize];
+			gradientsOutputFunction.process();
+		}
+		gradientsOutputQueue.addLast(matrix);
+
+		/* Add the new gradients deltas to be be saved. */
+		gradientsDeltasQueue.add(new double[inputSize][outputSize]);
+
+		/* Process the main bacward function. */
+		backwardFunction.process();
+
+		/* Push backward resultin input deltas. */
 		pushBackward(inputDeltas);
 	}
 
@@ -138,7 +181,34 @@ public class WeightsNode extends Node {
 	 * @param end   End input index.
 	 */
 	private void backward(int start, int end) {
-		optimizer.backward(start, end);
+
+		double[][] gradients = gradientsOutputQueue.getLast();
+		double[][] prevDeltas = gradientsDeltasQueue.getLast(1);
+		double[][] nextDeltas = gradientsDeltasQueue.getLast(0);
+
+		for (int in = start; in <= end; in++) {
+
+			double inputDelta = 0;
+
+			for (int out = 0; out < outputSize; out++) {
+
+				double weight = weights[in][out];
+				double outputDelta = outputDeltas[out];
+				inputDelta += (weight * outputDelta);
+
+				double learningRate = learningRates[in][out];
+				double momentum = momentums[in][out];
+				double gradient = gradients[in][out];
+				double prevDelta = prevDeltas[in][out];
+				double nextDelta = learningRate * gradient;
+
+				double weightDelta = (momentum * prevDelta) + ((1 - momentum) * nextDelta);
+				weights[in][out] += weightDelta;
+				nextDeltas[in][out] = weightDelta;
+			}
+
+			inputDeltas[in] = inputDelta;
+		}
 	}
 
 	/**
@@ -173,37 +243,8 @@ public class WeightsNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public String getExtendedDescription() {
-		return optimizer.getDescription();
-	}
-
-	/**
-	 * @return The input deltas.
-	 */
-	public double[] getInputDeltas() {
-		return inputDeltas;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	public int getInputSize() {
 		return inputSize;
-	}
-
-	/**
-	 * @return The input values
-	 */
-	public double[] getInputValues() {
-		return inputValues;
-	}
-
-	/**
-	 * @return The output deltas.
-	 */
-	public double[] getOutputDeltas() {
-		return outputDeltas;
 	}
 
 	/**
@@ -215,17 +256,72 @@ public class WeightsNode extends Node {
 	}
 
 	/**
-	 * @return The output values
+	 * @param start Start input index.
+	 * @param end   End input index.
 	 */
-	public double[] getOutputValues() {
-		return outputValues;
+	private void gradients(int start, int end) {
+		for (int in = start; in <= end; in++) {
+			for (int out = 0; out < outputSize; out++) {
+				matrix[in][out] = inputValues[in] * outputDeltas[out];
+			}
+		}
 	}
 
 	/**
-	 * @return The weights.
+	 * Consurrently (by input index) calculates the SMA of the raw gradients queue.
+	 * 
+	 * @param start Start input index.
+	 * @param end   End input index.
 	 */
-	public double[][] getWeights() {
-		return weights;
+	private void gradientsSMA(int start, int end) {
+		if (gradientsInputQueue.isEmpty()) {
+			return;
+		}
+		Iterator<double[][]> iter = gradientsInputQueue.iterator();
+		while (iter.hasNext()) {
+			double[][] gradients = iter.next();
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					matrix[in][out] += gradients[in][out];
+				}
+			}
+		}
+		double size = ((double) gradientsInputQueue.size());
+		for (int in = start; in <= end; in++) {
+			for (int out = 0; out < outputSize; out++) {
+				matrix[in][out] /= size;
+			}
+		}
+	}
+
+	/**
+	 * Consurrently (by input index) calculates the WMA of the raw gradients queue.
+	 * 
+	 * @param start Start input index.
+	 * @param end   End input index.
+	 */
+	private void gradientsWMA(int start, int end) {
+		if (gradientsInputQueue.isEmpty()) {
+			return;
+		}
+		Iterator<double[][]> iter = gradientsInputQueue.iterator();
+		double weight = 1;
+		double total = 0;
+		while (iter.hasNext()) {
+			double[][] gradients = iter.next();
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					matrix[in][out] += (gradients[in][out] * weight);
+				}
+			}
+			total += weight;
+			weight += 1;
+		}
+		for (int in = start; in <= end; in++) {
+			for (int out = 0; out < outputSize; out++) {
+				matrix[in][out] /= total;
+			}
+		}
 	}
 
 	/**
@@ -233,36 +329,80 @@ public class WeightsNode extends Node {
 	 */
 	@Override
 	public void initialize() {
+
 		/* Validate. */
-		if (inputEdges.size() == 0) throw new IllegalStateException("Input edges empty");
-		if (inputEdges.size() > 1) throw new IllegalStateException("More than one input edge");
-		if (inputEdges.get(0)
-			.getSize() != inputSize) throw new IllegalStateException("Invalid input edge size");
-		if (outputEdges.size() == 0) throw new IllegalStateException("Output edges empty");
-		if (outputEdges.size() > 1) throw new IllegalStateException("More than one output edge");
-		if (outputEdges.get(0)
-			.getSize() != outputSize) throw new IllegalStateException("Invalid output edge size");
-		/* Initialize. */
+		if (inputEdges.size() == 0) {
+			throw new IllegalStateException("Input edges empty");
+		}
+		if (inputEdges.size() > 1) {
+			throw new IllegalStateException("More than one input edge");
+		}
+		if (inputEdges.get(0).getSize() != inputSize) {
+			throw new IllegalStateException("Invalid input edge size");
+		}
+		if (outputEdges.size() == 0) {
+			throw new IllegalStateException("Output edges empty");
+		}
+		if (outputEdges.size() > 1) {
+			throw new IllegalStateException("More than one output edge");
+		}
+		if (outputEdges.get(0).getSize() != outputSize) {
+			throw new IllegalStateException("Invalid output edge size");
+		}
+
+		/* Initialize weights. */
 		weights = new double[inputSize][outputSize];
-		initializeVectorsAndFunctions();
 		Gaussian w = new Gaussian(true);
 		for (int in = 0; in < inputSize; in++) {
 			for (int out = 0; out < outputSize; out++) {
 				weights[in][out] = w.nextGaussian();
 			}
 		}
+
+		/* Initialize learning rates and momentums. */
+		learningRates = new double[inputSize][outputSize];
+		Matrix.fill(learningRates, 0.01);
+		momentums = new double[inputSize][outputSize];
+		Matrix.fill(momentums, 0.0);
+
+		/* Initialize cached vectors and functions. */
+		initializeVectorsAndFunctions();
 	}
 
 	/**
 	 * Initialize vectors and functions.
 	 */
 	private void initializeVectorsAndFunctions() {
+
+		/* Cached vectors not retrieved from edges. */
 		inputDeltas = new double[inputSize];
-		inputValues = new double[inputSize];
 		outputValues = new double[outputSize];
-		backwardFunction = new RangeFunction(inputSize, (start, end) -> backward(start, end));
+
+		/* Forward function. */
 		forwardFunction = new RangeFunction(outputSize, (start, end) -> forward(start, end));
-		optimizer.initializeOptimizer();
+
+		/* Backward function. */
+		backwardFunction = new RangeFunction(inputSize, (start, end) -> backward(start, end));
+
+		/* Gradients input function. */
+		gradientsInputFunction =
+			new RangeFunction(inputSize, (start, end) -> gradients(start, end));
+
+		/* Gradients output function only if softener is not NONE. */
+		if (gradientsSoftener == GradientSoftener.SMA) {
+			gradientsOutputFunction =
+				new RangeFunction(inputSize, (start, end) -> gradientsSMA(start, end));
+		}
+		if (gradientsSoftener == GradientSoftener.WMA) {
+			gradientsOutputFunction =
+				new RangeFunction(inputSize, (start, end) -> gradientsWMA(start, end));
+		}
+
+		/* Clear queues and initializa deltas queue. */
+		gradientsInputQueue = new FixedSizeQueue<>(queueSize);
+		gradientsOutputQueue = new FixedSizeQueue<>(queueSize);
+		gradientsDeltasQueue = new FixedSizeQueue<>(queueSize);
+		gradientsDeltasQueue.addLast(new double[inputSize][outputSize]);
 	}
 
 	/**
@@ -271,11 +411,14 @@ public class WeightsNode extends Node {
 	@Override
 	public void restore(InputStream is) throws IOException {
 		restoreProperties(is);
+		gradientsSoftener = GradientSoftener.valueOf(properties.getString("gradients-softener"));
 		inputSize = properties.getInteger("input-size");
 		outputSize = properties.getInteger("output-size");
 		weights = properties.getDouble2A("weights");
-		optimizer = (WeightsOptimizer) properties.getObject("optimizer");
-		optimizer.setNode(this);
+		learningRates = properties.getDouble2A("learning-rates");
+		momentums = properties.getDouble2A("momentums");
+
+		/* Initialize cached vectors and functions. */
 		initializeVectorsAndFunctions();
 	}
 
@@ -284,10 +427,32 @@ public class WeightsNode extends Node {
 	 */
 	@Override
 	public void save(OutputStream os) throws IOException {
+		properties.setString("gradients-softener", gradientsSoftener.name());
 		properties.setInteger("input-size", inputSize);
 		properties.setInteger("output-size", outputSize);
 		properties.setDouble2A("weights", weights);
-		properties.setObject("optimizer", optimizer);
+		properties.setDouble2A("learning-rates", learningRates);
+		properties.setDouble2A("momentums", momentums);
 		saveProperties(os);
 	}
+
+	/**
+	 * @param gradientsSoftener The gradients softener.
+	 */
+	public void setGradientSoftener(GradientSoftener gradientsSoftener) {
+		if (gradientsSoftener == null) {
+			gradientsSoftener = GradientSoftener.NONE;
+		}
+		this.gradientsSoftener = gradientsSoftener;
+		initializeVectorsAndFunctions();
+	}
+
+	/**
+	 * @param queueSize The common size of queues.
+	 */
+	public void setQueueSize(int queueSize) {
+		this.queueSize = queueSize;
+		initializeVectorsAndFunctions();
+	}
+
 }

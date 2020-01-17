@@ -39,10 +39,163 @@ import com.mlt.util.Queue;
 public class WeightsNode extends Node {
 
 	/**
-	 * Enumerates the gradients softeners.
+	 * Enumerates the gradient softeners.
 	 */
 	public static enum GradientSoftener {
 		NONE, SMA, WMA
+	}
+
+	/**
+	 * Gradients data structure.
+	 */
+	class Gradients {
+		GradientSoftener softener = GradientSoftener.WMA;
+		RangeFunction inputFunction;
+		RangeFunction outputFunction;
+		Queue<double[][]> inputQueue;
+		Queue<double[][]> outputQueue;
+		Queue<double[][]> deltasQueue;
+
+		/**
+		 * @param start Start input index.
+		 * @param end   End input index.
+		 */
+		void gradients(int start, int end) {
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					t.matrix[in][out] = t.inputValues[in] * t.outputDeltas[out];
+				}
+			}
+		}
+
+		/**
+		 * Consurrently (by input index) calculates the SMA of the raw gradients queue.
+		 * 
+		 * @param start Start input index.
+		 * @param end   End input index.
+		 */
+		void gradientsSMA(int start, int end) {
+			if (g.inputQueue.isEmpty()) {
+				return;
+			}
+			Iterator<double[][]> iter = g.inputQueue.iterator();
+			while (iter.hasNext()) {
+				double[][] gradients = iter.next();
+				for (int in = start; in <= end; in++) {
+					for (int out = 0; out < outputSize; out++) {
+						t.matrix[in][out] += gradients[in][out];
+					}
+				}
+			}
+			double size = ((double) g.inputQueue.size());
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					t.matrix[in][out] /= size;
+				}
+			}
+		}
+
+		/**
+		 * Consurrently (by input index) calculates the WMA of the raw gradients queue.
+		 * 
+		 * @param start Start input index.
+		 * @param end   End input index.
+		 */
+		void gradientsWMA(int start, int end) {
+			if (g.inputQueue.isEmpty()) {
+				return;
+			}
+			Iterator<double[][]> iter = g.inputQueue.iterator();
+			double weight = 1;
+			double total = 0;
+			while (iter.hasNext()) {
+				double[][] gradients = iter.next();
+				for (int in = start; in <= end; in++) {
+					for (int out = 0; out < outputSize; out++) {
+						t.matrix[in][out] += (gradients[in][out] * weight);
+					}
+				}
+				total += weight;
+				weight += 1;
+			}
+			for (int in = start; in <= end; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					t.matrix[in][out] /= total;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Momentum data structure.
+	 */
+	class Momentum {
+		double[][] momentums;
+		MomentumStrategy strategy = MomentumStrategy.FIXED;
+		double increase = 1.2;
+		double decrease = 0.8;
+		double maximum = 0.9;
+		double minimum = 0.1;
+		double initialValue = 0.0;
+		/**
+		 * Calculate the momentum applying the deltas strategy.
+		 * 
+		 * @param momentum  Current momentum.
+		 * @param prevDelta Previous delta.
+		 * @param nextDelta Next delta.
+		 * @return The adjusted momentum.
+		 */
+		double deltas(double momentum, double prevDelta, double nextDelta) {
+		
+			/*
+			 * Sign of change of deltas.
+			 */
+			int sign = -1;
+			if (Math.abs(prevDelta) <= minimumEqual && Math.abs(nextDelta) <= minimumEqual) {
+				sign = 0;
+			} else if (prevDelta > 0 && nextDelta > 0) {
+				sign = 1;
+			} else if (prevDelta < 0 && nextDelta < 0) {
+				sign = 1;
+			} else {
+				sign = -1;
+			}
+		
+			/*
+			 * Sign positive, both deltas are eithe positive or negative, they go in the
+			 * same direction, increase the momentum.
+			 */
+			if (sign == 1) {
+				momentum = Math.min(momentum * m.increase, m.maximum);
+			}
+			/*
+			 * Sign negative, deltas are one positive and one negative, oposite direction,
+			 * decrease the momentum.
+			 */
+			if (sign == -1) {
+				momentum = Math.max(momentum * m.decrease, m.minimum);
+			}
+		
+			return momentum;
+		}
+	}
+
+	/**
+	 * Enumerates momentum strategies.
+	 */
+	public static enum MomentumStrategy {
+		FIXED, DELTAS
+	}
+
+	/**
+	 * Transient cache data structure.
+	 */
+	class Transient {
+		double[] inputDeltas;
+		double[] inputValues;
+		double[] outputDeltas;
+		double[] outputValues;
+		double[][] matrix;
 	}
 
 	/** Input size. */
@@ -51,48 +204,38 @@ public class WeightsNode extends Node {
 	private int outputSize;
 	/** Matrix of weights (in-out). */
 	private double[][] weights;
+
 	/** Learning rates. */
 	private double[][] learningRates;
-	/** Momentums. */
-	private double[][] momentums;
 
 	/** Backward function. */
 	private RangeFunction backwardFunction;
 	/** Forward function. */
 	private RangeFunction forwardFunction;
-	/** Gradients calculator function. */
-	private RangeFunction gradientsInputFunction;
-	/** Gradients collector function. */
-	private RangeFunction gradientsOutputFunction;
 
-	/** Queue of input gradients. */
-	private Queue<double[][]> gradientsInputQueue;
-	/** Queue of output gradients. */
-	private Queue<double[][]> gradientsOutputQueue;
-	/** Queue of gradients deltas. */
-	private Queue<double[][]> gradientsDeltasQueue;
+	/** Gradients data structure. */
+	private Gradients g;
+	/** Momentum data structure. */
+	private Momentum m;
+	/** Transient cached vectors and matrices. */
+	private Transient t;
 
+	/**
+	 * Minimum absolute value to consider two values to be equal. Absolute values
+	 * less equal this minimum are considered to be equal.
+	 */
+	private double minimumEqual = 1.0e-12;
 	/** Default size for all queues. */
 	private int queueSize = 5;
-	/** Gradients softnener. */
-	private GradientSoftener gradientsSoftener = GradientSoftener.WMA;
-
-	/** Cached input deltas, to be accessed concurrently. */
-	private double[] inputDeltas;
-	/** Cached input values, to be accessed concurrently. */
-	private double[] inputValues;
-	/** Cached output deltas, to be accessed concurrently. */
-	private double[] outputDeltas;
-	/** Cached output values, to be accessed concurrently. */
-	private double[] outputValues;
-	/** Cached matrix accessed concurrently. */
-	private double[][] matrix;
 
 	/**
 	 * Constructor used to restore.
 	 */
 	public WeightsNode() {
 		super();
+		g = new Gradients();
+		m = new Momentum();
+		t = new Transient();
 	}
 
 	/**
@@ -102,7 +245,7 @@ public class WeightsNode extends Node {
 	 * @param outputSize Output size.
 	 */
 	public WeightsNode(int inputSize, int outputSize) {
-		super();
+		this();
 		this.inputSize = inputSize;
 		this.outputSize = outputSize;
 	}
@@ -147,31 +290,31 @@ public class WeightsNode extends Node {
 		}
 
 		/* Retrieve input values and output deltas. */
-		inputValues = inputEdges.get(0).getForwardData();
-		outputDeltas = outputEdges.get(0).getBackwardData();
+		t.inputValues = inputEdges.get(0).getForwardData();
+		t.outputDeltas = outputEdges.get(0).getBackwardData();
 
 		/* Calculate and add gradients to the input queue. */
-		matrix = new double[inputSize][outputSize];
-		gradientsInputFunction.process();
-		gradientsInputQueue.addLast(matrix);
+		t.matrix = new double[inputSize][outputSize];
+		g.inputFunction.process();
+		g.inputQueue.addLast(t.matrix);
 
 		/* Process (collector) the input queue and add to the output queue. */
-		if (gradientsSoftener == GradientSoftener.NONE) {
-			matrix = gradientsInputQueue.getLast();
+		if (g.softener == GradientSoftener.NONE) {
+			t.matrix = g.inputQueue.getLast();
 		} else {
-			matrix = new double[inputSize][outputSize];
-			gradientsOutputFunction.process();
+			t.matrix = new double[inputSize][outputSize];
+			g.outputFunction.process();
 		}
-		gradientsOutputQueue.addLast(matrix);
+		g.outputQueue.addLast(t.matrix);
 
 		/* Add the new gradients deltas to be be saved. */
-		gradientsDeltasQueue.add(new double[inputSize][outputSize]);
+		g.deltasQueue.add(new double[inputSize][outputSize]);
 
 		/* Process the main bacward function. */
 		backwardFunction.process();
 
 		/* Push backward resultin input deltas. */
-		pushBackward(inputDeltas);
+		pushBackward(t.inputDeltas);
 	}
 
 	/**
@@ -182,9 +325,9 @@ public class WeightsNode extends Node {
 	 */
 	private void backward(int start, int end) {
 
-		double[][] gradients = gradientsOutputQueue.getLast();
-		double[][] prevDeltas = gradientsDeltasQueue.getLast(1);
-		double[][] nextDeltas = gradientsDeltasQueue.getLast(0);
+		double[][] gradients = g.outputQueue.getLast();
+		double[][] prevDeltas = g.deltasQueue.getLast(1);
+		double[][] nextDeltas = g.deltasQueue.getLast(0);
 
 		for (int in = start; in <= end; in++) {
 
@@ -193,21 +336,26 @@ public class WeightsNode extends Node {
 			for (int out = 0; out < outputSize; out++) {
 
 				double weight = weights[in][out];
-				double outputDelta = outputDeltas[out];
+				double outputDelta = t.outputDeltas[out];
 				inputDelta += (weight * outputDelta);
 
 				double learningRate = learningRates[in][out];
-				double momentum = momentums[in][out];
 				double gradient = gradients[in][out];
-				double prevDelta = prevDeltas[in][out];
 				double nextDelta = learningRate * gradient;
 
+				double prevDelta = prevDeltas[in][out];
+				double momentum = m.momentums[in][out];
 				double weightDelta = (momentum * prevDelta) + ((1 - momentum) * nextDelta);
+
+				if (m.strategy == MomentumStrategy.DELTAS) {
+					m.momentums[in][out] = m.deltas(momentum, prevDelta, nextDelta);
+				}
+
 				weights[in][out] += weightDelta;
 				nextDeltas[in][out] = weightDelta;
 			}
 
-			inputDeltas[in] = inputDelta;
+			t.inputDeltas[in] = inputDelta;
 		}
 	}
 
@@ -216,9 +364,9 @@ public class WeightsNode extends Node {
 	 */
 	@Override
 	public void forward() {
-		inputValues = inputEdges.get(0).getForwardData();
+		t.inputValues = inputEdges.get(0).getForwardData();
 		forwardFunction.process();
-		pushForward(outputValues);
+		pushForward(t.outputValues);
 	}
 
 	/**
@@ -231,12 +379,20 @@ public class WeightsNode extends Node {
 		for (int out = start; out <= end; out++) {
 			double signal = 0;
 			for (int in = 0; in < inputSize; in++) {
-				double input = inputValues[in];
+				double input = t.inputValues[in];
 				double weight = weights[in][out];
 				signal += (input * weight);
 			}
-			outputValues[out] = signal;
+			t.outputValues[out] = signal;
 		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "WG";
 	}
 
 	/**
@@ -256,81 +412,241 @@ public class WeightsNode extends Node {
 	}
 
 	/**
-	 * @param start Start input index.
-	 * @param end   End input index.
+	 * {@inheritDoc}
 	 */
-	private void gradients(int start, int end) {
-		for (int in = start; in <= end; in++) {
+	@Override
+	public void initialize() {
+		validateState();
+		initializeLearningRates();
+		initializeMomentums();
+		initializeWeights();
+		initializeVectorsAndFunctions();
+	}
+	
+	/**
+	 * Initialize learning rates.
+	 */
+	private void initializeLearningRates() {
+		learningRates = new double[inputSize][outputSize];
+		Matrix.fill(learningRates, 0.01);
+	}
+	
+	/**
+	 * Initialize momentums.
+	 */
+	private void initializeMomentums() {
+		m.momentums = new double[inputSize][outputSize];
+		Matrix.fill(m.momentums, m.initialValue);
+	}
+	
+	/**
+	 * Initialize weights.
+	 */
+	private void initializeWeights() {
+		weights = new double[inputSize][outputSize];
+		Gaussian w = new Gaussian(true);
+		for (int in = 0; in < inputSize; in++) {
 			for (int out = 0; out < outputSize; out++) {
-				matrix[in][out] = inputValues[in] * outputDeltas[out];
+				weights[in][out] = w.nextGaussian();
 			}
 		}
 	}
 
 	/**
-	 * Consurrently (by input index) calculates the SMA of the raw gradients queue.
-	 * 
-	 * @param start Start input index.
-	 * @param end   End input index.
+	 * Initialize vectors and functions.
 	 */
-	private void gradientsSMA(int start, int end) {
-		if (gradientsInputQueue.isEmpty()) {
-			return;
-		}
-		Iterator<double[][]> iter = gradientsInputQueue.iterator();
-		while (iter.hasNext()) {
-			double[][] gradients = iter.next();
-			for (int in = start; in <= end; in++) {
-				for (int out = 0; out < outputSize; out++) {
-					matrix[in][out] += gradients[in][out];
-				}
-			}
-		}
-		double size = ((double) gradientsInputQueue.size());
-		for (int in = start; in <= end; in++) {
-			for (int out = 0; out < outputSize; out++) {
-				matrix[in][out] /= size;
-			}
-		}
-	}
+	private void initializeVectorsAndFunctions() {
 
-	/**
-	 * Consurrently (by input index) calculates the WMA of the raw gradients queue.
-	 * 
-	 * @param start Start input index.
-	 * @param end   End input index.
-	 */
-	private void gradientsWMA(int start, int end) {
-		if (gradientsInputQueue.isEmpty()) {
-			return;
+		/* Cached vectors not retrieved from edges. */
+		t.inputDeltas = new double[inputSize];
+		t.outputValues = new double[outputSize];
+
+		/* Forward function. */
+		forwardFunction = new RangeFunction(outputSize, (start, end) -> forward(start, end));
+
+		/* Backward function. */
+		backwardFunction = new RangeFunction(inputSize, (start, end) -> backward(start, end));
+
+		/* Gradients input function. */
+		g.inputFunction = new RangeFunction(
+			inputSize, 
+			(start, end) -> g.gradients(start, end));
+
+		/* Gradients output function only if softener is not NONE. */
+		if (g.softener == GradientSoftener.SMA) {
+			g.outputFunction = new RangeFunction(
+				inputSize, 
+				(start, end) -> g.gradientsSMA(start, end));
 		}
-		Iterator<double[][]> iter = gradientsInputQueue.iterator();
-		double weight = 1;
-		double total = 0;
-		while (iter.hasNext()) {
-			double[][] gradients = iter.next();
-			for (int in = start; in <= end; in++) {
-				for (int out = 0; out < outputSize; out++) {
-					matrix[in][out] += (gradients[in][out] * weight);
-				}
-			}
-			total += weight;
-			weight += 1;
+		if (g.softener == GradientSoftener.WMA) {
+			g.outputFunction = new RangeFunction(
+				inputSize, 
+				(start, end) -> g.gradientsWMA(start, end));
 		}
-		for (int in = start; in <= end; in++) {
-			for (int out = 0; out < outputSize; out++) {
-				matrix[in][out] /= total;
-			}
-		}
+
+		/* Clear queues and initialize deltas queue. */
+		g.inputQueue = new FixedSizeQueue<>(queueSize);
+		g.outputQueue = new FixedSizeQueue<>(queueSize);
+		g.deltasQueue = new FixedSizeQueue<>(queueSize);
+		g.deltasQueue.addLast(new double[inputSize][outputSize]);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void initialize() {
+	public void restore(InputStream is) throws IOException {
+		restoreProperties(is);
 
-		/* Validate. */
+		inputSize = properties.getInteger("input-size");
+		outputSize = properties.getInteger("output-size");
+
+		weights = properties.getDouble2A("weights");
+
+		g.softener = GradientSoftener.valueOf(properties.getString("gradients-softener"));
+
+		learningRates = properties.getDouble2A("learning-rates");
+
+		m.momentums = properties.getDouble2A("momentums");
+		m.strategy = MomentumStrategy.valueOf(properties.getString("momentum-strategy"));
+		m.increase = properties.getDouble("momentum-increase");
+		m.decrease = properties.getDouble("momentum-decrease");
+		m.maximum = properties.getDouble("momentum-maximum");
+		m.minimum = properties.getDouble("momentum-minimum");
+
+		minimumEqual = properties.getDouble("minimum-equal");
+
+		/* Initialize cached vectors and functions. */
+		initializeVectorsAndFunctions();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void save(OutputStream os) throws IOException {
+
+		properties.setInteger("input-size", inputSize);
+		properties.setInteger("output-size", outputSize);
+
+		properties.setDouble2A("weights", weights);
+
+		properties.setString("gradients-softener", g.softener.name());
+
+		properties.setDouble2A("learning-rates", learningRates);
+
+		properties.setDouble2A("momentums", m.momentums);
+		properties.setString("momentum-strategy", m.strategy.name());
+		properties.setDouble("momentum-increase", m.increase);
+		properties.setDouble("momentum-decrease", m.decrease);
+		properties.setDouble("momentum-maximum", m.maximum);
+		properties.setDouble("momentum-minimum", m.minimum);
+
+		properties.setDouble("minimum-equal", minimumEqual);
+
+		saveProperties(os);
+	}
+
+	/**
+	 * @param gradientSoftener The gradients softener.
+	 */
+	public void setGradientSoftener(GradientSoftener gradientSoftener) {
+		if (gradientSoftener == null) {
+			gradientSoftener = GradientSoftener.NONE;
+		}
+		g.softener = gradientSoftener;
+		initializeVectorsAndFunctions();
+	}
+
+	/**
+	 * @param minimumEqual Absolute minimum value to consider two values equal.
+	 */
+	public void setMinimumEquals(double minimumEqual) {
+		if (minimumEqual <= 0.0 || minimumEqual > 1.0e-8) {
+			throw new IllegalArgumentException("Invalid minimum equal: " + minimumEqual);
+		}
+		this.minimumEqual = minimumEqual;
+	}
+
+	/**
+	 * Set the momentum strategy to DELTAS with default values.
+	 * 
+	 * @param initialValue The initial momentum value.
+	 */
+	public void setMomentumStrategyDeltas(double initialValue) {
+		setMomentumStrategyDeltas(1.2, 0.8, 0.9, 0.1, initialValue);
+	}
+
+	/**
+	 * Set the momentum strategy to DELTAS.
+	 * 
+	 * @param momentumIncrease Increase factor.
+	 * @param momentumDecrease Decrease factor.
+	 * @param momentumMaximum  Maximum momentum (less than 1.0).
+	 * @param momentumMinimum  Minimum momentum (greater than 0.0)
+	 * @param initialValue     Initial value.
+	 */
+	public void setMomentumStrategyDeltas(
+		double momentumIncrease,
+		double momentumDecrease,
+		double momentumMaximum,
+		double momentumMinimum,
+		double initialValue) {
+
+		if (momentumIncrease <= 1.0) {
+			throw new IllegalArgumentException("Invalid momentum increase: " + momentumIncrease);
+		}
+		if (momentumDecrease <= 0.0 || momentumDecrease >= 1.0) {
+			throw new IllegalArgumentException("Invalid momentum decrease: " + momentumDecrease);
+		}
+		if (momentumMaximum <= 0.0 || momentumMaximum >= 1.0) {
+			throw new IllegalArgumentException("Invalid momentum maximum: " + momentumMaximum);
+		}
+		if (momentumMinimum <= 0.0 || momentumMinimum >= 1.0) {
+			throw new IllegalArgumentException("Invalid momentum minimum: " + momentumMinimum);
+		}
+		if (momentumMaximum <= momentumMinimum) {
+			throw new IllegalArgumentException(
+				"Invalid momentum max-min: " + momentumMaximum + ", " + momentumMinimum);
+		}
+		if (initialValue > momentumMaximum || initialValue < momentumMinimum) {
+			throw new IllegalArgumentException("Invalid initial value: " + initialValue);
+		}
+		m.strategy = MomentumStrategy.DELTAS;
+		m.increase = momentumIncrease;
+		m.decrease = momentumDecrease;
+		m.maximum = momentumMaximum;
+		m.minimum = momentumMinimum;
+		m.initialValue = initialValue;
+		initializeMomentums();
+	}
+
+	/**
+	 * Set the momentum strategy to FIXED.
+	 * 
+	 * @param value The value.
+	 */
+	public void setMomentumStrategyFixed(double value) {
+		if (value > m.maximum || value < 0.0) {
+			throw new IllegalArgumentException("Invalid initial momentum value: " + value);
+		}
+		m.strategy = MomentumStrategy.FIXED;
+		m.initialValue = value;
+		initializeMomentums();
+	}
+
+	/**
+	 * @param queueSize The common size of queues.
+	 */
+	public void setQueueSize(int queueSize) {
+		this.queueSize = queueSize;
+		initializeVectorsAndFunctions();
+	}
+
+	/**
+	 * Validate initil state.
+	 */
+	private void validateState() {
 		if (inputEdges.size() == 0) {
 			throw new IllegalStateException("Input edges empty");
 		}
@@ -349,110 +665,5 @@ public class WeightsNode extends Node {
 		if (outputEdges.get(0).getSize() != outputSize) {
 			throw new IllegalStateException("Invalid output edge size");
 		}
-
-		/* Initialize weights. */
-		weights = new double[inputSize][outputSize];
-		Gaussian w = new Gaussian(true);
-		for (int in = 0; in < inputSize; in++) {
-			for (int out = 0; out < outputSize; out++) {
-				weights[in][out] = w.nextGaussian();
-			}
-		}
-
-		/* Initialize learning rates and momentums. */
-		learningRates = new double[inputSize][outputSize];
-		Matrix.fill(learningRates, 0.01);
-		momentums = new double[inputSize][outputSize];
-		Matrix.fill(momentums, 0.0);
-
-		/* Initialize cached vectors and functions. */
-		initializeVectorsAndFunctions();
 	}
-
-	/**
-	 * Initialize vectors and functions.
-	 */
-	private void initializeVectorsAndFunctions() {
-
-		/* Cached vectors not retrieved from edges. */
-		inputDeltas = new double[inputSize];
-		outputValues = new double[outputSize];
-
-		/* Forward function. */
-		forwardFunction = new RangeFunction(outputSize, (start, end) -> forward(start, end));
-
-		/* Backward function. */
-		backwardFunction = new RangeFunction(inputSize, (start, end) -> backward(start, end));
-
-		/* Gradients input function. */
-		gradientsInputFunction =
-			new RangeFunction(inputSize, (start, end) -> gradients(start, end));
-
-		/* Gradients output function only if softener is not NONE. */
-		if (gradientsSoftener == GradientSoftener.SMA) {
-			gradientsOutputFunction =
-				new RangeFunction(inputSize, (start, end) -> gradientsSMA(start, end));
-		}
-		if (gradientsSoftener == GradientSoftener.WMA) {
-			gradientsOutputFunction =
-				new RangeFunction(inputSize, (start, end) -> gradientsWMA(start, end));
-		}
-
-		/* Clear queues and initializa deltas queue. */
-		gradientsInputQueue = new FixedSizeQueue<>(queueSize);
-		gradientsOutputQueue = new FixedSizeQueue<>(queueSize);
-		gradientsDeltasQueue = new FixedSizeQueue<>(queueSize);
-		gradientsDeltasQueue.addLast(new double[inputSize][outputSize]);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void restore(InputStream is) throws IOException {
-		restoreProperties(is);
-		gradientsSoftener = GradientSoftener.valueOf(properties.getString("gradients-softener"));
-		inputSize = properties.getInteger("input-size");
-		outputSize = properties.getInteger("output-size");
-		weights = properties.getDouble2A("weights");
-		learningRates = properties.getDouble2A("learning-rates");
-		momentums = properties.getDouble2A("momentums");
-
-		/* Initialize cached vectors and functions. */
-		initializeVectorsAndFunctions();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void save(OutputStream os) throws IOException {
-		properties.setString("gradients-softener", gradientsSoftener.name());
-		properties.setInteger("input-size", inputSize);
-		properties.setInteger("output-size", outputSize);
-		properties.setDouble2A("weights", weights);
-		properties.setDouble2A("learning-rates", learningRates);
-		properties.setDouble2A("momentums", momentums);
-		saveProperties(os);
-	}
-
-	/**
-	 * @param gradientsSoftener The gradients softener.
-	 */
-	public void setGradientSoftener(GradientSoftener gradientsSoftener) {
-		if (gradientsSoftener == null) {
-			gradientsSoftener = GradientSoftener.NONE;
-		}
-		this.gradientsSoftener = gradientsSoftener;
-		initializeVectorsAndFunctions();
-	}
-
-	/**
-	 * @param queueSize The common size of queues.
-	 */
-	public void setQueueSize(int queueSize) {
-		this.queueSize = queueSize;
-		initializeVectorsAndFunctions();
-	}
-
 }

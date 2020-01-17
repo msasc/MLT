@@ -15,7 +15,6 @@
 package com.mlt.ml.function.activation;
 
 import com.mlt.ml.function.Activation;
-import com.mlt.util.Numbers;
 
 /**
  * Soft-max activation.
@@ -23,12 +22,31 @@ import com.mlt.util.Numbers;
  * @author Miquel Sas
  */
 public class ActivationSoftMax implements Activation {
+	
+	/** Too small of a number. */
+	private double tooSmall = -1.0E50;
+	/** Too big of a number. */
+	private double tooBig = 1.0E50;
 
 	/**
 	 * Constructor.
 	 */
 	public ActivationSoftMax() {
 		super();
+	}
+	
+	/**
+	 * @param d The number to bound.
+	 * @return The bounded number.
+	 */
+	private double bound(double d) {
+		if (d < tooSmall || d == Double.NEGATIVE_INFINITY) {
+			return tooSmall;
+		} else if (d > tooBig || d == Double.POSITIVE_INFINITY) {
+			return tooBig;
+		} else {
+			return d;
+		}
 	}
 
 	/**
@@ -47,7 +65,7 @@ public class ActivationSoftMax implements Activation {
 		double[] outputs = new double[triggers.length];
 		double div = 0;
 		for (int i = 0; i < triggers.length; i++) {
-			double p = Numbers.bound(Math.exp(triggers[i]));
+			double p = bound(Math.exp(triggers[i]));
 			outputs[i] = p;
 			div += p;
 		}

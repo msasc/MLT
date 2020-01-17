@@ -171,6 +171,14 @@ public class Filter1DNode extends Node {
 			outputValues[outputIndex] = outputValue;
 		}
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "F1";
+	}
 
 	/**
 	 * {@inheritDocs}

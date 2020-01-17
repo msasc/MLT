@@ -42,4 +42,12 @@ public class AdditionNode extends BranchNode {
 	public AdditionNode(int size) {
 		super(size, new CollectorAddition(), new CollectorTransfer());
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "AD";
+	}
 }

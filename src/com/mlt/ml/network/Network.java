@@ -29,10 +29,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 
-import com.google.common.base.Strings;
 import com.mlt.util.IO;
 import com.mlt.util.Logs;
-import com.mlt.util.Numbers;
 
 /**
  * A neural network internally represented by a computational graph, with only
@@ -317,14 +315,6 @@ public class Network {
 			for (Node node : branch) {
 				p.println();
 				p.print(node.getDescription());
-				String extDesc = node.getExtendedDescription();
-				if (extDesc != null && !extDesc.isEmpty()) {
-					int tab = Numbers.getDigits(index) + 1;
-					tab += Numbers.getDigits(node.getOrder()) + 1;
-					p.println();
-					p.print(Strings.repeat(" ", tab));
-					p.print(extDesc);
-				}
 			}
 			p.println();
 		}

@@ -105,6 +105,14 @@ public class ConcatNode extends Node {
 		}
 		pushForward(outputValues);
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "CC";
+	}
 
 	/**
 	 * {@inheritDoc}

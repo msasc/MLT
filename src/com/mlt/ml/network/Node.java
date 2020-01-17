@@ -166,14 +166,11 @@ public abstract class Node {
 	}
 
 	/**
-	 * Return an extended description, for instance, if the node has an optimizer,
-	 * the description of the optimizer.
+	 * Return an identificative string, reduced version of the name.
 	 * 
-	 * @return The extended description.
+	 * @return The id.
 	 */
-	public String getExtendedDescription() {
-		return null;
-	}
+	public abstract String getId();
 
 	/**
 	 * Return an unmodifiable list of input edges.

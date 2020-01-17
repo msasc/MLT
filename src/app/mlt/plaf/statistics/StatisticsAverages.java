@@ -2160,19 +2160,18 @@ public class StatisticsAverages extends Statistics {
 	 * @throws Exception
 	 */
 	private Trainer getTrainer() throws Exception {
+		
+		Network network = getNetwork(1024, 64);
 
 		Trainer trainer = new Trainer();
-		trainer.setEpochs(500);
-
-		Network network = getNetwork(1024, 256, 64);
-
 		trainer.setNetwork(network);
 		trainer.setPatternSourceTraining(getPatternSource(true, true));
 		trainer.setPatternSourceTest(getPatternSource(true, false));
+		
 		trainer.setShuffle(false);
 		trainer.setScore(false);
-		trainer.setEpochs(6);
-		trainer.setPerformanceHistory(6);
+		trainer.setEpochs(20);
+		trainer.setGenerateReport(true, "PLAF-Report");
 
 		trainer.setFilePath("res/network/");
 		trainer.setFileRoot(network.getName());

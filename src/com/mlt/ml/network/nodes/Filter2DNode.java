@@ -310,6 +310,14 @@ public class Filter2DNode extends Node {
 			outputValues[outputIndex] = outputValue;
 		}
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "F2";
+	}
 
 	/**
 	 * Return the filter columns.

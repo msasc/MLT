@@ -38,26 +38,6 @@ public class Numbers {
 	public static final int MAX_INTEGER = Integer.MAX_VALUE;
 	/** Minimum negative integer. */
 	public static final int MIN_INTEGER = -Integer.MAX_VALUE;
-	/** Too small of a number. */
-	public static final double TOO_SMALL = -1.0E50;
-	/** Too big of a number. */
-	public static final double TOO_BIG = 1.0E50;
-
-	/**
-	 * Bound the number so that it does not become too big or too small.
-	 * 
-	 * @param d The number to check.
-	 * @return The new number. Only changed if it was too big or too small.
-	 */
-	public static double bound(final double d) {
-		if (d < TOO_SMALL || d == Double.NEGATIVE_INFINITY) {
-			return TOO_SMALL;
-		} else if (d > TOO_BIG || d == Double.POSITIVE_INFINITY) {
-			return TOO_BIG;
-		} else {
-			return d;
-		}
-	}
 
 	/**
 	 * Returns the floor number to the given decimal places. The decimal places can
@@ -185,7 +165,7 @@ public class Numbers {
 		}
 		return max;
 	}
-
+	
 	/**
 	 * Return the maximum.
 	 *

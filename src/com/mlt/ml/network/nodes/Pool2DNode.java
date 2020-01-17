@@ -169,6 +169,14 @@ public class Pool2DNode extends Node {
 			outputValues[outputIndex] = max;
 		}
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "P2";
+	}
 
 	/**
 	 * {@inheritDoc}

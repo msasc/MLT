@@ -27,6 +27,7 @@ import com.mlt.ml.network.nodes.ActivationNode;
 import com.mlt.ml.network.nodes.AdditionNode;
 import com.mlt.ml.network.nodes.BiasNode;
 import com.mlt.ml.network.nodes.WeightsNode;
+import com.mlt.ml.network.nodes.WeightsNode.GradientSoftener;
 
 /**
  * Builder of network branches. A branch is a list of nodes starting at the
@@ -54,6 +55,8 @@ public class Builder {
 
 		Edge inputEdge = new Edge(inputSize);
 		WeightsNode weightsNode = new WeightsNode(inputSize, outputSize);
+		weightsNode.setGradientSoftener(GradientSoftener.WMA);
+		weightsNode.setMomentumStrategyDeltas(0.5);
 		weightsNode.addInputEdge(inputEdge);
 		nodes.add(weightsNode);
 

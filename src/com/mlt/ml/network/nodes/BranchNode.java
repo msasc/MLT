@@ -125,6 +125,14 @@ public class BranchNode extends Node {
 		double[] outputValues = forwardFunction.collect(inputValues);
 		pushForward(outputValues);
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "BR";
+	}
 
 	/**
 	 * {@inheritDoc}

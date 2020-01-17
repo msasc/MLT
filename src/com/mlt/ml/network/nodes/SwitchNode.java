@@ -68,4 +68,12 @@ public class SwitchNode extends BranchNode {
 		}
 		super.addInputEdge(edge);
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "SW";
+	}
 }

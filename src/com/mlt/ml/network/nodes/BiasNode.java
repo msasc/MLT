@@ -93,6 +93,14 @@ public class BiasNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public String getId() {
+		return "BI";
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public int getInputSize() {
 		return 0;
 	}

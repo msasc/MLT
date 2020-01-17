@@ -20,6 +20,8 @@ package com.mlt.ml.network.nodes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 import com.mlt.ml.function.Activation;
 import com.mlt.ml.network.Edge;
@@ -115,6 +117,39 @@ public class ActivationNode extends Node {
 		double[] triggerValues = inputEdge.getForwardData();
 		double[] outputValues = activation.activations(triggerValues);
 		pushForward(outputValues);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getDescription() {
+		StringWriter s = new StringWriter();
+		PrintWriter p = new PrintWriter(s);
+		p.print(getBranch());
+		p.print(".");
+		p.print(getOrder());
+		p.print(" ");
+		p.print(getId());
+		p.print("-");
+		p.print(activation.getId());
+		p.print(" (I: ");
+		p.print(getInputEdges().get(0).getOutputNode().getId());
+		p.print("-");
+		p.print(getInputSize());
+		p.print(", O: ");
+		p.print(getOutputSize());
+		p.print(")");
+		p.close();
+		return s.toString();
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getId() {
+		return "AC";
 	}
 
 	/**

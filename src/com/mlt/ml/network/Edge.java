@@ -139,6 +139,32 @@ public class Edge {
 	public int getForwardQueueSize() {
 		return forwardQueue.size();
 	}
+	
+	/**
+	 * @return A short description of the input.
+	 */
+	public String getInputDescription() {
+		StringBuilder b = new StringBuilder();
+		if (inputNode != null) {
+			b.append(inputNode.getId());
+			b.append("-");
+		}
+		b.append(size);
+		return b.toString();
+	}
+
+	/**
+	 * @return A short description of the output.
+	 */
+	public String getOutputDescription() {
+		StringBuilder b = new StringBuilder();
+		if (outputNode != null) {
+			b.append(outputNode.getId());
+			b.append("-");
+		}
+		b.append(size);
+		return b.toString();
+	}
 
 	/**
 	 * Return the input node.

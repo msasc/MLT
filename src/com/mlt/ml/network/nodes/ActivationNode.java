@@ -20,8 +20,6 @@ package com.mlt.ml.network.nodes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 import com.mlt.ml.function.Activation;
 import com.mlt.ml.network.Edge;
@@ -39,7 +37,7 @@ public class ActivationNode extends Node {
 	/** Activation function. */
 	private Activation activation;
 	/** Flat spot to avoid near zero derivatives. */
-	private static double flatSpot = 0.00;
+	private double flatSpot = 0.01;
 
 	/**
 	 * Constructor used for restore.
@@ -123,27 +121,10 @@ public class ActivationNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public String getDescription() {
-		StringWriter s = new StringWriter();
-		PrintWriter p = new PrintWriter(s);
-		p.print(getBranch());
-		p.print(".");
-		p.print(getOrder());
-		p.print(" ");
-		p.print(getId());
-		p.print("-");
-		p.print(activation.getId());
-		p.print(" (I: ");
-		p.print(getInputEdges().get(0).getOutputNode().getId());
-		p.print("-");
-		p.print(getInputSize());
-		p.print(", O: ");
-		p.print(getOutputSize());
-		p.print(")");
-		p.close();
-		return s.toString();
+	public String getExtendedDescription() {
+		return activation.getId() + ", " + flatSpot;
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -176,11 +157,13 @@ public class ActivationNode extends Node {
 		/* Validate. */
 		if (inputEdges.size() == 0) throw new IllegalStateException("Input edges empty");
 		if (inputEdges.size() > 1) throw new IllegalStateException("More than one input edge");
-		if (inputEdges.get(0)
+		if (inputEdges
+			.get(0)
 			.getSize() != size) throw new IllegalStateException("Invalid input edge size");
 		if (outputEdges.size() == 0) throw new IllegalStateException("Output edges empty");
 		if (outputEdges.size() > 1) throw new IllegalStateException("More than one output edge");
-		if (outputEdges.get(0)
+		if (outputEdges
+			.get(0)
 			.getSize() != size) throw new IllegalStateException("Invalid output edge size");
 		if (activation == null) throw new IllegalStateException("Activation is null");
 	}

@@ -54,7 +54,6 @@ public class WeightsNode extends Node {
 		RangeFunction outputFunction;
 		Queue<double[][]> inputQueue;
 		Queue<double[][]> outputQueue;
-		Queue<double[][]> deltasQueue;
 
 		/**
 		 * @param start Start input index.
@@ -127,56 +126,140 @@ public class WeightsNode extends Node {
 	}
 
 	/**
-	 * Momentum data structure.
+	 * Learning rate (eta - wiki nomenclature) data structure.
+	 */
+
+	/**
+	 * Momentum (alpha - wiki nomenclature) data structure.
 	 */
 	class Momentum {
+
 		double[][] momentums;
 		MomentumStrategy strategy = MomentumStrategy.FIXED;
 		double increase = 1.2;
 		double decrease = 0.8;
-		double maximum = 0.9;
-		double minimum = 0.1;
+		double maximum = 0.99;
+		double minimum = 0.01;
 		double initialValue = 0.0;
+
 		/**
-		 * Calculate the momentum applying the deltas strategy.
+		 * Calculate the momentum applying the gradients strategy.
 		 * 
-		 * @param momentum  Current momentum.
-		 * @param prevDelta Previous delta.
-		 * @param nextDelta Next delta.
+		 * @param momentum Current momentum.
+		 * @param prevGrad Previous gradient.
+		 * @param nextGrad Next gradien.
 		 * @return The adjusted momentum.
 		 */
-		double deltas(double momentum, double prevDelta, double nextDelta) {
-		
+		double gradients(double momentum, double prevGrad, double nextGrad) {
+
 			/*
 			 * Sign of change of deltas.
 			 */
 			int sign = -1;
-			if (Math.abs(prevDelta) <= minimumEqual && Math.abs(nextDelta) <= minimumEqual) {
+			if (Math.abs(prevGrad) <= minimumEqual && Math.abs(nextGrad) <= minimumEqual) {
 				sign = 0;
-			} else if (prevDelta > 0 && nextDelta > 0) {
+			} else if (prevGrad > 0 && nextGrad > 0) {
 				sign = 1;
-			} else if (prevDelta < 0 && nextDelta < 0) {
+			} else if (prevGrad < 0 && nextGrad < 0) {
 				sign = 1;
 			} else {
 				sign = -1;
 			}
-		
+
 			/*
 			 * Sign positive, both deltas are eithe positive or negative, they go in the
 			 * same direction, increase the momentum.
 			 */
 			if (sign == 1) {
-				momentum = Math.min(momentum * m.increase, m.maximum);
+				momentum = Math.min(momentum * increase, maximum);
 			}
 			/*
 			 * Sign negative, deltas are one positive and one negative, oposite direction,
 			 * decrease the momentum.
 			 */
 			if (sign == -1) {
-				momentum = Math.max(momentum * m.decrease, m.minimum);
+				momentum = Math.max(momentum * decrease, minimum);
 			}
-		
+
 			return momentum;
+		}
+
+		/**
+		 * Initialize momentums.
+		 */
+		void initialize() {
+			momentums = new double[inputSize][outputSize];
+			Matrix.fill(momentums, initialValue);
+		}
+
+		/**
+		 * Restore parameters from properties.
+		 */
+		void restoreProperties() {
+			momentums = properties.getDouble2A("momentums");
+			strategy = MomentumStrategy.valueOf(properties.getString("momentum-strategy"));
+			increase = properties.getDouble("momentum-increase");
+			decrease = properties.getDouble("momentum-decrease");
+			maximum = properties.getDouble("momentum-maximum");
+			minimum = properties.getDouble("momentum-minimum");
+		}
+
+		/**
+		 * Save parameters to properties.
+		 */
+		void saveProperties() {
+			properties.setDouble2A("momentums", momentums);
+			properties.setString("momentum-strategy", strategy.name());
+			properties.setDouble("momentum-increase", increase);
+			properties.setDouble("momentum-decrease", decrease);
+			properties.setDouble("momentum-maximum", maximum);
+			properties.setDouble("momentum-minimum", minimum);
+		}
+
+		void setStrategy(MomentumStrategy strategy, double... params) {
+			this.strategy = strategy;
+
+			if (strategy == MomentumStrategy.FIXED) {
+				double value = params[0];
+				if (value > this.maximum || value < 0.0) {
+					throw new IllegalArgumentException("Invalid initial momentum value: " + value);
+				}
+				this.initialValue = value;
+			}
+
+			if (strategy == MomentumStrategy.GRADIENTS) {
+				double increase = params[0];
+				double decrease = params[1];
+				double maximum = params[2];
+				double minimum = params[3];
+				double initialValue = params[4];
+				if (increase <= 1.0) {
+					throw new IllegalArgumentException("Invalid momentum increase: " + increase);
+				}
+				if (decrease <= 0.0 || decrease >= 1.0) {
+					throw new IllegalArgumentException("Invalid momentum decrease: " + decrease);
+				}
+				if (maximum <= 0.0 || maximum >= 1.0) {
+					throw new IllegalArgumentException("Invalid momentum maximum: " + maximum);
+				}
+				if (minimum <= 0.0 || minimum >= 1.0) {
+					throw new IllegalArgumentException("Invalid momentum minimum: " + minimum);
+				}
+				if (maximum <= minimum) {
+					throw new IllegalArgumentException(
+						"Invalid momentum max-min: " + maximum + ", " + minimum);
+				}
+				if (initialValue > maximum || initialValue < minimum) {
+					throw new IllegalArgumentException("Invalid initial value: " + initialValue);
+				}
+				this.increase = increase;
+				this.decrease = decrease;
+				this.maximum = maximum;
+				this.minimum = minimum;
+				this.initialValue = initialValue;
+			}
+
+			initialize();
 		}
 	}
 
@@ -184,7 +267,7 @@ public class WeightsNode extends Node {
 	 * Enumerates momentum strategies.
 	 */
 	public static enum MomentumStrategy {
-		FIXED, DELTAS
+		FIXED, GRADIENTS
 	}
 
 	/**
@@ -307,9 +390,6 @@ public class WeightsNode extends Node {
 		}
 		g.outputQueue.addLast(t.matrix);
 
-		/* Add the new gradients deltas to be be saved. */
-		g.deltasQueue.add(new double[inputSize][outputSize]);
-
 		/* Process the main bacward function. */
 		backwardFunction.process();
 
@@ -325,9 +405,8 @@ public class WeightsNode extends Node {
 	 */
 	private void backward(int start, int end) {
 
-		double[][] gradients = g.outputQueue.getLast();
-		double[][] prevDeltas = g.deltasQueue.getLast(1);
-		double[][] nextDeltas = g.deltasQueue.getLast(0);
+		double[][] prevGradients = g.outputQueue.getLast(1);
+		double[][] nextGradients = g.outputQueue.getLast(0);
 
 		for (int in = start; in <= end; in++) {
 
@@ -339,20 +418,19 @@ public class WeightsNode extends Node {
 				double outputDelta = t.outputDeltas[out];
 				inputDelta += (weight * outputDelta);
 
-				double learningRate = learningRates[in][out];
-				double gradient = gradients[in][out];
-				double nextDelta = learningRate * gradient;
-
-				double prevDelta = prevDeltas[in][out];
+				double prevGrad = prevGradients[in][out];
+				double nextGrad = nextGradients[in][out];
 				double momentum = m.momentums[in][out];
-				double weightDelta = (momentum * prevDelta) + ((1 - momentum) * nextDelta);
+				double gradient = momentum * prevGrad + (1 - momentum) * nextGrad;
 
-				if (m.strategy == MomentumStrategy.DELTAS) {
-					m.momentums[in][out] = m.deltas(momentum, prevDelta, nextDelta);
+				double learningRate = learningRates[in][out];
+				double weightDelta = learningRate * gradient;
+
+				if (m.strategy == MomentumStrategy.GRADIENTS) {
+					m.momentums[in][out] = m.gradients(momentum, prevGrad, nextGrad);
 				}
 
 				weights[in][out] += weightDelta;
-				nextDeltas[in][out] = weightDelta;
 			}
 
 			t.inputDeltas[in] = inputDelta;
@@ -388,6 +466,21 @@ public class WeightsNode extends Node {
 	}
 
 	/**
+	 * Return the description of the momentum and learning rate optimization method.
+	 */
+	@Override
+	public String getExtendedDescription() {
+		StringBuilder b = new StringBuilder();
+		b.append("GS: ");
+		b.append(g.softener);
+		b.append("; MM: ");
+		b.append(m.strategy);
+		b.append(", ");
+		b.append(m.initialValue);
+		return b.toString();
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -418,11 +511,11 @@ public class WeightsNode extends Node {
 	public void initialize() {
 		validateState();
 		initializeLearningRates();
-		initializeMomentums();
+		m.initialize();
 		initializeWeights();
 		initializeVectorsAndFunctions();
 	}
-	
+
 	/**
 	 * Initialize learning rates.
 	 */
@@ -430,15 +523,7 @@ public class WeightsNode extends Node {
 		learningRates = new double[inputSize][outputSize];
 		Matrix.fill(learningRates, 0.01);
 	}
-	
-	/**
-	 * Initialize momentums.
-	 */
-	private void initializeMomentums() {
-		m.momentums = new double[inputSize][outputSize];
-		Matrix.fill(m.momentums, m.initialValue);
-	}
-	
+
 	/**
 	 * Initialize weights.
 	 */
@@ -468,27 +553,29 @@ public class WeightsNode extends Node {
 		backwardFunction = new RangeFunction(inputSize, (start, end) -> backward(start, end));
 
 		/* Gradients input function. */
-		g.inputFunction = new RangeFunction(
-			inputSize, 
-			(start, end) -> g.gradients(start, end));
+		g.inputFunction =
+			new RangeFunction(
+				inputSize,
+				(start, end) -> g.gradients(start, end));
 
 		/* Gradients output function only if softener is not NONE. */
 		if (g.softener == GradientSoftener.SMA) {
-			g.outputFunction = new RangeFunction(
-				inputSize, 
-				(start, end) -> g.gradientsSMA(start, end));
+			g.outputFunction =
+				new RangeFunction(
+					inputSize,
+					(start, end) -> g.gradientsSMA(start, end));
 		}
 		if (g.softener == GradientSoftener.WMA) {
-			g.outputFunction = new RangeFunction(
-				inputSize, 
-				(start, end) -> g.gradientsWMA(start, end));
+			g.outputFunction =
+				new RangeFunction(
+					inputSize,
+					(start, end) -> g.gradientsWMA(start, end));
 		}
 
-		/* Clear queues and initialize deltas queue. */
+		/* Clear queues and initialize output queue with the last gradients. */
 		g.inputQueue = new FixedSizeQueue<>(queueSize);
 		g.outputQueue = new FixedSizeQueue<>(queueSize);
-		g.deltasQueue = new FixedSizeQueue<>(queueSize);
-		g.deltasQueue.addLast(new double[inputSize][outputSize]);
+		g.outputQueue.addLast(new double[inputSize][outputSize]);
 	}
 
 	/**
@@ -497,24 +584,13 @@ public class WeightsNode extends Node {
 	@Override
 	public void restore(InputStream is) throws IOException {
 		restoreProperties(is);
-
 		inputSize = properties.getInteger("input-size");
 		outputSize = properties.getInteger("output-size");
-
 		weights = properties.getDouble2A("weights");
-
 		g.softener = GradientSoftener.valueOf(properties.getString("gradients-softener"));
-
 		learningRates = properties.getDouble2A("learning-rates");
-
-		m.momentums = properties.getDouble2A("momentums");
-		m.strategy = MomentumStrategy.valueOf(properties.getString("momentum-strategy"));
-		m.increase = properties.getDouble("momentum-increase");
-		m.decrease = properties.getDouble("momentum-decrease");
-		m.maximum = properties.getDouble("momentum-maximum");
-		m.minimum = properties.getDouble("momentum-minimum");
-
 		minimumEqual = properties.getDouble("minimum-equal");
+		m.restoreProperties();
 
 		/* Initialize cached vectors and functions. */
 		initializeVectorsAndFunctions();
@@ -525,25 +601,13 @@ public class WeightsNode extends Node {
 	 */
 	@Override
 	public void save(OutputStream os) throws IOException {
-
 		properties.setInteger("input-size", inputSize);
 		properties.setInteger("output-size", outputSize);
-
 		properties.setDouble2A("weights", weights);
-
 		properties.setString("gradients-softener", g.softener.name());
-
 		properties.setDouble2A("learning-rates", learningRates);
-
-		properties.setDouble2A("momentums", m.momentums);
-		properties.setString("momentum-strategy", m.strategy.name());
-		properties.setDouble("momentum-increase", m.increase);
-		properties.setDouble("momentum-decrease", m.decrease);
-		properties.setDouble("momentum-maximum", m.maximum);
-		properties.setDouble("momentum-minimum", m.minimum);
-
 		properties.setDouble("minimum-equal", minimumEqual);
-
+		m.saveProperties();
 		saveProperties(os);
 	}
 
@@ -569,56 +633,31 @@ public class WeightsNode extends Node {
 	}
 
 	/**
-	 * Set the momentum strategy to DELTAS with default values.
+	 * Set the momentum strategy to GRADIENTS with default values.
 	 * 
 	 * @param initialValue The initial momentum value.
 	 */
-	public void setMomentumStrategyDeltas(double initialValue) {
-		setMomentumStrategyDeltas(1.2, 0.8, 0.9, 0.1, initialValue);
+	public void setMomentumStrategyGradients(double initialValue) {
+		setMomentumStrategyGradients(1.2, 0.8, 0.9, 0.1, initialValue);
 	}
 
 	/**
-	 * Set the momentum strategy to DELTAS.
+	 * Set the momentum strategy to GRADIENTS.
 	 * 
-	 * @param momentumIncrease Increase factor.
-	 * @param momentumDecrease Decrease factor.
-	 * @param momentumMaximum  Maximum momentum (less than 1.0).
-	 * @param momentumMinimum  Minimum momentum (greater than 0.0)
-	 * @param initialValue     Initial value.
+	 * @param increase     Increase factor.
+	 * @param decrease     Decrease factor.
+	 * @param maximum      Maximum momentum (less than 1.0).
+	 * @param minimum      Minimum momentum (greater than 0.0)
+	 * @param initialValue Initial value.
 	 */
-	public void setMomentumStrategyDeltas(
-		double momentumIncrease,
-		double momentumDecrease,
-		double momentumMaximum,
-		double momentumMinimum,
+	public void setMomentumStrategyGradients(
+		double increase,
+		double decrease,
+		double maximum,
+		double minimum,
 		double initialValue) {
-
-		if (momentumIncrease <= 1.0) {
-			throw new IllegalArgumentException("Invalid momentum increase: " + momentumIncrease);
-		}
-		if (momentumDecrease <= 0.0 || momentumDecrease >= 1.0) {
-			throw new IllegalArgumentException("Invalid momentum decrease: " + momentumDecrease);
-		}
-		if (momentumMaximum <= 0.0 || momentumMaximum >= 1.0) {
-			throw new IllegalArgumentException("Invalid momentum maximum: " + momentumMaximum);
-		}
-		if (momentumMinimum <= 0.0 || momentumMinimum >= 1.0) {
-			throw new IllegalArgumentException("Invalid momentum minimum: " + momentumMinimum);
-		}
-		if (momentumMaximum <= momentumMinimum) {
-			throw new IllegalArgumentException(
-				"Invalid momentum max-min: " + momentumMaximum + ", " + momentumMinimum);
-		}
-		if (initialValue > momentumMaximum || initialValue < momentumMinimum) {
-			throw new IllegalArgumentException("Invalid initial value: " + initialValue);
-		}
-		m.strategy = MomentumStrategy.DELTAS;
-		m.increase = momentumIncrease;
-		m.decrease = momentumDecrease;
-		m.maximum = momentumMaximum;
-		m.minimum = momentumMinimum;
-		m.initialValue = initialValue;
-		initializeMomentums();
+		double[] params = new double[] { increase, decrease, maximum, minimum, initialValue };
+		m.setStrategy(MomentumStrategy.GRADIENTS, params);
 	}
 
 	/**
@@ -627,12 +666,7 @@ public class WeightsNode extends Node {
 	 * @param value The value.
 	 */
 	public void setMomentumStrategyFixed(double value) {
-		if (value > m.maximum || value < 0.0) {
-			throw new IllegalArgumentException("Invalid initial momentum value: " + value);
-		}
-		m.strategy = MomentumStrategy.FIXED;
-		m.initialValue = value;
-		initializeMomentums();
+		m.setStrategy(MomentumStrategy.FIXED, value);
 	}
 
 	/**

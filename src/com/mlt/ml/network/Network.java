@@ -307,7 +307,17 @@ public class Network {
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
 		
-		p.println(getName());
+		p.print(getName());
+		p.print(" (");
+		List<Integer> sizes = graph.getSizes();
+		for (int i = 0; i < sizes.size(); i++) {
+			if (i > 0) {
+				p.print(", ");
+			}
+			p.print(sizes.get(i));
+		}
+		p.print(")");
+		p.println();
 		
 		List<Integer> branchIndexes = graph.getBranches();
 		for (Integer index : branchIndexes) {

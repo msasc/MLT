@@ -20,8 +20,6 @@ package com.mlt.ml.network;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -129,40 +127,49 @@ public abstract class Node {
 	 * @return The node description.
 	 */
 	public String getDescription() {
-		StringWriter s = new StringWriter();
-		PrintWriter p = new PrintWriter(s);
-		p.print(getBranch());
-		p.print(".");
-		p.print(getOrder());
-		p.print(" ");
-		p.print(getName());
-
-		StringBuilder io = new StringBuilder();
+		StringBuilder b = new StringBuilder();
+		b.append(getBranch());
+		b.append(".");
+		b.append(getOrder());
+		b.append(" ");
+		b.append(getId());
 		if (!inputEdges.isEmpty()) {
-			io.append(" (I: ");
+			b.append(" (In: ");
 			for (int i = 0; i < inputEdges.size(); i++) {
-				if (i > 0) io.append(", ");
-				io.append(inputEdges.get(i).getSize());
+				if (i > 0) {
+					b.append(", ");
+				}
+				b.append(inputEdges.get(i).getInputDescription());
 			}
+			b.append(")");
 		}
 		if (!outputEdges.isEmpty()) {
-			if (io.length() == 0) {
-				io.append(" (O: ");
-			} else {
-				io.append(", O: ");
-			}
+			b.append(" (Out: ");
 			for (int i = 0; i < outputEdges.size(); i++) {
-				if (i > 0) io.append(", ");
-				io.append(outputEdges.get(i).getSize());
+				if (i > 0) {
+					b.append(", ");
+				}
+				b.append(outputEdges.get(i).getOutputDescription());
 			}
+			b.append(")");
 		}
-		if (io.length() > 0) {
-			io.append(")");
+		String extDesc = getExtendedDescription();
+		if (extDesc != null && !extDesc.isEmpty()) {
+			b.append(" ");
+			b.append(getExtendedDescription());
 		}
-		p.print(io.toString());
+		return b.toString();
+	}
 
-		p.close();
-		return s.toString();
+	/**
+	 * Return an extended description of the node. This method is intended to be
+	 * override.
+	 * 
+	 * @return An extended description, for instance the activation function in an
+	 *         activation node, or the optimizer in a weights node.
+	 */
+	public String getExtendedDescription() {
+		return null;
 	}
 
 	/**

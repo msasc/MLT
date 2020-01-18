@@ -906,8 +906,6 @@ class Graph {
 	}
 
 	/**
-	 * Return the output edge or null.
-	 * 
 	 * @return The output edge or null.
 	 */
 	Edge getOutputEdge() {
@@ -916,6 +914,26 @@ class Graph {
 			return outputEdges.get(0);
 		}
 		return null;
+	}
+	
+	/**
+	 * @return The list of sizes per branch.
+	 */
+	List<Integer> getSizes() {
+		List<Integer> sizes = new ArrayList<>();
+		List<Integer> indexes = getBranches();
+		for (int index = 0; index < indexes.size(); index++) {
+			List<Node> branch = getBranch(index);
+			int inputSize = branch.get(0).getInputSize();
+			if (!sizes.contains(inputSize)) {
+				sizes.add(inputSize);
+			}
+			int outputSize = branch.get(branch.size() - 1).getOutputSize();
+			if (!sizes.contains(outputSize)) {
+				sizes.add(outputSize);
+			}
+		}
+		return sizes;
 	}
 
 	/**

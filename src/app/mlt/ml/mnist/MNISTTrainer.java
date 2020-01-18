@@ -117,7 +117,7 @@ public class MNISTTrainer {
 		
 		trainer.setShuffle(false);
 		trainer.setScore(false);
-		trainer.setEpochs(20);
+		trainer.setEpochs(6);
 		trainer.setGenerateReport(true, "MNIST-Report");
 
 		trainer.setTitle(network.getName());

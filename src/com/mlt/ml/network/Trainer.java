@@ -666,11 +666,9 @@ public class Trainer extends Task {
 		int padError = errorDecimals + 4;
 		int padPerformance = performanceDecimals + 5;
 		int padIndex = Numbers.getDigits(size) + 2;
-		int padRule = padIndex + (2 * padError) + (2 * padPerformance);
 
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
-		p.println(Strings.repeat("-", padRule));
 		p.println(network.getDescription());
 		
 		for (int i = 0; i < size; i++) {

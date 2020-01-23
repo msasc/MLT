@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control;
@@ -55,7 +60,8 @@ import java.awt.EventQueue;
 public class ProgressPane extends GridBagPane {
 
 	/**
-	 * Listener to notify containers that it has been requested to remove the progress pane.
+	 * Listener to notify containers that it has been requested to remove the
+	 * progress pane.
 	 */
 	public interface Listener {
 
@@ -121,6 +127,38 @@ public class ProgressPane extends GridBagPane {
 	 * Task listener.
 	 */
 	class TaskListener extends TaskAdapter {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void onConsoleClear() {
+			console.clear();
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void onConsolePrint(String str) {
+			console.print(str);
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void onConsolePrintln() {
+			console.println();
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void onConsolePrintln(String str) {
+			console.println(str);
+		}
 
 		/**
 		 * {@inheritDoc}
@@ -211,7 +249,11 @@ public class ProgressPane extends GridBagPane {
 		 * {@inheritDoc}
 		 */
 		@Override
-		public void onStatusProgress(String statusKey, String progressKey, int workDone, int totalWork) {
+		public void onStatusProgress(
+			String statusKey,
+			String progressKey,
+			int workDone,
+			int totalWork) {
 			for (StatusBar statusBar : statusBars) {
 				if (statusBar.getName().equals("KEY-" + statusKey)) {
 					statusBar.setProgress(progressKey, workDone, totalWork);
@@ -224,7 +266,12 @@ public class ProgressPane extends GridBagPane {
 		 * {@inheritDoc}
 		 */
 		@Override
-		public void onStatusProgress(String statusKey, String progressKey, String text, int workDone, int totalWork) {
+		public void onStatusProgress(
+			String statusKey,
+			String progressKey,
+			String text,
+			int workDone,
+			int totalWork) {
 			for (StatusBar statusBar : statusBars) {
 				if (statusBar.getName().equals("KEY-" + statusKey)) {
 					statusBar.setProgress(progressKey, text, workDone, totalWork);
@@ -301,11 +348,11 @@ public class ProgressPane extends GridBagPane {
 	private Label labelState;
 	/** List of additional status bars by key. */
 	private List<StatusBar> statusBars;
-	/** Error message. */
-	private Label labelError;
-
 	/** Progress bar. */
 	private ProgressBar progressBar;
+
+	/** Optional console at the end. */
+	private Console console;
 
 	/** Progress pane listeners. */
 	private List<Listener> listeners = new ArrayList<>();
@@ -321,9 +368,6 @@ public class ProgressPane extends GridBagPane {
 		this.pool = pool;
 		this.task = task;
 
-		/*
-		 * Create components.
-		 */
 		IconArrow iconStart = new IconArrow();
 		iconStart.setDirection(Direction.RIGHT);
 		iconStart.setSize(24, 24);
@@ -371,8 +415,6 @@ public class ProgressPane extends GridBagPane {
 			statusBars.add(statusBar);
 		}
 
-		labelError = createLabel("ERROR", fontPlain);
-
 		progressBar = new ProgressBar();
 		progressBar.setOpaque(false);
 		progressBar.setBorder(new LineBorder(Color.LIGHT_GRAY));
@@ -395,39 +437,66 @@ public class ProgressPane extends GridBagPane {
 		Label.setPreferredAndMinimumSize(labelProgress);
 		Label.setPreferredAndMinimumSize(labelTime);
 		Label.setPreferredAndMinimumSize(labelState);
-		Label.setPreferredAndMinimumSize(labelError);
 
 		setBorder(new LineBorderSides(Color.LIGHT_GRAY, new Stroke(), false, false, true, false));
 		setBackground(Color.WHITE);
 
 		GridBagPane paneTitleAndButtons = new GridBagPane();
 		paneTitleAndButtons.setOpaque(false);
-		paneTitleAndButtons.add(labelTitle,
+		paneTitleAndButtons.add(
+			labelTitle,
 			new Constraints(Anchor.LEFT, Fill.HORIZONTAL, 0, 0, new Insets(0, 0, 0, 0)));
-		paneTitleAndButtons.add(buttonStart, new Constraints(Anchor.RIGHT, Fill.NONE, 1, 0, new Insets(0, 1, 0, 0)));
-		paneTitleAndButtons.add(buttonCancel, new Constraints(Anchor.RIGHT, Fill.NONE, 2, 0, new Insets(0, 1, 0, 0)));
-		paneTitleAndButtons.add(buttonInfo, new Constraints(Anchor.RIGHT, Fill.NONE, 3, 0, new Insets(0, 1, 0, 0)));
-		paneTitleAndButtons.add(buttonRemove, new Constraints(Anchor.RIGHT, Fill.NONE, 4, 0, new Insets(0, 1, 0, 0)));
+		paneTitleAndButtons.add(
+			buttonStart,
+			new Constraints(Anchor.RIGHT, Fill.NONE, 1, 0, new Insets(0, 1, 0, 0)));
+		paneTitleAndButtons.add(
+			buttonCancel,
+			new Constraints(Anchor.RIGHT, Fill.NONE, 2, 0, new Insets(0, 1, 0, 0)));
+		paneTitleAndButtons.add(
+			buttonInfo,
+			new Constraints(Anchor.RIGHT, Fill.NONE, 3, 0, new Insets(0, 1, 0, 0)));
+		paneTitleAndButtons.add(
+			buttonRemove,
+			new Constraints(Anchor.RIGHT, Fill.NONE, 4, 0, new Insets(0, 1, 0, 0)));
 
 		Anchor anchor = Anchor.TOP;
 		Fill fill = Fill.HORIZONTAL;
 		int y = 0;
-		
+
 		Insets insetsTitle = new Insets(5, 5, 0, 5);
 		Insets insetsLine = new Insets(2, 5, 0, 5);
-		Insets insetsError = new Insets(2, 5, 5, 5);
-		
-		
+
 		add(paneTitleAndButtons, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsTitle));
 		add(labelMessage, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
 		add(labelProgress, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
 		add(labelTime, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
 		add(labelState, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
 		add(progressBar, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsTitle));
-		for (StatusBar statusBar : statusBars) {
-			add(statusBar, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
+
+		boolean consoleRequired = task.isConsoleRequired();
+		for (int i = 0; i < statusBars.size(); i++) {
+			StatusBar statusBar = statusBars.get(i);
+			Insets insets = new Insets(2, 5, 0, 5);
+			double wy = 0.0;
+			if (!consoleRequired) {
+				if (i == statusBars.size() - 1) {
+					wy = 1.0;
+					insets = new Insets(2, 5, 5, 5);
+				}
+			}
+			add(statusBar, new Constraints(anchor, fill, 0, y++, 1, 1, 1, wy, insets));
 		}
-		add(labelError, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 1, insetsError));
+
+		if (consoleRequired) {
+			Insets insets = new Insets(2, 5, 10, 5);
+			console = new Console();
+			console.setMargin(5, 5, 5, 5);
+			console.getControl().setPreferredSize(new Dimension(30, 200));
+			console.getControl().setBorder(new LineBorder(Color.LIGHT_GRAY));
+			Constraints constraints =
+				new Constraints(Anchor.TOP, Fill.BOTH, 0, y++, 1, 1, 1, 1, insets);
+			add(console.getControl(), constraints);
+		}
 
 		/*
 		 * Install the task listener.

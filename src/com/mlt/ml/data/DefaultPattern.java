@@ -17,8 +17,6 @@
 
 package com.mlt.ml.data;
 
-import com.mlt.util.Numbers;
-
 /**
  * Default pattern.
  *
@@ -30,8 +28,6 @@ public class DefaultPattern extends Pattern {
 	private double[] inputValues;
 	/** Output values. */
 	private double[] outputValues;
-	/** Decimals to round results for matches. */
-	private int decimals;
 
 	/**
 	 * Constructor.
@@ -40,40 +36,11 @@ public class DefaultPattern extends Pattern {
 	 * @param outputValues Output values.
 	 */
 	public DefaultPattern(double[] inputValues, double[] outputValues) {
-		this(inputValues, outputValues, 0);
-	}
-
-	/**
-	 * Constructor.
-	 * 
-	 * @param inputValues Input values.
-	 * @param outputValues Output values.
-	 */
-	public DefaultPattern(double[] inputValues, double[] outputValues, int decimals) {
 		if (inputValues == null || outputValues == null) {
 			throw new NullPointerException();
 		}
 		this.inputValues = inputValues;
 		this.outputValues = outputValues;
-		this.decimals = decimals;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public boolean matches(double[] networkOutput) {
-		if (outputValues.length != networkOutput.length) {
-			return false;
-		}
-		for (int i = 0; i < outputValues.length; i++) {
-			double out = Numbers.round(outputValues[i], decimals);
-			double net = Numbers.round(networkOutput[i], decimals);
-			if (out != net) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	/**

@@ -19,6 +19,8 @@
 
 package com.mlt.ml.data;
 
+import com.mlt.ml.function.Matcher;
+
 /**
  * A source of patterns for learning or performance check.
  *
@@ -52,6 +54,13 @@ public interface PatternSource {
 	 * @return The description.
 	 */
 	String getDescription();
+
+	/**
+	 * Return the match function.
+	 * 
+	 * @return The match function.
+	 */
+	Matcher getMatch();
 
 	/**
 	 * Set the description.

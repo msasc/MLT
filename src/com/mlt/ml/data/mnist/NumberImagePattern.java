@@ -72,14 +72,6 @@ public class NumberImagePattern extends Pattern {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public boolean matches(double[] networkOutput) {
-		return (getNumber(networkOutput) == image.getNumber());
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	public double[] getInputValues() {
 		if (inputValues == null) {
 			Normalizer normalizer = new Normalizer(image.getMaximum(), image.getMinimum(), 1, (bipolarInput ? -1 : 0));

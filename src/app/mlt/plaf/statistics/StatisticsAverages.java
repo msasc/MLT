@@ -1553,7 +1553,7 @@ public class StatisticsAverages extends Statistics {
 	Pattern getPattern(Record rc, boolean calculated) {
 		double[] inputValues = getPatternInputValues(rc);
 		double[] outputValues = getPatternOutputValues(rc, calculated);
-		DefaultPattern pattern = new DefaultPattern(inputValues, outputValues, 0);
+		DefaultPattern pattern = new DefaultPattern(inputValues, outputValues);
 		return pattern;
 	}
 
@@ -1689,7 +1689,7 @@ public class StatisticsAverages extends Statistics {
 			for (int i = 0; i < count; i++) {
 				double[] inputValues = IO.readDouble1A(bi);
 				double[] outputValues = IO.readDouble1A(bi);
-				Pattern pattern = new DefaultPattern(inputValues, outputValues, 0);
+				Pattern pattern = new DefaultPattern(inputValues, outputValues);
 				patterns.add(pattern);
 			}
 		} catch (Exception exc) {

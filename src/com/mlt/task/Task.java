@@ -72,6 +72,8 @@ public abstract class Task implements Runnable, Callable<Void> {
 
 	/** List of additional status keys. */
 	private List<String> statusKeys = new ArrayList<>();
+	/** A boolean indicating whether this task requires a console. */
+	private boolean consoleRequired = false;
 
 	/** List of task listeners. */
 	private List<TaskListener> listeners = new ArrayList<>();
@@ -202,7 +204,7 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 * @param labelKey  Label key.
 	 */
 	protected void clearStatusLabel(String statusKey, String labelKey) {
-		updateStatusLabel(statusKey, labelKey, "");
+		updateStatusLabel(statusKey, labelKey, " ");
 	}
 
 	/**
@@ -212,6 +214,46 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 * @throws java.lang.Throwable
 	 */
 	protected abstract void compute() throws Throwable;
+
+	/**
+	 * Clear the console.
+	 */
+	protected void consoleClear() {
+		if (!consoleRequired) {
+			throw new IllegalStateException();
+		}
+		notifyOnConsoleClear();
+	}
+
+	/**
+	 * @param str The string to print to the console.
+	 */
+	protected void consolePrint(String str) {
+		if (!consoleRequired) {
+			throw new IllegalStateException();
+		}
+		notifyOnConsolePrint(str);
+	}
+
+	/**
+	 * Send a println to the console.
+	 */
+	protected void consolePrintln() {
+		if (!consoleRequired) {
+			throw new IllegalStateException();
+		}
+		notifyOnConsolePrintln();
+	}
+
+	/**
+	 * @param str The string to print to the console.
+	 */
+	protected void consolePrintln(String str) {
+		if (!consoleRequired) {
+			throw new IllegalStateException();
+		}
+		notifyOnConsolePrintln(str);
+	}
 
 	/**
 	 * Execute the task setting the proper states and registering the exception if
@@ -519,6 +561,13 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
+	 * @return A boolean indicating whether a console is required.
+	 */
+	public boolean isConsoleRequired() {
+		return consoleRequired;
+	}
+
+	/**
 	 * Check if the task is counting.
 	 *
 	 * @return A boolean.
@@ -543,6 +592,46 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 */
 	public boolean isPooled() {
 		return taskPool != null;
+	}
+
+	/**
+	 * Notify clear the console.
+	 */
+	protected void notifyOnConsoleClear() {
+		for (int i = 0; i < listeners.size(); i++) {
+			listeners.get(i).onConsoleClear();
+		}
+	}
+
+	/**
+	 * Notify print to the console.
+	 * 
+	 * @param str The string to print.
+	 */
+	protected void notifyOnConsolePrint(String str) {
+		for (int i = 0; i < listeners.size(); i++) {
+			listeners.get(i).onConsolePrint(str);
+		}
+	}
+
+	/**
+	 * Notify println to the console.
+	 */
+	protected void notifyOnConsolePrintln() {
+		for (int i = 0; i < listeners.size(); i++) {
+			listeners.get(i).onConsolePrintln();
+		}
+	}
+
+	/**
+	 * Notify println to the console.
+	 * 
+	 * @param str The string to print.
+	 */
+	protected void notifyOnConsolePrintln(String str) {
+		for (int i = 0; i < listeners.size(); i++) {
+			listeners.get(i).onConsolePrintln(str);
+		}
 	}
 
 	/**
@@ -752,6 +841,13 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 */
 	public void setCancelSupported(boolean cancelSupported) {
 		this.cancelSupported = cancelSupported;
+	}
+
+	/**
+	 * @param consoleRequired A boolean indicating whether a console is required.
+	 */
+	protected void setConsoleRequired(boolean consoleRequired) {
+		this.consoleRequired = consoleRequired;
 	}
 
 	/**

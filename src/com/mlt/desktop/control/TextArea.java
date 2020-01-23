@@ -19,9 +19,11 @@ package com.mlt.desktop.control;
 import javax.swing.JTextArea;
 
 import com.mlt.db.Value;
+import com.mlt.desktop.AWT;
 import com.mlt.desktop.EditContext;
 import com.mlt.desktop.EditField;
 import com.mlt.desktop.layout.Dimension;
+import com.mlt.desktop.layout.Insets;
 
 /**
  * Text area hosted in a scroll pane.
@@ -94,6 +96,13 @@ public class TextArea extends Control implements EditField {
 	}
 
 	/**
+	 * @return The caret position.
+	 */
+	public int getCaretPosition() {
+		return getComponent().getCaretPosition();
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -152,6 +161,26 @@ public class TextArea extends Control implements EditField {
 	}
 
 	/**
+	 * Replace.
+	 * 
+	 * @param str   Replace string.
+	 * @param start Start position.
+	 * @param end   End position.
+	 */
+	public void replaceRange(String str, int start, int end) {
+		getComponent().replaceRange(str, start, end);
+	}
+
+	/**
+	 * Set the caret position.
+	 * 
+	 * @param position The caret position.
+	 */
+	public void setCaretPosition(int position) {
+		getComponent().setCaretPosition(position);
+	}
+
+	/**
 	 * Set editable.
 	 * 
 	 * @param b A boolean.
@@ -167,6 +196,10 @@ public class TextArea extends Control implements EditField {
 	 */
 	public void setLineWrap(boolean wrap) {
 		getComponent().setLineWrap(wrap);
+	}
+	
+	public void setMargin(int top, int left, int bottom, int right) {
+		getComponent().setMargin(AWT.toAWT(new Insets(top, left, bottom, right)));
 	}
 
 	/**
@@ -194,12 +227,19 @@ public class TextArea extends Control implements EditField {
 	}
 
 	/**
+	 * @param text The text.
+	 */
+	public void setText(String text) {
+		getComponent().setText(text);
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public void setValue(Value value) {
 		Value previousValue = getValue();
-		getComponent().setText(value.toString());
+		setText(value.toString());
 		if (getEditContext() != null) {
 			getEditContext().fireValueActions(this, previousValue, value);
 		}

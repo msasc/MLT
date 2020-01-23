@@ -41,6 +41,7 @@ import com.mlt.desktop.Option;
 import com.mlt.ml.data.Pattern;
 import com.mlt.ml.data.PatternSource;
 import com.mlt.ml.function.Distance;
+import com.mlt.ml.function.Matcher;
 import com.mlt.ml.function.distance.DistanceEuclidean;
 import com.mlt.task.Task;
 import com.mlt.util.Lists;
@@ -205,6 +206,10 @@ public class Trainer extends Task {
 	private List<Performance> trainPerformances = new ArrayList<>();
 	/** History of test performances. */
 	private List<Performance> testPerformances = new ArrayList<>();
+	/** History of train metrics. */
+	private List<Metrics> trainMetricsHistory = new ArrayList<>();
+	/** History of test metrics. */
+	private List<Metrics> testMetricsHistory = new ArrayList<>();
 
 	/**
 	 * A boolean that indicates if network data should be saved.When the trainer is
@@ -238,6 +243,84 @@ public class Trainer extends Task {
 		addStatus(STATUS_TRAIN);
 		addStatus(STATUS_TEST);
 		addStatus(STATUS_PROCESSING);
+		setConsoleRequired(true);
+	}
+
+	/**
+	 * Calculate the metrics.
+	 * 
+	 * @param train Train/test indicator.
+	 * @return The metrics.
+	 */
+	private Metrics calculateMetrics(boolean train) {
+
+		removeStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
+		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
+
+		PatternSource source = train ? sourceTrain : sourceTest;
+		int length = network.getOutputSize();
+		int size = source.size();
+		Metrics metrics = new Metrics(length, size);
+		metrics.setLabel(train ? "Train" : "Test");
+
+		/* A first iteration to calculate the mean of data. */
+		for (int i = 0; i < size; i++) {
+
+			if (isCancelRequested()) {
+				setCancelled();
+				return metrics;
+			}
+
+			int index = i + 1;
+			double percent = (double) (index * 100) / (double) size;
+			StringBuilder msg = new StringBuilder();
+			msg.append("Calculating ");
+			msg.append(train ? "train" : "test");
+			msg.append(" data mean: ");
+			msg.append(index);
+			msg.append(" of ");
+			msg.append(size);
+			msg.append(" (");
+			msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
+			msg.append("%)");
+			updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, index, size);
+
+			Pattern pattern = source.get(i);
+			double[] patternOutput = pattern.getOutputValues();
+			metrics.compute(patternOutput);
+		}
+
+		/* A second iteration to calculate the rest of metrics. */
+		for (int i = 0; i < size; i++) {
+
+			if (isCancelRequested()) {
+				setCancelled();
+				return metrics;
+			}
+
+			int index = i + 1;
+			double percent = (double) (index * 100) / (double) size;
+			StringBuilder msg = new StringBuilder();
+			msg.append("Calculating ");
+			msg.append(train ? "train" : "test");
+			msg.append(" rest of metrics: ");
+			msg.append(index);
+			msg.append(" of ");
+			msg.append(size);
+			msg.append(" (");
+			msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
+			msg.append("%)");
+			updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, index, size);
+
+			Pattern pattern = source.get(i);
+			double[] patternInput = pattern.getInputValues();
+			double[] patternOutput = pattern.getOutputValues();
+			double[] networkOutput = network.calculate(patternInput);
+			metrics.compute(patternOutput, networkOutput);
+		}
+
+		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
+		return metrics;
 	}
 
 	/**
@@ -251,6 +334,7 @@ public class Trainer extends Task {
 		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
 
 		PatternSource source = train ? sourceTrain : sourceTest;
+		Matcher match = source.getMatch();
 
 		int matches = 0;
 		int size = source.size();
@@ -280,7 +364,7 @@ public class Trainer extends Task {
 			double[] patternInput = pattern.getInputValues();
 			double[] patternOutput = pattern.getOutputValues();
 			double[] networkOutput = network.calculate(patternInput);
-			if (pattern.matches(networkOutput)) {
+			if (match.match(patternOutput, networkOutput)) {
 				matches += 1;
 			}
 			error += distance.distance(patternOutput, networkOutput);
@@ -359,7 +443,7 @@ public class Trainer extends Task {
 
 		/* Validate. */
 		validate();
-		
+
 		/* Initialize the network. */
 		network.initialize();
 
@@ -378,9 +462,17 @@ public class Trainer extends Task {
 			}
 		}
 
-		/* Perfornces history. */
+		/* Clear history. */
 		trainPerformances.clear();
 		testPerformances.clear();
+		trainMetricsHistory.clear();
+		testMetricsHistory.clear();
+		
+		/* Calculate metrics. */
+		Metrics trainMetrics = calculateMetrics(true);
+		Metrics testMetrics = calculateMetrics(false);
+		trainMetricsHistory.add(trainMetrics);
+		testMetricsHistory.add(testMetrics);
 
 		/* Calculate train and test performance. */
 		trainPerformance = calculatePerformance("Train flat", true);
@@ -398,6 +490,7 @@ public class Trainer extends Task {
 		long totalWork = getTotalWork();
 		long workDone = 0;
 		boolean scanFlat = true;
+		Matcher match = sourceTrain.getMatch();
 		TreeMap<Double, Integer> scoreMap = new TreeMap<>((a, b) -> (Double.compare(a, b) * -1));
 		for (int epoch = 1; epoch <= epochs; epoch++) {
 
@@ -442,7 +535,7 @@ public class Trainer extends Task {
 				Pattern pattern = sourceTrain.get(index);
 				double[] patternOutput = pattern.getOutputValues();
 				double[] networkOutput = network.forward(pattern.getInputValues());
-				if (pattern.matches(networkOutput)) {
+				if (match.match(patternOutput, networkOutput)) {
 					matches += 1;
 				}
 				epochError += distance.distance(patternOutput, networkOutput);
@@ -463,10 +556,16 @@ public class Trainer extends Task {
 				/* Errors or deltas and backward. Discard the return vector. */
 				double[] networkDeltas = Vector.subtract(patternOutput, networkOutput);
 				network.backward(networkDeltas);
+
+				/* Adjust internal per step. */
+				network.adjustStep();
 			}
 
 			/* Last network unfold if history size is not a multiple of the source size. */
 			network.unfold();
+
+			/* Adjust internals per iteration or batch. */
+			network.adjustBatch();
 
 			/* Check cancelled. */
 			if (isCancelled()) {
@@ -670,7 +769,7 @@ public class Trainer extends Task {
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
 		p.println(network.getDescription());
-		
+
 		for (int i = 0; i < size; i++) {
 			int index = i + 1;
 			Performance train = trainPerformances.get(i);
@@ -858,8 +957,7 @@ public class Trainer extends Task {
 		}
 		if (saveNetworkData) {
 			if (filePath == null) {
-				throw new IllegalStateException(
-					"The file path is required to save the network data");
+				throw new IllegalStateException("The file path is required to save the network data");
 			}
 			File path = new File(filePath);
 			if (!path.exists()) {
@@ -869,8 +967,7 @@ public class Trainer extends Task {
 				throw new IllegalStateException("The file path must be a directory");
 			}
 			if (fileRoot == null) {
-				throw new IllegalStateException(
-					"The file root is required to save the network data");
+				throw new IllegalStateException("The file root is required to save the network data");
 			}
 		}
 

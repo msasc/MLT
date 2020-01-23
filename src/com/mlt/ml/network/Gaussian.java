@@ -22,8 +22,7 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
 import java.util.Random;
 
 import com.mlt.util.IO;
@@ -40,72 +39,105 @@ import com.mlt.util.Logs;
 public class Gaussian {
 
 	private String filePath = "res/network/";
-	private String fileName = "weights.dat";
-	private boolean fixed;
+	private String fileName = "guassians.dat";
+	private boolean generated;
 	private Random random;
 
-	private List<Double> gaussians;
 	private int index = -1;
-	private int size = 1000000;
+	private int size = 10000000;
+	private BufferedInputStream in;
 
 	/**
-	 * @param fixed A boolean that indicates whether gaussian values will be fixed,
-	 *              retrieves from a file, or new randomly generated.
+	 * @param generated A boolean that indicates whether gaussian values will be
+	 *                  generated once, retrieved from a file, or new randomly
+	 *                  generated.
 	 */
-	public Gaussian(boolean fixed) {
-		this.fixed = fixed;
+	public Gaussian(boolean generated) {
+		this.generated = generated;
+
+		try {
+			start();
+		} catch (IOException exc) {
+			Logs.catching(exc);
+		}
+	}
+	
+	public void end() {
+		if (in != null) {
+			try {
+				in.close();
+				in = null;
+			} catch (IOException exc) {
+				Logs.catching(exc);
+			}
+		}
+		index = -1;
+	}
+
+	@Override
+	protected void finalize() throws Throwable {
+		end();
+	}
+
+	/**
+	 * Generates the gaussian file.
+	 */
+	private void generate() throws IOException {
+		if (!getFile().exists()) {
+			Random random = new Random();
+			BufferedOutputStream bo = new BufferedOutputStream(new FileOutputStream(getFile()));
+			for (int i = 0; i < size; i++) {
+				double w = 0;
+				while (true) {
+					w = random.nextGaussian();
+					if (w != 0) {
+						break;
+					}
+				}
+				IO.writeDouble(bo, w);
+			}
+			bo.close();
+		}
+	}
+
+	/**
+	 * @return The file.
+	 */
+	private File getFile() {
+		return new File(filePath, fileName);
 	}
 
 	/**
 	 * @return Next gaussian value.
 	 */
 	public double nextGaussian() {
-		if (fixed) {
-			return nextGaussianFixed();
+		if (generated) {
+			try {
+				return nextGaussianFixed();
+			} catch (Exception exc) {
+				Logs.catching(exc);
+			}
 		}
 		return nextGaussianRandom();
-	}
-
-	private List<Double> loadGaussians() throws Exception {
-		File file = new File(filePath, fileName);
-		if (!file.exists()) {
-			Random random = new Random();
-			BufferedOutputStream bo = new BufferedOutputStream(new FileOutputStream(file));
-			for (int i = 0; i < size; i++) {
-				IO.writeDouble(bo, random.nextGaussian());
-			}
-			bo.close();
-		}
-		List<Double> gaussians = new ArrayList<>();
-		BufferedInputStream bi = new BufferedInputStream(new FileInputStream(file));
-		for (int i = 0; i < size; i++) {
-			gaussians.add(IO.readDouble(bi));
-		}
-		bi.close();
-		return gaussians;
 	}
 
 	/**
 	 * @return The next gaussian read from the file.
 	 */
-	private double nextGaussianFixed() {
+	private double nextGaussianFixed() throws Exception {
 
-		/* Load the list of gaussians if necessary. */
-		if (gaussians == null) {
-			try {
-				gaussians = loadGaussians();
-			} catch (Exception exc) {
-				Logs.catching(exc);
-				return 0.0;
-			}
+		if (in == null) {
+			in = new BufferedInputStream(new FileInputStream(getFile()));
 		}
-		
+
 		index++;
 		if (index == size) {
 			index = 0;
+			in.close();
+			in = new BufferedInputStream(new FileInputStream(getFile()));
 		}
 
-		return gaussians.get(index);
+		return IO.readDouble(in);
 	}
 
 	/**
@@ -116,5 +148,12 @@ public class Gaussian {
 			random = new Random();
 		}
 		return random.nextGaussian();
+	}
+
+	private void start() throws IOException {
+		if (!generated) {
+			return;
+		}
+		generate();
 	}
 }

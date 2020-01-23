@@ -22,9 +22,11 @@ import java.awt.EventQueue;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import javax.swing.Icon;
 import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
 
 import com.mlt.desktop.AWT;
 import com.mlt.desktop.layout.Alignment;
@@ -135,6 +137,11 @@ public class StatusBar extends Control {
 	private boolean flow;
 	/** Horizontal alignment. */
 	private Alignment horizontalAlignment = Alignment.LEFT;
+	
+	/** Empty label. */
+	private LabelControl emptyLabel;
+	/**^Empty progress. */
+	private ProgressControl emptyProgress;
 
 	/**
 	 * Constructor.
@@ -170,13 +177,38 @@ public class StatusBar extends Control {
 		}
 		setComponent(pane.getComponent());
 		setFont(new Font(Font.DIALOG, Font.PLAIN, 12));
+		
+		emptyLabel = new LabelControl(UUID.randomUUID().toString());
+		emptyLabel.label.setText(" ");
+		emptyLabel.label.setOpaque(false);
+		emptyLabel.setOpaque(false);
+		components.add(emptyLabel);
+		
+		emptyProgress = new ProgressControl(UUID.randomUUID().toString(), false);
+		emptyProgress.progress.setBorder(new EmptyBorder(1, 1, 1, 1));
+		emptyProgress.progress.setStringPainted(false);
+		emptyProgress.progress.setOpaque(false);
+		emptyProgress.setOpaque(false);
+		components.add(emptyProgress);
+		
+		layoutComponents();
 	}
-
+	
+	/**
+	 * @param component The component, label or progress, to add.
+	 */
+	private void addComponent(Pane component) {
+		components.remove(emptyLabel);
+		components.remove(emptyProgress);
+		components.add(0, component);
+	}
+	
 	/**
 	 * Clear all components.
 	 */
 	public void clearStatusBar() {
 		components.clear();
+		components.add(emptyLabel);
 		layoutComponents();
 	}
 
@@ -197,7 +229,7 @@ public class StatusBar extends Control {
 			}
 		}
 		LabelControl label = new LabelControl(key);
-		components.add(0, label);
+		addComponent(label);
 		layoutComponents();
 		return label;
 	}
@@ -240,7 +272,7 @@ public class StatusBar extends Control {
 			}
 		}
 		ProgressControl progress = new ProgressControl(key, useLabel);
-		components.add(0, progress);
+		addComponent(progress);
 		layoutComponents();
 		return progress;
 	}
@@ -274,6 +306,17 @@ public class StatusBar extends Control {
 	}
 
 	/**
+	 * @param component The component, label or progress, to remove.
+	 */
+	private void removeComponent(Pane component) {
+		components.remove(component);
+		if (components.isEmpty()) {
+			components.add(emptyLabel);
+			components.add(emptyProgress);
+		}
+	}
+
+	/**
 	 * Remove the label with the given key.
 	 * 
 	 * @param key The key of the label.
@@ -281,7 +324,7 @@ public class StatusBar extends Control {
 	public void removeLabel(String key) {
 		LabelControl label = getLabel(key);
 		if (label != null) {
-			components.remove(label);
+			removeComponent(label);
 			layoutComponents();
 			revalidate();
 		}
@@ -295,7 +338,7 @@ public class StatusBar extends Control {
 	public void removeProgress(String key) {
 		ProgressControl progress = getProgress(key, false);
 		if (progress != null) {
-			components.remove(progress);
+			removeComponent(progress);
 			layoutComponents();
 		}
 	}
@@ -365,6 +408,15 @@ public class StatusBar extends Control {
 	}
 
 	/**
+	 * Set the progress bars borders.
+	 * 
+	 * @param progressBorder The border.
+	 */
+	public void setProgressBorder(Border progressBorder) {
+		this.progressBorder = progressBorder;
+	}
+
+	/**
 	 * Set the progress as indeterminate.
 	 * 
 	 * @param key           The key of the progress.
@@ -392,15 +444,6 @@ public class StatusBar extends Control {
 			}
 			progress.label.setText(text);
 		});
-	}
-
-	/**
-	 * Set the progress bars borders.
-	 * 
-	 * @param progressBorder The border.
-	 */
-	public void setProgressBorder(Border progressBorder) {
-		this.progressBorder = progressBorder;
 	}
 
 	/**

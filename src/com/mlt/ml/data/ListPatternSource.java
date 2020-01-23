@@ -22,6 +22,8 @@ package com.mlt.ml.data;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mlt.ml.function.Matcher;
+import com.mlt.ml.function.match.CategoryMatcher;
 import com.mlt.util.Lists;
 
 /**
@@ -35,6 +37,8 @@ public class ListPatternSource implements PatternSource {
 	private List<Pattern> patterns;
 	/** The description. */
 	private String description;
+	/** Match function, default is match category. */
+	private Matcher matcher = new CategoryMatcher();
 
 	/**
 	 * Contructor to clone the source.
@@ -97,6 +101,14 @@ public class ListPatternSource implements PatternSource {
 	@Override
 	public String getDescription() {
 		return description;
+	}
+
+	/**
+	 * @return The description.
+	 */
+	@Override
+	public Matcher getMatch() {
+		return matcher;
 	}
 
 	/**

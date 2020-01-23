@@ -367,6 +367,25 @@ public class WeightsNode extends Node {
 	 * {@inheritDoc}
 	 */
 	@Override
+	public void adjustStep() {
+		if (m.strategy == MomentumStrategy.GRADIENTS) {
+			double[][] prevGradients = g.outputQueue.getLast(1);
+			double[][] nextGradients = g.outputQueue.getLast(0);
+			for (int in = 0; in < inputSize; in++) {
+				for (int out = 0; out < outputSize; out++) {
+					double prevGrad = prevGradients[in][out];
+					double nextGrad = nextGradients[in][out];
+					double momentum = m.momentums[in][out];
+					m.momentums[in][out] = m.gradients(momentum, prevGrad, nextGrad);
+				}
+			}
+		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public void backward() {
 		if (inputEdges.get(0).isRecurrent()) {
 			return;
@@ -425,11 +444,6 @@ public class WeightsNode extends Node {
 
 				double learningRate = learningRates[in][out];
 				double weightDelta = learningRate * gradient;
-
-				if (m.strategy == MomentumStrategy.GRADIENTS) {
-					m.momentums[in][out] = m.gradients(momentum, prevGrad, nextGrad);
-				}
-
 				weights[in][out] += weightDelta;
 			}
 
@@ -529,12 +543,13 @@ public class WeightsNode extends Node {
 	 */
 	private void initializeWeights() {
 		weights = new double[inputSize][outputSize];
-		Gaussian w = new Gaussian(true);
+		Gaussian g = new Gaussian(true);
 		for (int in = 0; in < inputSize; in++) {
 			for (int out = 0; out < outputSize; out++) {
-				weights[in][out] = w.nextGaussian();
+				weights[in][out] = g.nextGaussian();
 			}
 		}
+		g.end();
 	}
 
 	/**

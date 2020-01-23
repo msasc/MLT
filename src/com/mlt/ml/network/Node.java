@@ -83,6 +83,18 @@ public abstract class Node {
 	public abstract void addOutputEdge(Edge edge);
 
 	/**
+	 * Adjust internal paramenters after processing a batch of patterns or an entire
+	 * iteration. This method is intended to be overwritten.
+	 */
+	public void adjustBatch() {}
+
+	/**
+	 * Adjust internal paramenters after processing a step, a single pattern. This
+	 * method is intended to be overwritten.
+	 */
+	public void adjustStep() {}
+
+	/**
 	 * Request deltas, apply any parameter update, and push deltas to input edges.
 	 */
 	public abstract void backward();

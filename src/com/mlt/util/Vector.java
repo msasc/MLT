@@ -66,7 +66,7 @@ public class Vector {
 	public static double[] add(double[]... vectors) {
 		return add(Lists.asList(vectors));
 	}
-	
+
 	/**
 	 * Return a vector which elements are the exponential (moving) average of the
 	 * elements of the argument list of vectors.
@@ -421,6 +421,35 @@ public class Vector {
 	}
 
 	/**
+	 * Tranform the source vector to have only one element with the maximum value
+	 * and the rest with the minimum.
+	 * 
+	 * @param a   The vector.
+	 * @param maximum Maximum.
+	 * @param minimum Minimum.
+	 * @return The transformed vector.
+	 */
+	public static double[] transform(double[] a, double maximum, double minimum) {
+		int index = -1;
+		double max = Double.NEGATIVE_INFINITY;
+		for (int i = 0; i < a.length; i++) {
+			if (a[i] > max) {
+				index = i;
+				max = a[i];
+			}
+		}
+		double[] r = new double[a.length];
+		for (int i = 0; i < r.length; i++) {
+			if (i == index) {
+				r[i] = maximum;
+			} else {
+				r[i] = minimum;
+			}
+		}
+		return r;
+	}
+
+	/**
 	 * Returns the mean of a vector.
 	 *
 	 * @param x The vector.
@@ -430,7 +459,7 @@ public class Vector {
 		if (x.length == 0) {
 			return 0;
 		}
-		return sum(x) / x.length;
+		return sum(x) / (double) x.length;
 	}
 
 	/**

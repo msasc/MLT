@@ -1,38 +1,54 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.task;
 
 /**
- * Interface that should implement listeners interested in receiving task notifications.
+ * Interface that should implement listeners interested in receiving task
+ * notifications.
  *
  * @author Miquel Sas
  */
 public interface TaskListener {
+	
+	/**
+	 * Clear the console.
+	 */
+	void onConsoleClear();
 
 	/**
-	 * Called when the task changes the state.
-	 *
-	 * @param state The new state.
+	 * Print to the console.
+	 * 
+	 * @param str The string to print.
 	 */
-	void onState(State state);
+	void onConsolePrint(String str);
 
 	/**
-	 * Called when the title changes.
-	 *
-	 * @param title The title.
+	 * Print a new line to the console.
 	 */
-	void onTitle(String title);
+	void onConsolePrintln();
+
+	/**
+	 * Print a string and then a new line to the console.
+	 * 
+	 * @param str The string to print.
+	 */
+	void onConsolePrintln(String str);
 
 	/**
 	 * Called to update the main message.
@@ -57,6 +73,13 @@ public interface TaskListener {
 	void onProgressMessage(String progressMessage);
 
 	/**
+	 * Called when the task changes the state.
+	 *
+	 * @param state The new state.
+	 */
+	void onState(State state);
+
+	/**
 	 * Called to set a status text.
 	 * 
 	 * @param statusKey The status key.
@@ -76,6 +99,22 @@ public interface TaskListener {
 	void onStatusProgress(String statusKey, String progressKey, int workDone, int totalWork);
 
 	/**
+	 * Called to set a status progress.
+	 * 
+	 * @param statusKey   The status key.
+	 * @param progressKey The label key in the status bar.
+	 * @param text        Progress text.
+	 * @param workDone    Work done.
+	 * @param totalWork   Total work.
+	 */
+	void onStatusProgress(
+		String statusKey,
+		String progressKey,
+		String text,
+		int workDone,
+		int totalWork);
+
+	/**
 	 * Called to remove a status label.
 	 * 
 	 * @param statusKey The status key.
@@ -86,21 +125,17 @@ public interface TaskListener {
 	/**
 	 * Called to remove a status progress.
 	 * 
-	 * @param statusKey The status key.
-	 * @param progressKey  The progress key.
+	 * @param statusKey   The status key.
+	 * @param progressKey The progress key.
 	 */
 	void onStatusRemoveProgress(String statusKey, String progressKey);
 
 	/**
-	 * Called to set a status progress.
-	 * 
-	 * @param statusKey   The status key.
-	 * @param progressKey The label key in the status bar.
-	 * @param text        Progress text.
-	 * @param workDone    Work done.
-	 * @param totalWork   Total work.
+	 * Called when the title changes.
+	 *
+	 * @param title The title.
 	 */
-	void onStatusProgress(String statusKey, String progressKey, String text, int workDone, int totalWork);
+	void onTitle(String title);
 
 	/**
 	 * Called to update the time message.

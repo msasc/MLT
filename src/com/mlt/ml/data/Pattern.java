@@ -29,14 +29,6 @@ public abstract class Pattern {
 	private Properties properties;
 
 	/**
-	 * Returns a boolean indicating whether a network output matches this pattern output.
-	 * 
-	 * @param networkOutput The network output to check.
-	 * @return A boolean.
-	 */
-	public abstract boolean matches(double[] networkOutput);
-
-	/**
 	 * Return the pattern input values.
 	 * 
 	 * @return The pattern input values.

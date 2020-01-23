@@ -214,6 +214,22 @@ public class Network {
 		nodes = graph.getNodes();
 		edges = graph.getEdges();
 	}
+	
+	/**
+	 * Adjust internal paramenters after processing a batch of patterns or an entire
+	 * iteration.
+	 */
+	public void adjustBatch() {
+		nodes.forEach(node -> node.adjustBatch());
+	}
+
+	/**
+	 * Adjust internal paramenters after processing a step, a single pattern. This
+	 * method is intended to be overwritten.
+	 */
+	public void adjustStep() {
+		nodes.forEach(node -> node.adjustStep());
+	}
 
 	/**
 	 * Backward pass. Pushes output deltas or errors

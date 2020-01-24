@@ -17,8 +17,16 @@
 
 package com.mlt.ml.network;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.mlt.ml.function.Matcher;
 import com.mlt.ml.function.match.CategoryMatcher;
+import com.mlt.util.Numbers;
+import com.mlt.util.Strings;
 import com.mlt.util.Vector;
 
 /**
@@ -27,9 +35,96 @@ import com.mlt.util.Vector;
  * @author Miquel Sas
  */
 public class Metrics {
-	
+
+	/**
+	 * @param trainMetrics List of train metrics.
+	 * @param testMetrics  List of test metrics.
+	 * @return A full report.
+	 */
+	public static String getReport(List<Metrics> trainMetrics, List<Metrics> testMetrics) {
+
+		/* Validate. */
+		if (trainMetrics.isEmpty() || testMetrics.isEmpty()) {
+			return "";
+		}
+		if (trainMetrics.size() != testMetrics.size()) {
+			return "";
+		}
+
+		Metrics master = trainMetrics.get(0);
+		int length = master.length;
+		int padNumber = master.decimals + 3;
+		int padVector = (length * padNumber) + ((length - 1) * 2);
+		int size = trainMetrics.size();
+		List<String> titles = new ArrayList<>();
+		titles.add("Mean Absolute Error");
+		titles.add("Mean Square Error");
+		titles.add("Root Mean Square Error");
+		titles.add("R-Square");
+		int padTitle = 0;
+		for (String title : titles) {
+			padTitle = Math.max(padTitle, title.length());
+		}
+		padTitle += 2;
+		int sep = 4;
+
+		StringWriter s = new StringWriter();
+		PrintWriter p = new PrintWriter(s);
+
+		p.print(Strings.repeat(" ", padTitle));
+		p.print(Strings.centerPad("Training", padVector, " "));
+		p.print(Strings.repeat(" ", sep));
+		p.print(Strings.centerPad("Test", padVector, " "));
+		p.println();
+
+		p.print(Strings.repeat(" ", padTitle));
+		p.print(Strings.repeat("-", padVector));
+		p.print(Strings.repeat(" ", sep));
+		p.print(Strings.repeat("-", padVector));
+		p.println();
+
+		for (int i = 0; i < titles.size(); i++) {
+			String title = titles.get(i);
+			for (int j = 0; j < size; j++) {
+				if (j == 0) {
+					p.print(Strings.rightPad(title, padTitle));
+				} else {
+					p.print(Strings.repeat(" ", padTitle));
+				}
+				Metrics mtrain = trainMetrics.get(j); 
+				Metrics mtest = testMetrics.get(j); 
+				BigDecimal[] train = null;
+				BigDecimal[] test = null;
+				switch (i) {
+				case 0:
+					train = mtrain.getMeanAbsoluteErrorVector();
+					test = mtest.getMeanAbsoluteErrorVector();
+					break;
+				case 1:
+					train = mtrain.getMeanSquaredErrorVector();
+					test = mtest.getMeanSquaredErrorVector();
+					break;
+				case 2:
+					train = mtrain.getRootMeanSquaredErrorVector();
+					test = mtest.getRootMeanSquaredErrorVector();
+					break;
+				case 3:
+					train = mtrain.getRSquaredVector();
+					test = mtest.getRSquaredVector();
+					break;
+				}
+				p.println();
+			}
+		}
+
+		p.close();
+		return s.toString();
+	}
+
 	/** Label. */
 	private String label;
+	/** Decimals for presentation. */
+	private int decimals = 4;
 
 	/** Mean absolute error. */
 	private double[] meanAbsoluteError;
@@ -38,7 +133,7 @@ public class Metrics {
 	/** Root mean squared error. */
 	private double[] rootMeanSquaredError;
 	/** Coeficient of determination (R-Square). */
-	private double[] rSquare;
+	private double[] rSquared;
 	/** Overall performance. */
 	private double performance;
 
@@ -131,67 +226,106 @@ public class Metrics {
 				meanAbsoluteError[i] /= ((double) size);
 				meanSquaredError[i] /= ((double) size);
 				rootMeanSquaredError[i] = Math.sqrt(meanSquaredError[i]);
-				rSquare[i] = 1 - ssres[i] / sstot[i];
+				rSquared[i] = 1 - ssres[i] / sstot[i];
 			}
 			performance = ((double) matches) / ((double) size);
 		}
 	}
 
 	/**
+	 * @param value The value to format.
+	 * @return The formatted value with decimals.
+	 */
+	private BigDecimal getFormatted(double value) {
+		if (pass != 2) {
+			throw new IllegalStateException();
+		}
+		return Numbers.getBigDecimal(value, decimals);
+	}
+
+	/**
+	 * @param values The values to format.
+	 * @return The formatted values with decimals.
+	 */
+	private BigDecimal[] getFormatted(double[] values) {
+		if (pass != 2) {
+			throw new IllegalStateException();
+		}
+		BigDecimal[] fmt = new BigDecimal[length];
+		for (int i = 0; i < length; i++) {
+			fmt[i] = getFormatted(values[i]);
+		}
+		return fmt;
+	}
+
+	/**
 	 * @return The label.
 	 */
-	protected String getLabel() {
+	public String getLabel() {
 		return label;
 	}
 
 	/**
 	 * @return The mean absolute error.
 	 */
-	public double getMeanAbsoluteError() {
-		if (pass != 2) {
-			throw new IllegalStateException();
-		}
-		return Vector.mean(meanAbsoluteError);
+	public BigDecimal getMeanAbsoluteError() {
+		return getFormatted(Vector.mean(meanAbsoluteError));
+	}
+
+	/**
+	 * @return The mean absolute error.
+	 */
+	public BigDecimal[] getMeanAbsoluteErrorVector() {
+		return getFormatted(meanAbsoluteError);
 	}
 
 	/**
 	 * @return The mean square error.
 	 */
-	public double getMeanSquaredError() {
-		if (pass != 2) {
-			throw new IllegalStateException();
-		}
-		return Vector.mean(meanSquaredError);
+	public BigDecimal getMeanSquaredError() {
+		return getFormatted(Vector.mean(meanSquaredError));
+	}
+
+	/**
+	 * @return The mean square error.
+	 */
+	public BigDecimal[] getMeanSquaredErrorVector() {
+		return getFormatted(meanSquaredError);
 	}
 
 	/**
 	 * @return The overall performance.
 	 */
-	public double getPerformance() {
-		if (pass != 2) {
-			throw new IllegalStateException();
-		}
-		return performance;
+	public BigDecimal getPerformance() {
+		return getFormatted(performance);
 	}
 
 	/**
 	 * @return The root mean square error.
 	 */
-	public double getRootMeanSquaredError() {
-		if (pass != 2) {
-			throw new IllegalStateException();
-		}
-		return Vector.mean(rootMeanSquaredError);
+	public BigDecimal getRootMeanSquaredError() {
+		return getFormatted(Vector.mean(rootMeanSquaredError));
+	}
+
+	/**
+	 * @return The root mean square error.
+	 */
+	public BigDecimal[] getRootMeanSquaredErrorVector() {
+		return getFormatted(rootMeanSquaredError);
 	}
 
 	/**
 	 * @return The coeficient of determination.
 	 */
-	public double getRSquare() {
-		if (pass != 2) {
-			throw new IllegalStateException();
-		}
-		return Vector.mean(rSquare);
+	public BigDecimal getRSquared() {
+		return getFormatted(Vector.mean(rSquared));
+	}
+
+	/**
+	 * @return The coeficient of determination.
+	 */
+	public BigDecimal[] getRSquaredVector() {
+		return getFormatted(rSquared);
 	}
 
 	/**
@@ -202,7 +336,7 @@ public class Metrics {
 		meanAbsoluteError = new double[length];
 		meanSquaredError = new double[length];
 		rootMeanSquaredError = new double[length];
-		rSquare = new double[length];
+		rSquared = new double[length];
 		performance = 0;
 
 		mdata = new double[length];
@@ -215,7 +349,7 @@ public class Metrics {
 	/**
 	 * @param label The label.
 	 */
-	protected void setLabel(String label) {
+	public void setLabel(String label) {
 		this.label = label;
 	}
 }

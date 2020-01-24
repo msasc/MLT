@@ -53,14 +53,14 @@ public class Strings {
 	public static final Modifier LOWERCASE = Modifier.LOWER;
 	/** Uppercase modifier. */
 	public static final Modifier UPPERCASE = Modifier.UPPER;
-	
+
 	/**
 	 * Case modifier.
 	 */
 	public static enum Modifier {
 		NONE, LOWER, UPPER;
 	}
-	
+
 	/**
 	 * Enumerates the types of string masks.
 	 */
@@ -96,6 +96,39 @@ public class Strings {
 		b.append(firstCap);
 		b.append(str.substring(1));
 		return b.toString();
+	}
+	
+	/**
+	 * Center pad.
+	 * 
+	 * @param str    The string to pad.
+	 * @param size   The size.
+	 * @param padChr The pad character.
+	 * @return The padded string
+	 */
+	public static String centerPad(String str, int size, char padChr) {
+		return centerPad(str, size, valueOf(padChr));
+	}
+
+	/**
+	 * Center pad.
+	 * 
+	 * @param str    The string to pad.
+	 * @param size   The size.
+	 * @param padStr The pad string.
+	 * @return The padded string
+	 */
+	public static String centerPad(String str, int size, String padStr) {
+		if (size < str.length()) {
+			int start = (str.length() - size) / 2;
+			return str.substring(start, start + size);
+		}
+		int pad = size - str.length();
+		int left = pad / 2;
+		int right = pad - left;
+		String leftStr = repeat(padStr, left).substring(0, left);
+		String rightStr = repeat(padStr, right).substring(0, right);
+		return leftStr + str + rightStr;
 	}
 
 	/**
@@ -644,6 +677,23 @@ public class Strings {
 	 * @return The string representation.
 	 */
 	public static String toString(double[] a) {
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < a.length; i++) {
+			if (i > 0) {
+				b.append(", ");
+			}
+			b.append(a[i]);
+		}
+		return b.toString();
+	}
+
+	/**
+	 * Return the string representation of the vector.
+	 * 
+	 * @param a The vector.
+	 * @return The string representation.
+	 */
+	public static <T> String toString(T[] a) {
 		StringBuilder b = new StringBuilder();
 		for (int i = 0; i < a.length; i++) {
 			if (i > 0) {

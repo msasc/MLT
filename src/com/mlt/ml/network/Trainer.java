@@ -22,10 +22,7 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -55,56 +52,6 @@ import com.mlt.util.Vector;
  * @author Miquel Sas
  */
 public class Trainer extends Task {
-
-	/**
-	 * Data structure to trace an epoch performance.
-	 */
-	private class Performance implements Comparable<Performance> {
-		/** Label. */
-		String label;
-		/** Error. */
-		BigDecimal error;
-		/** Performance. */
-		BigDecimal performance;
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public int compareTo(Performance p) {
-			if (performance.compareTo(p.performance) > 0) {
-				return -1;
-			}
-			if (performance.compareTo(p.performance) < 0) {
-				return 1;
-			}
-			return 0;
-		}
-
-		/**
-		 * @param p The argument performance to compare with.
-		 * @return A boolean indicating whether this performance is better than the
-		 *         argument one.
-		 */
-		public boolean isBetterThan(Performance p) {
-			return compareTo(p) < 0;
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public String toString() {
-			StringBuilder b = new StringBuilder();
-			b.append(label);
-			b.append(": ");
-			b.append(error);
-			b.append(", ");
-			b.append(performance);
-			b.append("%");
-			return b.toString();
-		}
-	}
 
 	/**
 	 * File filter.
@@ -144,10 +91,6 @@ public class Trainer extends Task {
 
 	/** Label key to show the current error. */
 	private static final String LABEL_ERROR = "LABEL-ERROR";
-	/** Label key to show the history of train performances. */
-	private static final String LABEL_TRAIN = "LABEL-TRAIN";
-	/** Label key to show the history of test performances. */
-	private static final String LABEL_TEST = "LABEL-TEST";
 	/** Label key of an additional processes. */
 	private static final String LABEL_PROCESSING = "LABEL-PROCESSING";
 
@@ -162,10 +105,6 @@ public class Trainer extends Task {
 
 	/** Status key to show the current error. */
 	private static final String STATUS_ERROR = "STATUS-ERROR";
-	/** Status key to show the history of train performances. */
-	private static final String STATUS_TRAIN = "STATUS-TRAIN";
-	/** Status key to show the history of test performances. */
-	private static final String STATUS_TEST = "STATUS-TEST";
 	/** Status key of additional processes. */
 	private static final String STATUS_PROCESSING = "STATUS-PROCESSING";
 
@@ -185,8 +124,6 @@ public class Trainer extends Task {
 	private boolean score = true;
 	/** Error decimals. */
 	private int errorDecimals = 8;
-	/** Performance and decimals. */
-	private int performanceDecimals = 2;
 	/** Percentages decimals. */
 	private int percentageDecimals = 2;
 
@@ -196,16 +133,6 @@ public class Trainer extends Task {
 	private String fileRoot;
 	/** Distance function. */
 	private Distance distance = new DistanceEuclidean();
-	/** Last train performance. */
-	private Performance trainPerformance;
-	/** Last test performance. */
-	private Performance testPerformance;
-	/** Performance history. */
-	private int performanceHistory = 4;
-	/** History of train performances. */
-	private List<Performance> trainPerformances = new ArrayList<>();
-	/** History of test performances. */
-	private List<Performance> testPerformances = new ArrayList<>();
 	/** History of train metrics. */
 	private List<Metrics> trainMetricsHistory = new ArrayList<>();
 	/** History of test metrics. */
@@ -240,8 +167,6 @@ public class Trainer extends Task {
 	public Trainer(Locale locale) {
 		super(locale);
 		addStatus(STATUS_ERROR);
-		addStatus(STATUS_TRAIN);
-		addStatus(STATUS_TEST);
 		addStatus(STATUS_PROCESSING);
 		setConsoleRequired(true);
 	}
@@ -324,65 +249,6 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * Calculate the performance.
-	 * 
-	 * @param label The label.
-	 * @param train Train/test indicator.
-	 */
-	private Performance calculatePerformance(String label, boolean train) {
-		removeStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
-		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
-
-		PatternSource source = train ? sourceTrain : sourceTest;
-		Matcher match = source.getMatch();
-
-		int matches = 0;
-		int size = source.size();
-		double error = 0;
-		for (int i = 0; i < size; i++) {
-
-			if (isCancelRequested()) {
-				setCancelled();
-				break;
-			}
-
-			int index = i + 1;
-			double percent = (double) (index * 100) / (double) size;
-			StringBuilder msg = new StringBuilder();
-			msg.append("Calculating ");
-			msg.append(train ? "train" : "test");
-			msg.append(" performance: ");
-			msg.append(index);
-			msg.append(" of ");
-			msg.append(size);
-			msg.append(" (");
-			msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
-			msg.append("%)");
-			updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, index, size);
-
-			Pattern pattern = source.get(i);
-			double[] patternInput = pattern.getInputValues();
-			double[] patternOutput = pattern.getOutputValues();
-			double[] networkOutput = network.calculate(patternInput);
-			if (match.match(patternOutput, networkOutput)) {
-				matches += 1;
-			}
-			error += distance.distance(patternOutput, networkOutput);
-		}
-
-		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
-		error /= (double) size;
-
-		Performance performance = new Performance();
-		performance.label = label;
-		performance.error = Numbers.getBigDecimal(error, errorDecimals);
-		performance.performance =
-			Numbers.getBigDecimal((double) (matches * 100) / (double) size, performanceDecimals);
-
-		return performance;
-	}
-
-	/**
 	 * {@inheritDoc}
 	 */
 	@Override
@@ -448,10 +314,9 @@ public class Trainer extends Task {
 		network.initialize();
 
 		/* Clear messages. */
+		consoleClear();
 		clearMessage();
 		clearStatusLabel(STATUS_ERROR, LABEL_ERROR);
-		clearStatusLabel(STATUS_TRAIN, LABEL_TRAIN);
-		clearStatusLabel(STATUS_TEST, LABEL_TEST);
 		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
 		updateProgress(0, 0);
 
@@ -463,27 +328,15 @@ public class Trainer extends Task {
 		}
 
 		/* Clear history. */
-		trainPerformances.clear();
-		testPerformances.clear();
 		trainMetricsHistory.clear();
 		testMetricsHistory.clear();
-		
+
 		/* Calculate metrics. */
 		Metrics trainMetrics = calculateMetrics(true);
 		Metrics testMetrics = calculateMetrics(false);
 		trainMetricsHistory.add(trainMetrics);
 		testMetricsHistory.add(testMetrics);
-
-		/* Calculate train and test performance. */
-		trainPerformance = calculatePerformance("Train flat", true);
-		testPerformance = calculatePerformance("Test", false);
-
-		/* Register performances and display them. */
-		trainPerformances.add(trainPerformance);
-		testPerformances.add(testPerformance);
-		updateStatusLabel(STATUS_TRAIN, LABEL_TRAIN, toString(trainPerformances));
-		updateStatusLabel(STATUS_TEST, LABEL_TEST, toString(testPerformances));
-		updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformanceMessage());
+		printMetrics();
 
 		/* Iterate epochs. Start with a flat scan. */
 		calculateTotalWork();
@@ -540,8 +393,7 @@ public class Trainer extends Task {
 				}
 				epochError += distance.distance(patternOutput, networkOutput);
 				BigDecimal error = Numbers.getBigDecimal(epochError / (i + 1), errorDecimals);
-				BigDecimal performance =
-					Numbers.getBigDecimal(100.0 * matches / (i + 1), performanceDecimals);
+				BigDecimal performance = Numbers.getBigDecimal(matches / (i + 1), 4);
 				StringBuilder msg = new StringBuilder();
 				msg.append("Epoch error ");
 				msg.append(scanFlat ? "flat: " : "score: ");
@@ -572,37 +424,10 @@ public class Trainer extends Task {
 				break;
 			}
 
-			/* Current performances. */
-			String testLabel = "Test";
-			Performance trainPerf = new Performance();
-			trainPerf.label = scanFlat ? "Train flat" : "Train score";
-			trainPerf.error = Numbers.getBigDecimal(epochError / size, errorDecimals);
-			trainPerf.performance =
-				Numbers.getBigDecimal((matches * 100) / size, performanceDecimals);
-			Performance testPerf = calculatePerformance(testLabel, false);
-
 			/*
 			 * Save data if both performances and errors are better. Save only if the scan
 			 * has been a flat scan.
 			 */
-			if (scanFlat &&
-				trainPerf.isBetterThan(trainPerformance) &&
-				testPerf.isBetterThan(testPerformance)) {
-				trainPerformance = trainPerf;
-				testPerformance = testPerf;
-				if (saveNetworkData) {
-					updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, "Saving network...");
-					saveNetwork();
-					clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
-				}
-			}
-
-			/* Register performances and display them. */
-			trainPerformances.add(trainPerf);
-			testPerformances.add(testPerf);
-			updateStatusLabel(STATUS_TRAIN, LABEL_TRAIN, toString(trainPerformances));
-			updateStatusLabel(STATUS_TEST, LABEL_TEST, toString(testPerformances));
-			updateStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING, getBestPerformanceMessage());
 
 			/* Change scan flag. */
 			scanFlat = score ? !scanFlat : true;
@@ -610,27 +435,14 @@ public class Trainer extends Task {
 
 		/* Compute has finished, generate a report if required. */
 		if (!isCancelled() && generateReport) {
-			if (reportFile == null) {
-				reportFile = "report";
-			}
-			File file = new File(filePath, reportFile + ".txt");
-			FileWriter fw = new FileWriter(file, true);
-			fw.append(getReport());
-			fw.close();
+//			if (reportFile == null) {
+//				reportFile = "report";
+//			}
+//			File file = new File(filePath, reportFile + ".txt");
+//			FileWriter fw = new FileWriter(file, true);
+//			fw.append(getReport());
+//			fw.close();
 		}
-	}
-
-	/**
-	 * @return The best performance message.
-	 */
-	private String getBestPerformanceMessage() {
-		StringBuilder msg = new StringBuilder();
-		msg.append("Best performance -> train (");
-		msg.append(trainPerformance);
-		msg.append(") test (");
-		msg.append(testPerformance);
-		msg.append(")");
-		return msg.toString();
 	}
 
 	/**
@@ -759,31 +571,36 @@ public class Trainer extends Task {
 	/**
 	 * @return The current performance report.
 	 */
-	private String getReport() {
+//	private String getReport() {
+//
+//		int size = trainPerformances.size();
+//		int padError = errorDecimals + 4;
+//		int padPerformance = performanceDecimals + 5;
+//		int padIndex = Numbers.getDigits(size) + 2;
+//
+//		StringWriter s = new StringWriter();
+//		PrintWriter p = new PrintWriter(s);
+//		p.println(network.getDescription());
+//
+//		for (int i = 0; i < size; i++) {
+//			int index = i + 1;
+//			Performance train = trainPerformances.get(i);
+//			Performance test = testPerformances.get(i);
+//			p.print(Strings.rightPad(index, padIndex));
+//			p.print(Strings.leftPad(train.error, padError));
+//			p.print(Strings.leftPad(train.performance, padPerformance));
+//			p.print(Strings.leftPad(test.error, padError));
+//			p.print(Strings.leftPad(test.performance, padPerformance));
+//			p.println();
+//		}
+//		p.println();
+//		p.close();
+//		return s.toString();
+//	}
 
-		int size = trainPerformances.size();
-		int padError = errorDecimals + 4;
-		int padPerformance = performanceDecimals + 5;
-		int padIndex = Numbers.getDigits(size) + 2;
-
-		StringWriter s = new StringWriter();
-		PrintWriter p = new PrintWriter(s);
-		p.println(network.getDescription());
-
-		for (int i = 0; i < size; i++) {
-			int index = i + 1;
-			Performance train = trainPerformances.get(i);
-			Performance test = testPerformances.get(i);
-			p.print(Strings.rightPad(index, padIndex));
-			p.print(Strings.leftPad(train.error, padError));
-			p.print(Strings.leftPad(train.performance, padPerformance));
-			p.print(Strings.leftPad(test.error, padError));
-			p.print(Strings.leftPad(test.performance, padPerformance));
-			p.println();
-		}
-		p.println();
-		p.close();
-		return s.toString();
+	private void printMetrics() {
+		consoleClear();
+		consolePrint(Metrics.getReport(trainMetricsHistory, testMetricsHistory));
 	}
 
 	/**
@@ -892,20 +709,6 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * @param performanceDecimals The performance decimals.
-	 */
-	public void setPerformanceDecimals(int performanceDecimals) {
-		this.performanceDecimals = performanceDecimals;
-	}
-
-	/**
-	 * @param performanceHistory The performance history size.
-	 */
-	public void setPerformanceHistory(int performanceHistory) {
-		this.performanceHistory = performanceHistory;
-	}
-
-	/**
 	 * @param score A boolean to train scored data.
 	 */
 	public void setScore(boolean score) {
@@ -917,29 +720,6 @@ public class Trainer extends Task {
 	 */
 	public void setShuffle(boolean shuffle) {
 		this.shuffle = shuffle;
-	}
-
-	/**
-	 * @param performances The list of performances.
-	 * @return The string displaying them.
-	 */
-	private String toString(List<Performance> performances) {
-		List<Performance> toList = new ArrayList<>();
-		int toLoad = Math.min(performances.size(), performanceHistory);
-		int size = performances.size();
-		for (int i = 0; i < toLoad; i++) {
-			toList.add(performances.get(size - toLoad + i));
-		}
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < toList.size(); i++) {
-			if (i > 0) {
-				b.append(", ");
-			}
-			b.append("(");
-			b.append(toList.get(i).toString());
-			b.append(")");
-		}
-		return b.toString();
 	}
 
 	/**

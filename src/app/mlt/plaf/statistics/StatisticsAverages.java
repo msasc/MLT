@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
@@ -105,12 +106,25 @@ import app.mlt.plaf.MLT;
  */
 public class StatisticsAverages extends Statistics {
 
-	private static final Function<Integer, String> KEY_CANDLES = size -> "candles-" + size;
-	private static final String KEY_LABELS = "labels";
-	private static final String KEY_PRICES_AND_AVERAGES = "prices_and_averages";
-	private static final String KEY_SLOPES = "slopes";
-	private static final String KEY_SPREADS = "spreads";
-	private static final String KEY_PIVOTS = "pivots";
+	private static final String GROUP_DATA = "group-data";
+	private static final String GROUP_LABELS = "group-labels";
+	private static final String GROUP_AVGS = "group-avgs";
+	private static final String GROUP_AVG_SLOPES = "group-avg-slopes";
+	private static final String GROUP_AVG_SPREADS = "group-avg-spreads";
+	private static final String GROUP_VARS = "group-vars";
+	private static final String GROUP_VAR_SLOPES = "group-var-slopes";
+	private static final String GROUP_VAR_SPREADS = "group-var-spreads";
+	private static final Function<Integer, String> GROUP_CANDLES = size -> "group-candles-" + size;
+
+	private static final Function<Integer, String> KEY_CANDLES = size -> "key-candles-" + size;
+	private static final String KEY_LABELS = "key-labels";
+	private static final String KEY_PRICES_AND_AVERAGES = "key-prices-and-averages";
+	private static final String KEY_AVG_SLOPES = "key-avg-slopes";
+	private static final String KEY_AVG_SPREADS = "key-avg-spreads";
+	private static final String KEY_VARIANCES = "key-vars";
+	private static final String KEY_VAR_SLOPES = "key-var-slopes";
+	private static final String KEY_VAR_SPREADS = "key-var-spreads";
+	private static final String KEY_PIVOTS = "key-pivots";
 
 	/**
 	 * Browse the ranges table.
@@ -178,7 +192,7 @@ public class StatisticsAverages extends Statistics {
 
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
-				View view = getView(normalized, true, true, true, true);
+				View view = getView(normalized, true, true, true, true, true, true, true);
 				ListPersistor persistor = new ListPersistor(view.getPersistor(), view.getOrderBy());
 				persistor.setCacheSize(10000);
 				persistor.setPageSize(100);
@@ -276,8 +290,8 @@ public class StatisticsAverages extends Statistics {
 				ChartContainer chart = new ChartContainer();
 				chart.setPopupMenuProvider(new MenuChart());
 				chart.addPlotData(getPlotDataPriceAndAverages());
-				chart.addPlotData(getPlotDataSlopes());
-				chart.addPlotData(getPlotDataSpreads());
+				chart.addPlotData(getPlotDataAvgSlopes());
+				chart.addPlotData(getPlotDataAvgSpreads());
 
 				Icon icon = Icons.getIcon(Icons.APP_16x16_CHART);
 				MLT.getTabbedPane().addTab(key, icon, text, text, chart);
@@ -422,26 +436,59 @@ public class StatisticsAverages extends Statistics {
 						l -> container.addPlotData(getPlotDataPriceAndAverages(), true));
 					popup.add(option.getMenuItem());
 				}
-				if (!container.containsPlotData(KEY_SLOPES)) {
+				if (!container.containsPlotData(KEY_AVG_SLOPES)) {
 					Option option = new Option();
-					option.setKey(KEY_SLOPES);
+					option.setKey(KEY_AVG_SLOPES);
 					option.setText("Slopes of averages");
 					option.setToolTip("Slopes of averages");
 					option.setOptionGroup(Group.CONFIGURE);
 					option.setDefaultClose(false);
 					option.setCloseWindow(false);
-					option.setAction(l -> container.addPlotData(getPlotDataSlopes(), true));
+					option.setAction(l -> container.addPlotData(getPlotDataAvgSlopes(), true));
 					popup.add(option.getMenuItem());
 				}
-				if (!container.containsPlotData(KEY_SPREADS)) {
+				if (!container.containsPlotData(KEY_AVG_SPREADS)) {
 					Option option = new Option();
-					option.setKey(KEY_SPREADS);
+					option.setKey(KEY_AVG_SPREADS);
 					option.setText("Spreads between averages");
 					option.setToolTip("Spreads between averages");
 					option.setOptionGroup(Group.CONFIGURE);
 					option.setDefaultClose(false);
 					option.setCloseWindow(false);
-					option.setAction(l -> container.addPlotData(getPlotDataSpreads(), true));
+					option.setAction(l -> container.addPlotData(getPlotDataAvgSpreads(), true));
+					popup.add(option.getMenuItem());
+				}
+				if (!container.containsPlotData(KEY_VARIANCES)) {
+					Option option = new Option();
+					option.setKey(KEY_VARIANCES);
+					option.setText("Variances between averages");
+					option.setToolTip("Variances between averages");
+					option.setOptionGroup(Group.CONFIGURE);
+					option.setDefaultClose(false);
+					option.setCloseWindow(false);
+					option.setAction(l -> container.addPlotData(getPlotDataVariances(), true));
+					popup.add(option.getMenuItem());
+				}
+				if (!container.containsPlotData(KEY_VAR_SLOPES)) {
+					Option option = new Option();
+					option.setKey(KEY_VAR_SLOPES);
+					option.setText("Variance slopes");
+					option.setToolTip("Variance slopes");
+					option.setOptionGroup(Group.CONFIGURE);
+					option.setDefaultClose(false);
+					option.setCloseWindow(false);
+					option.setAction(l -> container.addPlotData(getPlotDataVarSlopes(), true));
+					popup.add(option.getMenuItem());
+				}
+				if (!container.containsPlotData(KEY_VAR_SPREADS)) {
+					Option option = new Option();
+					option.setKey(KEY_VAR_SPREADS);
+					option.setText("Variance spreads");
+					option.setToolTip("Variance spreads");
+					option.setOptionGroup(Group.CONFIGURE);
+					option.setDefaultClose(false);
+					option.setCloseWindow(false);
+					option.setAction(l -> container.addPlotData(getPlotDataVarSpreads(), true));
 					popup.add(option.getMenuItem());
 				}
 				if (!container.containsPlotData(KEY_LABELS)) {
@@ -856,7 +903,8 @@ public class StatisticsAverages extends Statistics {
 				if (path == null) {
 					path = new Path();
 					path.setStroke(new Stroke(2.0));
-					path.addHint(RenderingHints.KEY_ANTIALIASING,
+					path.addHint(
+						RenderingHints.KEY_ANTIALIASING,
 						RenderingHints.VALUE_ANTIALIAS_ON);
 					if (labelSet) {
 						if (label.equals("1")) {
@@ -867,11 +915,9 @@ public class StatisticsAverages extends Statistics {
 							path.setDrawPaint(colorOut);
 						}
 					} else {
-						path.setStroke(new Stroke(
-							1.0,
-							Stroke.CAP_BUTT,
-							Stroke.JOIN_MITER, 1,
-							new double[] { 2 }, 0));
+						path.setStroke(
+							new Stroke(1.0, Stroke.CAP_BUTT, Stroke.JOIN_MITER, 1, new double[] {
+								2 }, 0));
 						path.setDrawPaint(colorNotSet);
 					}
 					path.moveTo(x, y);
@@ -1060,40 +1106,12 @@ public class StatisticsAverages extends Statistics {
 	 */
 	public StatisticsAverages(Instrument instrument, Period period) {
 		super(instrument, period);
+
 		properties = new Properties();
 		averages = new ArrayList<>();
 		barsAhead = 100;
 		percentCalc = 10;
 		percentEdit = 10;
-	}
-
-	/**
-	 * Add an average to the list of averages in a period ascending order.
-	 * 
-	 * @param avg The average to add.
-	 */
-	public void addAverage(Average avg) {
-		/* First one, just add. */
-		if (averages.isEmpty()) {
-			averages.add(avg);
-			return;
-		}
-		/* Not exists. */
-		if (averages.contains(avg)) {
-			throw new IllegalArgumentException("Average exists.");
-		}
-		/* No same period. */
-		for (Average a : averages) {
-			if (a.getPeriod() == avg.getPeriod()) {
-				throw new IllegalArgumentException("Repeated average period.");
-			}
-		}
-		/* Period must be greater than previous. */
-		if (avg.getPeriod() <= averages.get(averages.size() - 1).getPeriod()) {
-			throw new IllegalArgumentException("Period must be greater than the previous one.");
-		}
-		/* Do add. */
-		averages.add(avg);
 	}
 
 	/**
@@ -1153,7 +1171,7 @@ public class StatisticsAverages extends Statistics {
 			return dataConverter;
 		}
 
-		View view = getView(true, true, true, true, false);
+		View view = getView(true, true, true, true, true, true, true, false);
 		List<Integer> list = new ArrayList<>();
 
 		/* Open, high, low, close. */
@@ -1162,28 +1180,14 @@ public class StatisticsAverages extends Statistics {
 		list.add(view.getFieldIndex(DB.FIELD_BAR_LOW));
 		list.add(view.getFieldIndex(DB.FIELD_BAR_CLOSE));
 
-		List<Field> fields;
-
 		/* Pivots, reference values and labels. */
 		list.add(view.getFieldIndex(DB.FIELD_SOURCES_PIVOT_CALC));
 		list.add(view.getFieldIndex(DB.FIELD_SOURCES_REFV_CALC));
 
-		/* Averages. */
-		fields = getFieldListAverages();
-		for (Field field : fields) {
-			int index = view.getFieldIndex(field.getAlias());
-			list.add(index);
-		}
-
-		/* Slopes normalized. */
-		fields = getFieldListSlopes();
-		for (Field field : fields) {
-			int index = view.getFieldIndex(field.getAlias());
-			list.add(index);
-		}
-
-		/* Spreads normalized. */
-		fields = getFieldListSpreads();
+		/* Rest of fields. */
+		List<Field> fields = new ArrayList<>();
+		fields.addAll(getFieldListAverages());
+		fields.addAll(getFieldListPatterns(false));
 		for (Field field : fields) {
 			int index = view.getFieldIndex(field.getAlias());
 			list.add(index);
@@ -1206,7 +1210,7 @@ public class StatisticsAverages extends Statistics {
 	private ListPersistor getChartListPersistor() {
 		ListPersistor persistor = (ListPersistor) properties.getObject("data_persistor");
 		if (persistor == null) {
-			View view = getView(true, true, true, true, false);
+			View view = getView(true, true, true, true, true, true, true, false);
 			persistor = new ListPersistor(view.getPersistor());
 			properties.setObject("data_persistor", persistor);
 		}
@@ -1226,17 +1230,66 @@ public class StatisticsAverages extends Statistics {
 //	}
 
 	/**
+	 * @param key The field group key.
+	 * @return The field group.
+	 */
+	FieldGroup getFieldGroup(String key) {
+		FieldGroup fieldGroup = (FieldGroup) properties.getObject(key);
+		return fieldGroup;
+	}
+
+	/**
 	 * @return The list of average fields.
 	 */
 	List<Field> getFieldListAverages() {
 		List<Field> fields = new ArrayList<>();
 		for (int i = 0; i < averages.size(); i++) {
 			Average avg = averages.get(i);
-			String name = getNameAverage(avg);
+			String name = getNameAvg(avg);
 			String header = getHeader(name);
 			Field field = DB.field_double(name, header);
 			field.setStringConverter(new NumberScaleConverter(8));
+			field.setFieldGroup(getFieldGroup(GROUP_AVGS));
 			fields.add(field);
+		}
+		return fields;
+	}
+
+	/**
+	 * @return The list of slope fields.
+	 */
+	List<Field> getFieldListAvgSlopes() {
+		List<Field> fields = new ArrayList<>();
+		for (int i = 0; i < averages.size(); i++) {
+			Average avg = averages.get(i);
+			String name = getNameAvgSlope(avg);
+			String header = getHeader(name);
+			Field field = DB.field_double(name, header);
+			field.setStringConverter(new NumberScaleConverter(8));
+			field.setFieldGroup(getFieldGroup(GROUP_AVG_SLOPES));
+			fields.add(field);
+		}
+		return fields;
+	}
+
+	/**
+	 * @return The list of spread fields.
+	 */
+	List<Field> getFieldListAvgSpreads() {
+		List<Field> fields = new ArrayList<>();
+		String name, header;
+		Field field;
+		for (int i = 0; i < averages.size(); i++) {
+			Average fast = averages.get(i);
+			for (int j = i + 1; j < averages.size(); j++) {
+				Average slow = averages.get(j);
+				name = getNameAvgSpread(fast, slow);
+				header = getHeader(name);
+				field = DB.field_double(name, header);
+				field.setStringConverter(new NumberScaleConverter(8));
+				field.setFieldGroup(getFieldGroup(GROUP_AVG_SPREADS));
+				fields.add(field);
+			}
 		}
 		return fields;
 	}
@@ -1269,6 +1322,7 @@ public class StatisticsAverages extends Statistics {
 				String header = getHeader(name);
 				Field field = DB.field_double(name, header);
 				field.setStringConverter(new NumberScaleConverter(8));
+				field.setFieldGroup(getFieldGroup(GROUP_CANDLES.apply(i)));
 				fields.add(field);
 			}
 		}
@@ -1276,38 +1330,82 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @return The list of slope fields.
+	 * @return The list of pattern fields (raw and normalized)
 	 */
-	List<Field> getFieldListSlopes() {
+	List<Field> getFieldListPatterns(boolean candles) {
 		List<Field> fields = new ArrayList<>();
-		for (int i = 0; i < averages.size(); i++) {
-			Average avg = averages.get(i);
-			String name = getNameSlope(avg);
-			String header = getHeader(name);
-			Field field = DB.field_double(name, header);
-			field.setStringConverter(new NumberScaleConverter(8));
-			fields.add(field);
-		}
+		fields.addAll(getFieldListAvgSlopes());
+		fields.addAll(getFieldListAvgSpreads());
+		fields.addAll(getFieldListVariances());
+		fields.addAll(getFieldListVarSlopes());
+		fields.addAll(getFieldListVarSpreads());
+		if (candles) fields.addAll(getFieldListCandles());
 		return fields;
 	}
 
 	/**
-	 * @return The list of spread fields.
+	 * @return The list of variance fields.
 	 */
-	List<Field> getFieldListSpreads() {
+	List<Field> getFieldListVariances() {
 		List<Field> fields = new ArrayList<>();
 		String name, header;
 		Field field;
-		for (int i = 0; i < averages.size(); i++) {
+		for (int i = 0; i < averages.size() - 1; i++) {
 			Average fast = averages.get(i);
+			Average slow = averages.get(i + 1);
 			for (int j = i + 1; j < averages.size(); j++) {
-				Average slow = averages.get(j);
-				name = getNameSpread(fast, slow);
+				int period = averages.get(j).getPeriod();
+				name = getNameVar(fast, slow, period);
 				header = getHeader(name);
 				field = DB.field_double(name, header);
 				field.setStringConverter(new NumberScaleConverter(8));
+				field.setFieldGroup(getFieldGroup(GROUP_VARS));
 				fields.add(field);
 			}
+		}
+		return fields;
+	}
+
+	/**
+	 * @return The list of variance slope fields.
+	 */
+	List<Field> getFieldListVarSlopes() {
+		List<Field> fields = new ArrayList<>();
+		String name, header;
+		Field field;
+		for (int i = 0; i < averages.size() - 1; i++) {
+			Average fast = averages.get(i);
+			Average slow = averages.get(i + 1);
+			for (int j = i + 1; j < averages.size(); j++) {
+				int period = averages.get(j).getPeriod();
+				name = getNameVarSlope(fast, slow, period);
+				header = getHeader(name);
+				field = DB.field_double(name, header);
+				field.setStringConverter(new NumberScaleConverter(8));
+				field.setFieldGroup(getFieldGroup(GROUP_VAR_SLOPES));
+				fields.add(field);
+			}
+		}
+		return fields;
+	}
+
+	/**
+	 * @return The list of variance slope fields.
+	 */
+	List<Field> getFieldListVarSpreads() {
+		List<Field> varFields = getFieldListVariances();
+		List<Field> fields = new ArrayList<>();
+		String name, header;
+		Field field;
+		for (int i = 0; i < varFields.size() - 1; i++) {
+			String nameFast = varFields.get(i).getName();
+			String nameSlow = varFields.get(i + 1).getName();
+			name = getNameVarSpread(nameFast, nameSlow);
+			header = getHeader(name);
+			field = DB.field_double(name, header);
+			field.setStringConverter(new NumberScaleConverter(8));
+			field.setFieldGroup(getFieldGroup(GROUP_VAR_SPREADS));
+			fields.add(field);
 		}
 		return fields;
 	}
@@ -1332,8 +1430,30 @@ public class StatisticsAverages extends Statistics {
 	 * @param avg The average.
 	 * @return The name.
 	 */
-	String getNameAverage(Average avg) {
-		return "average_" + getPadded(avg.getPeriod());
+	String getNameAvg(Average avg) {
+		return "avg_" + getPadded(avg.getPeriod());
+	}
+
+	/**
+	 * @param avg The average.
+	 * @return The field name.
+	 */
+	String getNameAvgSlope(Average avg) {
+		return "avg_slope_" + getPadded(avg.getPeriod());
+	}
+
+	/**
+	 * @param fast Fast average.
+	 * @param slow Slow average.
+	 * @return the field name.
+	 */
+	String getNameAvgSpread(Average fast, Average slow) {
+		StringBuilder b = new StringBuilder();
+		b.append("avg_spread_");
+		b.append(getPadded(fast.getPeriod()));
+		b.append("_");
+		b.append(getPadded(slow.getPeriod()));
+		return b.toString();
 	}
 
 	/**
@@ -1354,24 +1474,57 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @param avg The average.
-	 * @return The field name.
+	 * @param fast   Fast average.
+	 * @param slow   Slow average.
+	 * @param period Back period.
+	 * @return the field name.
 	 */
-	String getNameSlope(Average avg) {
-		return "slope_" + getPadded(avg.getPeriod());
+	String getNameVar(Average fast, Average slow, int period) {
+		return getNameVar("var", fast, slow, period);
 	}
 
 	/**
-	 * @param fast Fast average.
-	 * @param slow Slow average.
+	 * @param prefix Prefix.
+	 * @param fast   Fast average.
+	 * @param slow   Slow average.
+	 * @param period Back period.
 	 * @return the field name.
 	 */
-	String getNameSpread(Average fast, Average slow) {
+	private String getNameVar(String prefix, Average fast, Average slow, int period) {
 		StringBuilder b = new StringBuilder();
-		b.append("spread_");
+		b.append(prefix);
+		b.append("_");
 		b.append(getPadded(fast.getPeriod()));
 		b.append("_");
 		b.append(getPadded(slow.getPeriod()));
+		b.append("_");
+		b.append(getPadded(period));
+		return b.toString();
+	}
+
+	/**
+	 * @param fast   Fast average.
+	 * @param slow   Slow average.
+	 * @param period Back period.
+	 * @return the field name.
+	 */
+	String getNameVarSlope(Average fast, Average slow, int period) {
+		return getNameVar("var_slope", fast, slow, period);
+	}
+
+	/**
+	 * @param nameFast Fast variance name.
+	 * @param nameSlow Slow variance name.
+	 * @return Spread name.
+	 */
+	String getNameVarSpread(String nameFast, String nameSlow) {
+		nameFast = Strings.remove(nameFast, "var_");
+		nameSlow = Strings.remove(nameSlow, "var_");
+		StringBuilder b = new StringBuilder();
+		b.append("var_spread_");
+		b.append(nameFast);
+		b.append("_");
+		b.append(nameSlow);
 		return b.toString();
 	}
 
@@ -1527,7 +1680,8 @@ public class StatisticsAverages extends Statistics {
 	String getPadded(int number) {
 		return Strings.leftPad(
 			Integer.toString(number),
-			Numbers.getDigits(averages.get(averages.size() - 1).getPeriod()), "0");
+			Numbers.getDigits(averages.get(averages.size() - 1).getPeriod()),
+			"0");
 	}
 
 	/**
@@ -1564,10 +1718,7 @@ public class StatisticsAverages extends Statistics {
 		@SuppressWarnings("unchecked")
 		List<Field> fields = (List<Field>) properties.getObject("pattern_fields");
 		if (fields == null) {
-			fields = new ArrayList<>();
-			fields.addAll(getFieldListSlopes());
-			fields.addAll(getFieldListSpreads());
-			fields.addAll(getFieldListCandles());
+			fields = new ArrayList<>(getFieldListPatterns(true));
 			properties.setObject("pattern_fields", fields);
 		}
 		return fields;
@@ -1612,10 +1763,11 @@ public class StatisticsAverages extends Statistics {
 	 */
 	String getPatternFileRoot() {
 		StringBuilder root = new StringBuilder();
-		root.append(DB.name_ticker(
-			getInstrument(),
-			getPeriod(),
-			getTableNameSuffix("net")));
+		root.append(
+			DB.name_ticker(
+				getInstrument(),
+				getPeriod(),
+				getTableNameSuffix("net")));
 		root.append("-" + getPatternInputSize());
 		return Strings.replace(root.toString(), "_", "-").toUpperCase();
 	}
@@ -1754,7 +1906,7 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @return The plot data for states prices and averages.
+	 * @return The plot data for prices and averages.
 	 */
 	private PlotData getPlotDataPriceAndAverages() {
 
@@ -1798,19 +1950,19 @@ public class StatisticsAverages extends Statistics {
 	}
 
 	/**
-	 * @return The plot data for states slopes.
+	 * @return The plot data for average slopes.
 	 */
-	private PlotData getPlotDataSlopes() {
+	private PlotData getPlotDataAvgSlopes() {
 
 		DataInfo info = new DataInfo();
 		info.setInstrument(getInstrument());
-		info.setName(KEY_SLOPES);
+		info.setName(KEY_AVG_SLOPES);
 		info.setDescription("Averages slopes");
 		info.setPeriod(getPeriod());
 		DataListSource dataList =
 			new DataListSource(info, getChartListPersistor(), getChartDataConverter());
 
-		List<Field> fields = getFieldListSlopes();
+		List<Field> fields = getFieldListAvgSlopes();
 		for (Field field : fields) {
 			String name = field.getHeader();
 			String label = field.getLabel();
@@ -1821,26 +1973,26 @@ public class StatisticsAverages extends Statistics {
 			dataList.addPlotter(plotter);
 		}
 
-		PlotData plotData = new PlotData(KEY_SLOPES);
+		PlotData plotData = new PlotData(KEY_AVG_SLOPES);
 		plotData.add(dataList);
 
 		return plotData;
 	}
 
 	/**
-	 * @return The plot data for states spreads.
+	 * @return The plot data for average spreads.
 	 */
-	private PlotData getPlotDataSpreads() {
+	private PlotData getPlotDataAvgSpreads() {
 
 		DataInfo info = new DataInfo();
 		info.setInstrument(getInstrument());
-		info.setName(KEY_SPREADS);
+		info.setName(KEY_AVG_SPREADS);
 		info.setDescription("Averages spreads");
 		info.setPeriod(getPeriod());
 		DataListSource dataList =
 			new DataListSource(info, getChartListPersistor(), getChartDataConverter());
 
-		List<Field> fields = getFieldListSpreads();
+		List<Field> fields = getFieldListAvgSpreads();
 		for (Field field : fields) {
 			String name = field.getHeader();
 			String label = field.getLabel();
@@ -1851,7 +2003,97 @@ public class StatisticsAverages extends Statistics {
 			dataList.addPlotter(plotter);
 		}
 
-		PlotData plotData = new PlotData(KEY_SPREADS);
+		PlotData plotData = new PlotData(KEY_AVG_SPREADS);
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
+	 * @return The plot data for average variances.
+	 */
+	private PlotData getPlotDataVariances() {
+
+		DataInfo info = new DataInfo();
+		info.setInstrument(getInstrument());
+		info.setName(KEY_VARIANCES);
+		info.setDescription("Averages vriances");
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getChartListPersistor(), getChartDataConverter());
+
+		List<Field> fields = getFieldListVariances();
+		for (Field field : fields) {
+			String name = field.getHeader();
+			String label = field.getLabel();
+			int index = getChartDataConverter().getIndex(field.getAlias());
+			info.addOutput(name, name, index, label);
+			LinePlotter plotter = new LinePlotter(index);
+			plotter.setColor(Color.BLACK);
+			dataList.addPlotter(plotter);
+		}
+
+		PlotData plotData = new PlotData(KEY_VARIANCES);
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
+	 * @return The plot data for variance slopes.
+	 */
+	private PlotData getPlotDataVarSlopes() {
+
+		DataInfo info = new DataInfo();
+		info.setInstrument(getInstrument());
+		info.setName(KEY_VARIANCES);
+		info.setDescription("Averages vriances");
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getChartListPersistor(), getChartDataConverter());
+
+		List<Field> fields = getFieldListVarSlopes();
+		for (Field field : fields) {
+			String name = field.getHeader();
+			String label = field.getLabel();
+			int index = getChartDataConverter().getIndex(field.getAlias());
+			info.addOutput(name, name, index, label);
+			LinePlotter plotter = new LinePlotter(index);
+			plotter.setColor(Color.BLACK);
+			dataList.addPlotter(plotter);
+		}
+
+		PlotData plotData = new PlotData(KEY_VAR_SLOPES);
+		plotData.add(dataList);
+
+		return plotData;
+	}
+
+	/**
+	 * @return The plot data for variance spreads.
+	 */
+	private PlotData getPlotDataVarSpreads() {
+
+		DataInfo info = new DataInfo();
+		info.setInstrument(getInstrument());
+		info.setName(KEY_VARIANCES);
+		info.setDescription("Averages vriances");
+		info.setPeriod(getPeriod());
+		DataListSource dataList =
+			new DataListSource(info, getChartListPersistor(), getChartDataConverter());
+
+		List<Field> fields = getFieldListVarSpreads();
+		for (Field field : fields) {
+			String name = field.getHeader();
+			String label = field.getLabel();
+			int index = getChartDataConverter().getIndex(field.getAlias());
+			info.addOutput(name, name, index, label);
+			LinePlotter plotter = new LinePlotter(index);
+			plotter.setColor(Color.BLACK);
+			dataList.addPlotter(plotter);
+		}
+
+		PlotData plotData = new PlotData(KEY_VAR_SPREADS);
 		plotData.add(dataList);
 
 		return plotData;
@@ -1907,32 +2149,9 @@ public class StatisticsAverages extends Statistics {
 		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
 		table.addField(DB.field_timeFmt(period, DB.FIELD_BAR_TIME, "Time fmt"));
 
-		FieldGroup group;
-		List<Field> fields;
-		int ndx = 0;
-
-		group = new FieldGroup(ndx++, "slopes", "Slopes");
-		fields = getFieldListSlopes();
+		List<Field> fields = getFieldListPatterns(true);
 		for (Field field : fields) {
-			field.setFieldGroup(group);
 			table.addField(field);
-		}
-
-		group = new FieldGroup(ndx++, "spreads", "Spreads");
-		fields = getFieldListSpreads();
-		for (Field field : fields) {
-			field.setFieldGroup(group);
-			table.addField(field);
-		}
-
-		for (int i = 0; i < averages.size(); i++) {
-			String suffix = getPadded(getCandleSize(i));
-			group = new FieldGroup(ndx++, "candles_" + suffix, "Spreads " + suffix);
-			fields = getFieldListCandles(i);
-			for (Field field : fields) {
-				field.setFieldGroup(group);
-				table.addField(field);
-			}
 		}
 
 		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
@@ -2004,32 +2223,9 @@ public class StatisticsAverages extends Statistics {
 		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
 		table.addField(DB.field_timeFmt(period, DB.FIELD_BAR_TIME, "Time fmt"));
 
-		FieldGroup group;
-		List<Field> fields;
-		int ndx = 0;
-
-		group = new FieldGroup(ndx++, "slopes", "Slopes");
-		fields = getFieldListSlopes();
+		List<Field> fields = getFieldListPatterns(true);
 		for (Field field : fields) {
-			field.setFieldGroup(group);
 			table.addField(field);
-		}
-
-		group = new FieldGroup(ndx++, "spreads", "Spreads");
-		fields = getFieldListSpreads();
-		for (Field field : fields) {
-			field.setFieldGroup(group);
-			table.addField(field);
-		}
-
-		for (int i = 0; i < averages.size(); i++) {
-			String suffix = getPadded(getCandleSize(i));
-			group = new FieldGroup(ndx++, "candles_" + suffix, "Candles " + suffix);
-			fields = getFieldListCandles(i);
-			for (Field field : fields) {
-				field.setFieldGroup(group);
-				table.addField(field);
-			}
 		}
 
 		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
@@ -2078,14 +2274,12 @@ public class StatisticsAverages extends Statistics {
 		table.addField(DB.field_data(instrument, DB.FIELD_BAR_LOW, "Low"));
 		table.addField(DB.field_data(instrument, DB.FIELD_BAR_CLOSE, "Close"));
 
-		int ndx = 0;
-		FieldGroup grpData = new FieldGroup(ndx++, "data", "Data");
-		table.getField(DB.FIELD_BAR_TIME).setFieldGroup(grpData);
-		table.getField(DB.FIELD_BAR_OPEN).setFieldGroup(grpData);
-		table.getField(DB.FIELD_BAR_HIGH).setFieldGroup(grpData);
-		table.getField(DB.FIELD_BAR_LOW).setFieldGroup(grpData);
-		table.getField(DB.FIELD_BAR_CLOSE).setFieldGroup(grpData);
-		table.getField(DB.FIELD_BAR_TIME_FMT).setFieldGroup(grpData);
+		table.getField(DB.FIELD_BAR_TIME).setFieldGroup(getFieldGroup(GROUP_DATA));
+		table.getField(DB.FIELD_BAR_OPEN).setFieldGroup(getFieldGroup(GROUP_DATA));
+		table.getField(DB.FIELD_BAR_HIGH).setFieldGroup(getFieldGroup(GROUP_DATA));
+		table.getField(DB.FIELD_BAR_LOW).setFieldGroup(getFieldGroup(GROUP_DATA));
+		table.getField(DB.FIELD_BAR_CLOSE).setFieldGroup(getFieldGroup(GROUP_DATA));
+		table.getField(DB.FIELD_BAR_TIME_FMT).setFieldGroup(getFieldGroup(GROUP_DATA));
 
 		table.addField(DB.field_data(instrument, DB.FIELD_SOURCES_REFV_CALC, "V-Calc"));
 		table.addField(DB.field_integer(DB.FIELD_SOURCES_PIVOT_CALC, "P-Calc"));
@@ -2097,19 +2291,18 @@ public class StatisticsAverages extends Statistics {
 		table.addField(DB.field_string(DB.FIELD_SOURCES_LABEL_EDIT, 2, "L-Edit"));
 		table.addField(DB.field_string(DB.FIELD_SOURCES_LABEL_NETE, 2, "L-Net-E"));
 
-		FieldGroup grpLabels = new FieldGroup(ndx++, "labels", "Labels");
-		table.getField(DB.FIELD_SOURCES_REFV_CALC).setFieldGroup(grpLabels);
-		table.getField(DB.FIELD_SOURCES_PIVOT_CALC).setFieldGroup(grpLabels);
-		table.getField(DB.FIELD_SOURCES_LABEL_CALC).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_SOURCES_REFV_CALC).setFieldGroup(getFieldGroup(GROUP_LABELS));
+		table.getField(DB.FIELD_SOURCES_PIVOT_CALC).setFieldGroup(getFieldGroup(GROUP_LABELS));
+		table.getField(DB.FIELD_SOURCES_LABEL_CALC).setFieldGroup(getFieldGroup(GROUP_LABELS));
+		table.getField(DB.FIELD_SOURCES_LABEL_NETC).setFieldGroup(getFieldGroup(GROUP_LABELS));
 
-		table.getField(DB.FIELD_SOURCES_REFV_EDIT).setFieldGroup(grpLabels);
-		table.getField(DB.FIELD_SOURCES_PIVOT_EDIT).setFieldGroup(grpLabels);
-		table.getField(DB.FIELD_SOURCES_LABEL_EDIT).setFieldGroup(grpLabels);
+		table.getField(DB.FIELD_SOURCES_REFV_EDIT).setFieldGroup(getFieldGroup(GROUP_LABELS));
+		table.getField(DB.FIELD_SOURCES_PIVOT_EDIT).setFieldGroup(getFieldGroup(GROUP_LABELS));
+		table.getField(DB.FIELD_SOURCES_LABEL_EDIT).setFieldGroup(getFieldGroup(GROUP_LABELS));
+		table.getField(DB.FIELD_SOURCES_LABEL_NETE).setFieldGroup(getFieldGroup(GROUP_LABELS));
 
-		FieldGroup grpAverages = new FieldGroup(ndx++, "avgs", "Averages");
 		List<Field> fields = getFieldListAverages();
 		for (Field field : fields) {
-			field.setFieldGroup(grpAverages);
 			table.addField(field);
 		}
 
@@ -2160,18 +2353,19 @@ public class StatisticsAverages extends Statistics {
 	 * @throws Exception
 	 */
 	private Trainer getTrainer() throws Exception {
-		
-		Network network = getNetwork(1024, 64);
+
+		Network network = getNetwork(512, 64);
 
 		Trainer trainer = new Trainer();
+		trainer.setProgressModulus(10);
 		trainer.setNetwork(network);
 		trainer.setPatternSourceTraining(getPatternSource(true, true));
 		trainer.setPatternSourceTest(getPatternSource(true, false));
-		
+
 		trainer.setShuffle(false);
 		trainer.setScore(false);
-		trainer.setEpochs(20);
-		trainer.setGenerateReport(true, "PLAF-Report");
+		trainer.setEpochs(50);
+		trainer.setGenerateReport(true, network.getName());
 
 		trainer.setFilePath("res/network/");
 		trainer.setFileRoot(network.getName());
@@ -2184,16 +2378,22 @@ public class StatisticsAverages extends Statistics {
 	/**
 	 * @param normalized Normalized / raw values.
 	 * @param averages   Show averages.
-	 * @param slopes     Show slopes.
-	 * @param spreads    Show spreads.
+	 * @param avgSlopes  Show average slopes.
+	 * @param avgSpreads Show average spreads.
+	 * @param variances  Show variances.
+	 * @param varSlopes  Show variance slopes.
+	 * @param varSpreads Show variance spreads.
 	 * @param candles    Show candles.
 	 * @return The view.
 	 */
 	View getView(
 		boolean normalized,
 		boolean averages,
-		boolean slopes,
-		boolean spreads,
+		boolean avgSlopes,
+		boolean avgSpreads,
+		boolean variances,
+		boolean varSlopes,
+		boolean varSpreads,
 		boolean candles) {
 		View view = new View();
 		StringBuilder b = new StringBuilder();
@@ -2207,11 +2407,20 @@ public class StatisticsAverages extends Statistics {
 		} else {
 			b.append("-raw");
 		}
-		if (slopes) {
-			b.append("-slopes");
+		if (avgSlopes) {
+			b.append("-avg_slopes");
 		}
-		if (spreads) {
-			b.append("-spreads");
+		if (avgSpreads) {
+			b.append("-avg_spreads");
+		}
+		if (variances) {
+			b.append("-vars");
+		}
+		if (varSlopes) {
+			b.append("-vars_slopes");
+		}
+		if (varSpreads) {
+			b.append("-vars_spreads");
 		}
 		if (candles) {
 			b.append("-candles");
@@ -2246,39 +2455,56 @@ public class StatisticsAverages extends Statistics {
 		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_EDIT));
 		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_NETE));
 
-		List<Field> fields = null;
-
+		List<Field> fields;
 		if (averages) {
 			fields = getFieldListAverages();
-			for (Field field : fields) {
-				view.addField(tableSrc.getField(field.getAlias()));
-			}
+			fields.forEach(field -> view.addField(tableSrc.getField(field.getAlias())));
 		}
-
-		if (slopes) {
-			fields = getFieldListSlopes();
-			for (Field field : fields) {
-				view.addField(tableRel.getField(field.getAlias()));
-			}
-		}
-
-		if (spreads) {
-			fields = getFieldListSpreads();
-			for (Field field : fields) {
-				view.addField(tableRel.getField(field.getAlias()));
-			}
-		}
-
-		if (candles) {
-			fields = getFieldListCandles();
-			for (Field field : fields) {
-				view.addField(tableRel.getField(field.getAlias()));
-			}
-		}
+		fields = new ArrayList<>();
+		if (avgSlopes) fields.addAll(getFieldListAvgSlopes());
+		if (avgSpreads) fields.addAll(getFieldListAvgSpreads());
+		if (variances) fields.addAll(getFieldListVariances());
+		if (varSlopes) fields.addAll(getFieldListVarSlopes());
+		if (varSpreads) fields.addAll(getFieldListVarSpreads());
+		if (candles) fields.addAll(getFieldListCandles());
+		fields.forEach(field -> view.addField(tableRel.getField(field.getAlias())));
 
 		view.setOrderBy(tableSrc.getPrimaryKey());
 		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 		return view;
+	}
+
+	private void setFieldGroups() {
+
+		List<String> groupKeys = new ArrayList<>();
+		Iterator<Object> keys = properties.keySet().iterator();
+		while (keys.hasNext()) {
+			String key = (String) keys.next();
+			if (key.startsWith("group-")) {
+				groupKeys.add(key);
+			}
+		}
+		groupKeys.forEach(key -> properties.remove(key));
+
+		int ndx = 0;
+		properties.setObject(GROUP_DATA, new FieldGroup(ndx++, "data", "Data"));
+		properties.setObject(GROUP_LABELS, new FieldGroup(ndx++, "labels", "Labels"));
+		properties.setObject(GROUP_AVGS, new FieldGroup(ndx++, "avgs", "Averages"));
+		properties.setObject(GROUP_AVG_SLOPES, new FieldGroup(ndx++, "avg-slopes", "Avg-Slopes"));
+		properties.setObject(
+			GROUP_AVG_SPREADS,
+			new FieldGroup(ndx++, "avg-spreads", "Avg-Spreads"));
+		properties.setObject(GROUP_VARS, new FieldGroup(ndx++, "vars", "Variances"));
+		properties.setObject(GROUP_VAR_SLOPES, new FieldGroup(ndx++, "var-slopes", "Var-Slopes"));
+		properties.setObject(
+			GROUP_VAR_SPREADS,
+			new FieldGroup(ndx++, "var-spreads", "Var-Spreads"));
+		for (int i = 0; i < averages.size(); i++) {
+			String suffix = getPadded(getCandleSize(i));
+			properties.setObject(
+				GROUP_CANDLES.apply(i),
+				new FieldGroup(ndx++, "candles_" + suffix, "Candles " + suffix));
+		}
 	}
 
 	/**
@@ -2294,6 +2520,7 @@ public class StatisticsAverages extends Statistics {
 		barsAhead = handler.barsAhead;
 		percentCalc = handler.percentCalc;
 		percentEdit = handler.percentEdit;
+		setFieldGroups();
 	}
 
 	/**

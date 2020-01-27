@@ -516,24 +516,54 @@ public class Vector {
 		}
 		return sum;
 	}
+	
+	/**
+	 * Returns the standard deviation for a list of values.
+	 * 
+	 * @param values The list of values.
+	 * @return The standard deviation.
+	 */
+	public static double stddev(double[] values) {
+		return stddev(values, mean(values));
+	}
+
+	/**
+	 * Returns the standard deviation for a list of values and its mean.
+	 * 
+	 * @param values The list of values.
+	 * @param mean The mean of the list of values.
+	 * @return The standard deviation.
+	 */
+	public static double stddev(double[] values, double mean) {
+		if (values.length <= 1) {
+			return 0;
+		}
+		double variance = 0;
+		for (double value : values) {
+			double difference = value - mean;
+			variance += (difference * difference);
+		}
+		variance /= (Double.valueOf(values.length).doubleValue() - 1);
+		return Math.sqrt(variance);
+	}
 
 	/**
 	 * Returns the variance of a vector.
 	 *
-	 * @param x The vector.
+	 * @param values The vector.
 	 * @return The variance.
 	 */
-	public static double variance(double[] x) {
-		checkMinLength(x, 2);
+	public static double variance(double[] values) {
+		checkMinLength(values, 2);
 
 		double sum = 0.0;
 		double sumsq = 0.0;
-		for (double xi : x) {
-			sum += xi;
-			sumsq += xi * xi;
+		for (double value : values) {
+			sum += value;
+			sumsq += value * value;
 		}
 
-		int n = x.length - 1;
-		return sumsq / n - (sum / x.length) * (sum / n);
+		int n = values.length - 1;
+		return sumsq / n - (sum / values.length) * (sum / n);
 	}
 }

@@ -462,18 +462,25 @@ public class ProgressPane extends GridBagPane {
 		Anchor anchor = Anchor.TOP;
 		Fill fill = Fill.HORIZONTAL;
 		int y = 0;
+		
+		boolean consoleRequired = task.isConsoleRequired();
 
 		Insets insetsTitle = new Insets(5, 5, 0, 5);
 		Insets insetsLine = new Insets(2, 5, 0, 5);
+		Insets insetsBar = null;
+		if (!consoleRequired && statusBars.isEmpty()) {
+			insetsBar = new Insets(5, 5, 10, 5);
+		} else {
+			insetsBar = new Insets(5, 5, 0, 5);
+		}
 
 		add(paneTitleAndButtons, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsTitle));
 		add(labelMessage, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
 		add(labelProgress, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
 		add(labelTime, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
 		add(labelState, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsLine));
-		add(progressBar, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsTitle));
+		add(progressBar, new Constraints(anchor, fill, 0, y++, 1, 1, 1, 0, insetsBar));
 
-		boolean consoleRequired = task.isConsoleRequired();
 		for (int i = 0; i < statusBars.size(); i++) {
 			StatusBar statusBar = statusBars.get(i);
 			Insets insets = new Insets(2, 5, 0, 5);
@@ -488,10 +495,10 @@ public class ProgressPane extends GridBagPane {
 		}
 
 		if (consoleRequired) {
-			Insets insets = new Insets(2, 5, 10, 5);
+			Insets insets = new Insets(10, 5, 10, 5);
 			console = new Console();
 			console.setMargin(5, 5, 5, 5);
-			console.getControl().setPreferredSize(new Dimension(30, 200));
+			console.getControl().setPreferredSize(new Dimension(30, 400));
 			console.getControl().setBorder(new LineBorder(Color.LIGHT_GRAY));
 			Constraints constraints =
 				new Constraints(Anchor.TOP, Fill.BOTH, 0, y++, 1, 1, 1, 1, insets);

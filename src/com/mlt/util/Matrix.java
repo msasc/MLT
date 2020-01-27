@@ -62,6 +62,22 @@ public class Matrix {
 	}
 
 	/**
+	 * Check tah the matrix has the argument number of rows and columns.
+	 * 
+	 * @param matrix The matrix.
+	 * @param rows   The required number of rows.
+	 * @param cols   The required number of columns.
+	 */
+	public static void checkDimensions(double[][] matrix, int rows, int cols) {
+		if (rows(matrix) != rows) {
+			throw new IllegalArgumentException("Invalid mtrix rows: " + rows(matrix));
+		}
+		if (cols(matrix) != cols) {
+			throw new IllegalArgumentException("Invalid mtrix cols: " + cols(matrix));
+		}
+	}
+
+	/**
 	 * Returns the number of columns of a matrix.
 	 *
 	 * @param matrix The argument matrix.
@@ -110,6 +126,22 @@ public class Matrix {
 	}
 
 	/**
+	 * Set the matrix with a scalar value.
+	 *
+	 * @param matrix The matrix to initialize.
+	 * @param value  The value to assign.
+	 */
+	public static void fill(double[][] matrix, double value) {
+		int rows = rows(matrix);
+		int cols = cols(matrix);
+		for (int row = 0; row < rows; row++) {
+			for (int col = 0; col < cols; col++) {
+				matrix[row][col] = value;
+			}
+		}
+	}
+
+	/**
 	 * Calculate the Hadamard product of matrices a and b.
 	 *
 	 * @param a Matrix a.
@@ -129,6 +161,39 @@ public class Matrix {
 	}
 
 	/**
+	 * @param matrices A collection of matrices of the same dimensions.
+	 * @return The mean matrix.
+	 */
+	public static double[][] mean(Collection<double[][]> matrices) {
+		if (matrices.isEmpty()) {
+			return null;
+		}
+
+		int rows = rows(Lists.getFirst(matrices));
+		int cols = cols(Lists.getFirst(matrices));
+
+		double[][] mean = new double[rows][cols];
+		Iterator<double[][]> i = matrices.iterator();
+		while (i.hasNext()) {
+			double[][] matrix = i.next();
+			for (int r = 0; r < rows; r++) {
+				for (int c = 0; c < cols; c++) {
+					mean[r][c] += matrix[r][c];
+				}
+			}
+		}
+
+		double size = matrices.size();
+		for (int r = 0; r < rows; r++) {
+			for (int c = 0; c < cols; c++) {
+				mean[r][c] /= size;
+			}
+		}
+
+		return mean;
+	}
+
+	/**
 	 * Returns the number of rows of a matrix.
 	 *
 	 * @param matrix The argument matrix.
@@ -137,21 +202,4 @@ public class Matrix {
 	public static int rows(double[][] matrix) {
 		return matrix.length;
 	}
-
-	/**
-	 * Set the matrix with a scalar value.
-	 *
-	 * @param matrix The matrix to initialize.
-	 * @param value  The value to assign.
-	 */
-	public static void fill(double[][] matrix, double value) {
-		int rows = rows(matrix);
-		int cols = cols(matrix);
-		for (int row = 0; row < rows; row++) {
-			for (int col = 0; col < cols; col++) {
-				matrix[row][col] = value;
-			}
-		}
-	}
-
 }

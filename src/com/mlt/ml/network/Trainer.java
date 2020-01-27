@@ -22,7 +22,9 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -37,9 +39,6 @@ import com.mlt.desktop.FileChooser;
 import com.mlt.desktop.Option;
 import com.mlt.ml.data.Pattern;
 import com.mlt.ml.data.PatternSource;
-import com.mlt.ml.function.Distance;
-import com.mlt.ml.function.Matcher;
-import com.mlt.ml.function.distance.DistanceEuclidean;
 import com.mlt.task.Task;
 import com.mlt.util.Lists;
 import com.mlt.util.Numbers;
@@ -122,8 +121,8 @@ public class Trainer extends Task {
 	private boolean shuffle = true;
 	/** Score flag indicator. */
 	private boolean score = true;
-	/** Error decimals. */
-	private int errorDecimals = 8;
+	/** Error and performance epoch decimals. */
+	private int decimals = 6;
 	/** Percentages decimals. */
 	private int percentageDecimals = 2;
 
@@ -131,8 +130,6 @@ public class Trainer extends Task {
 	private String filePath;
 	/** File root name. */
 	private String fileRoot;
-	/** Distance function. */
-	private Distance distance = new DistanceEuclidean();
 	/** History of train metrics. */
 	private List<Metrics> trainMetricsHistory = new ArrayList<>();
 	/** History of test metrics. */
@@ -186,9 +183,7 @@ public class Trainer extends Task {
 		int length = network.getOutputSize();
 		int size = source.size();
 		Metrics metrics = new Metrics(length, size);
-		metrics.setLabel(train ? "Train" : "Test");
 
-		/* A first iteration to calculate the mean of data. */
 		for (int i = 0; i < size; i++) {
 
 			if (isCancelRequested()) {
@@ -201,34 +196,7 @@ public class Trainer extends Task {
 			StringBuilder msg = new StringBuilder();
 			msg.append("Calculating ");
 			msg.append(train ? "train" : "test");
-			msg.append(" data mean: ");
-			msg.append(index);
-			msg.append(" of ");
-			msg.append(size);
-			msg.append(" (");
-			msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
-			msg.append("%)");
-			updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, index, size);
-
-			Pattern pattern = source.get(i);
-			double[] patternOutput = pattern.getOutputValues();
-			metrics.compute(patternOutput);
-		}
-
-		/* A second iteration to calculate the rest of metrics. */
-		for (int i = 0; i < size; i++) {
-
-			if (isCancelRequested()) {
-				setCancelled();
-				return metrics;
-			}
-
-			int index = i + 1;
-			double percent = (double) (index * 100) / (double) size;
-			StringBuilder msg = new StringBuilder();
-			msg.append("Calculating ");
-			msg.append(train ? "train" : "test");
-			msg.append(" rest of metrics: ");
+			msg.append(" metrics: ");
 			msg.append(index);
 			msg.append(" of ");
 			msg.append(size);
@@ -338,12 +306,15 @@ public class Trainer extends Task {
 		testMetricsHistory.add(testMetrics);
 		printMetrics();
 
+		/* Best metrics. */
+		Metrics bestTrainMetrics = trainMetrics;
+		Metrics bestTestMetrics = testMetrics;
+
 		/* Iterate epochs. Start with a flat scan. */
 		calculateTotalWork();
 		long totalWork = getTotalWork();
 		long workDone = 0;
 		boolean scanFlat = true;
-		Matcher match = sourceTrain.getMatch();
 		TreeMap<Double, Integer> scoreMap = new TreeMap<>((a, b) -> (Double.compare(a, b) * -1));
 		for (int epoch = 1; epoch <= epochs; epoch++) {
 
@@ -369,65 +340,81 @@ public class Trainer extends Task {
 			}
 
 			int size = indexes.length;
-			double epochError = 0;
-			double matches = 0;
+			trainMetrics = new Metrics(network.getOutputSize(), size);
+			
+			removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
+			
 			for (int i = 0; i < size; i++) {
 
-				/* Check cancelled. */
 				if (isCancelRequested()) {
 					setCancelled();
 					break;
 				}
 
-				/* Work done and notify work. */
 				workDone += 1;
 				update(getMessage(epoch, i + 1, size), workDone, totalWork);
 
-				/* Process the pattern. */
 				int index = indexes[i];
 				Pattern pattern = sourceTrain.get(index);
 				double[] patternOutput = pattern.getOutputValues();
 				double[] networkOutput = network.forward(pattern.getInputValues());
-				if (match.match(patternOutput, networkOutput)) {
-					matches += 1;
-				}
-				epochError += distance.distance(patternOutput, networkOutput);
-				BigDecimal error = Numbers.getBigDecimal(epochError / (i + 1), errorDecimals);
-				BigDecimal performance = Numbers.getBigDecimal(matches / (i + 1), 4);
-				StringBuilder msg = new StringBuilder();
-				msg.append("Epoch error ");
-				msg.append(scanFlat ? "flat: " : "score: ");
-				msg.append(error);
-				msg.append(", performance: ");
-				msg.append(performance);
-				updateStatusLabel(STATUS_ERROR, LABEL_ERROR, msg);
-
-				/* Add the error and pattern index to the score map. */
-				scoreMap.put(error.doubleValue(), index);
-
-				/* Errors or deltas and backward. Discard the return vector. */
 				double[] networkDeltas = Vector.subtract(patternOutput, networkOutput);
 				network.backward(networkDeltas);
-
+				
+				trainMetrics.compute(patternOutput, networkOutput);
+				scoreMap.put(trainMetrics.getErrAvg(), index);
+				
+				boolean update = checkUpdate(i + 1, size);
+				if (update) {
+					StringBuilder msg = new StringBuilder();
+					msg.append("Epoch error ");
+					msg.append(Numbers.getBigDecimal(trainMetrics.getErrAvg(), decimals));
+					msg.append(" std-dev ");
+					msg.append(Numbers.getBigDecimal(trainMetrics.getErrStd(), decimals));
+					msg.append(" performance ");
+					msg.append(Numbers.getBigDecimal(trainMetrics.getPerf(), decimals));
+					updateStatusLabel(STATUS_ERROR, LABEL_ERROR, msg);
+					
+					msg = new StringBuilder();
+					msg.append("Calculating ");
+					msg.append(i + 1);
+					msg.append(" of ");
+					msg.append(size);
+					updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, i + 1, size);
+				}
+				
 				/* Adjust internal per step. */
 				network.adjustStep();
 			}
+			removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
 
 			/* Last network unfold if history size is not a multiple of the source size. */
 			network.unfold();
-
-			/* Adjust internals per iteration or batch. */
-			network.adjustBatch();
 
 			/* Check cancelled. */
 			if (isCancelled()) {
 				break;
 			}
 
-			/*
-			 * Save data if both performances and errors are better. Save only if the scan
-			 * has been a flat scan.
-			 */
+			/* Calculate metrics. */
+			testMetrics = calculateMetrics(false);
+			trainMetricsHistory.add(trainMetrics);
+			testMetricsHistory.add(testMetrics);
+			printMetrics();
+
+			/* Adjust internals per iteration or batch. */
+			network.adjustBatch(false);
+
+			/* Save data if both metrics are better than the best metrics. */
+			if (saveNetworkData &&
+				trainMetrics.compareTo(bestTrainMetrics) > 0 &&
+				testMetrics.compareTo(bestTestMetrics) > 0) {
+				
+				bestTrainMetrics = trainMetrics;
+				bestTestMetrics = testMetrics;
+				
+				saveNetwork();
+			}
 
 			/* Change scan flag. */
 			scanFlat = score ? !scanFlat : true;
@@ -435,13 +422,21 @@ public class Trainer extends Task {
 
 		/* Compute has finished, generate a report if required. */
 		if (!isCancelled() && generateReport) {
-//			if (reportFile == null) {
-//				reportFile = "report";
-//			}
-//			File file = new File(filePath, reportFile + ".txt");
-//			FileWriter fw = new FileWriter(file, true);
-//			fw.append(getReport());
-//			fw.close();
+			if (reportFile == null) {
+				reportFile = "report";
+			}
+			File file = new File(filePath, reportFile + ".txt");
+			FileWriter fw = new FileWriter(file, true);
+			PrintWriter pw = new PrintWriter(fw);
+			pw.print(Metrics.summary(decimals, trainMetricsHistory, testMetricsHistory));
+			pw.println();
+			pw.print(
+				Metrics.summary(
+					decimals,
+					Metrics.averages(trainMetricsHistory, 5, "SMA"),
+					Metrics.averages(testMetricsHistory, 5, "SMA")));
+			pw.println();
+			pw.close();
 		}
 	}
 
@@ -568,39 +563,15 @@ public class Trainer extends Task {
 		return file;
 	}
 
-	/**
-	 * @return The current performance report.
-	 */
-//	private String getReport() {
-//
-//		int size = trainPerformances.size();
-//		int padError = errorDecimals + 4;
-//		int padPerformance = performanceDecimals + 5;
-//		int padIndex = Numbers.getDigits(size) + 2;
-//
-//		StringWriter s = new StringWriter();
-//		PrintWriter p = new PrintWriter(s);
-//		p.println(network.getDescription());
-//
-//		for (int i = 0; i < size; i++) {
-//			int index = i + 1;
-//			Performance train = trainPerformances.get(i);
-//			Performance test = testPerformances.get(i);
-//			p.print(Strings.rightPad(index, padIndex));
-//			p.print(Strings.leftPad(train.error, padError));
-//			p.print(Strings.leftPad(train.performance, padPerformance));
-//			p.print(Strings.leftPad(test.error, padError));
-//			p.print(Strings.leftPad(test.performance, padPerformance));
-//			p.println();
-//		}
-//		p.println();
-//		p.close();
-//		return s.toString();
-//	}
-
 	private void printMetrics() {
 		consoleClear();
-		consolePrint(Metrics.getReport(trainMetricsHistory, testMetricsHistory));
+		consolePrint(Metrics.summary(6, trainMetricsHistory, testMetricsHistory));
+		consolePrintln();
+		consolePrint(
+			Metrics.summary(
+				6,
+				Metrics.averages(trainMetricsHistory, 5, "SMA"),
+				Metrics.averages(testMetricsHistory, 5, "SMA")));
 	}
 
 	/**
@@ -635,14 +606,6 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * @param distance The distance function.
-	 */
-	public void setDistance(Distance distance) {
-		if (distance == null) throw new NullPointerException();
-		this.distance = distance;
-	}
-
-	/**
 	 * @param epochs The number of epochs to process.
 	 */
 	public void setEpochs(int epochs) {
@@ -650,10 +613,10 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * @param errorDecimals The error decimals.
+	 * @param decimals The decimals to report online error and performance.
 	 */
-	public void setErrorDecimals(int errorDecimals) {
-		this.errorDecimals = errorDecimals;
+	public void setErrorDecimals(int decimals) {
+		this.decimals = decimals;
 	}
 
 	/**
@@ -677,7 +640,6 @@ public class Trainer extends Task {
 	public void setGenerateReport(boolean generateReport, String reportFile) {
 		this.generateReport = generateReport;
 		this.reportFile = reportFile;
-		this.saveNetworkData = !generateReport;
 	}
 
 	/**
@@ -706,6 +668,13 @@ public class Trainer extends Task {
 	 */
 	public void setPercentageDecimals(int percentageDecimals) {
 		this.percentageDecimals = percentageDecimals;
+	}
+
+	/**
+	 * @param saveNetworkData A boolean indicating whether to save the network.
+	 */
+	public void setSaveNetworkData(boolean saveNetworkData) {
+		this.saveNetworkData = saveNetworkData;
 	}
 
 	/**

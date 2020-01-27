@@ -88,7 +88,7 @@ public class MNISTTrainer {
 	private static Trainer getTrainerBP(int... sizes) {
 
 		Trainer trainer = new Trainer();
-		trainer.setProgressModulus(100);
+		trainer.setProgressModulus(10);
 
 		Network network = new Network();
 
@@ -117,8 +117,9 @@ public class MNISTTrainer {
 		
 		trainer.setShuffle(false);
 		trainer.setScore(false);
-		trainer.setEpochs(6);
+		trainer.setEpochs(20);
 		trainer.setGenerateReport(true, "MNIST-Report");
+		trainer.setSaveNetworkData(true);
 
 		trainer.setTitle(network.getName());
 

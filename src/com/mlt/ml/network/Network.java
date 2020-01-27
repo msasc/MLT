@@ -158,7 +158,7 @@ public class Network {
 	private List<Concurrent> backwardConcurrents;
 	/** List of forward concurrent branches, cached from the graph. */
 	private List<Concurrent> forwardConcurrents;
-	
+
 	/** List of nodes, cached from the graph. */
 	private List<Node> nodes;
 	/** List of edges, cached from the graph. */
@@ -214,13 +214,16 @@ public class Network {
 		nodes = graph.getNodes();
 		edges = graph.getEdges();
 	}
-	
+
 	/**
 	 * Adjust internal paramenters after processing a batch of patterns or an entire
 	 * iteration.
+	 * 
+	 * @param stagnation A boolean indicating whether the network is entering
+	 *                   stagnation over iterations or epochs.
 	 */
-	public void adjustBatch() {
-		nodes.forEach(node -> node.adjustBatch());
+	public void adjustBatch(boolean stagnation) {
+		nodes.forEach(node -> node.adjustBatch(stagnation));
 	}
 
 	/**
@@ -322,7 +325,7 @@ public class Network {
 	public String getDescription() {
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
-		
+
 		p.print(getName());
 		p.print(" (");
 		List<Integer> sizes = graph.getSizes();
@@ -334,7 +337,7 @@ public class Network {
 		}
 		p.print(")");
 		p.println();
-		
+
 		List<Integer> branchIndexes = graph.getBranches();
 		for (Integer index : branchIndexes) {
 			List<Node> branch = graph.getBranch(index);
@@ -344,7 +347,7 @@ public class Network {
 			}
 			p.println();
 		}
-		
+
 		p.close();
 		return s.toString();
 	}

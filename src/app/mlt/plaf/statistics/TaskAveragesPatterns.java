@@ -70,7 +70,7 @@ public class TaskAveragesPatterns extends TaskAverages {
 
 		this.calculated = calculated;
 		this.trainingFactor = trainingFactor;
-		this.persistor = stats.getView(true, false, true, true, true).getPersistor();
+		this.persistor = stats.getView(true, false, true, true, true, true, true, true).getPersistor();
 
 		this.aliasLabel = calculated ? DB.FIELD_SOURCES_LABEL_CALC : DB.FIELD_SOURCES_LABEL_EDIT;
 	}

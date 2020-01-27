@@ -110,12 +110,16 @@ public class TaskAveragesRaw extends TaskAverages {
 
 		/* Concurrent pool. */
 		Concurrent concurrent = new Concurrent(50, 500);
-		
+
 		/* Buffers. */
 		List<Average> averages = stats.getAverages();
 		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
 		FixedSizeQueue<Double> avgBuffer = new FixedSizeQueue<>(maxPeriod);
-		FixedSizeQueue<Record> rcBuffer = new FixedSizeQueue<>(maxPeriod);
+		FixedSizeQueue<Record> rcTickBuffer = new FixedSizeQueue<>(maxPeriod);
+		FixedSizeQueue<Record> rcSrcBuffer = new FixedSizeQueue<>(maxPeriod);
+		FixedSizeQueue<Record> rcRawBuffer = new FixedSizeQueue<>(maxPeriod);
+
+		List<Field> varFields = stats.getFieldListVariances();
 
 		/* Iterate ticker. */
 		Record rcSrcPrev = null;
@@ -132,7 +136,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			/* Retrieve record. */
 			Record rcTick = iter.next();
 			avgBuffer.add(rcTick.getValue(DB.FIELD_BAR_CLOSE).getDouble());
-			rcBuffer.add(rcTick);
+			rcTickBuffer.add(rcTick);
 
 			/* Notify work done. */
 			workDone++;
@@ -158,58 +162,112 @@ public class TaskAveragesRaw extends TaskAverages {
 			if (rcSrcPrev == null) {
 				rcSrcPrev = rcSrc;
 			}
+			rcSrcBuffer.add(rcSrc);
 
 			/* Calculate averages. */
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
 				double value = avg.getAverage(avgBuffer);
-				String name = stats.getNameAverage(avg);
+				String name = stats.getNameAvg(avg);
 				rcSrc.setValue(name, value);
 			}
 
 			/* Raw values record. */
 			Record rcRaw = persistorRaw.getDefaultRecord();
 			rcRaw.setValue(DB.FIELD_BAR_TIME, rcTick.getValue(DB.FIELD_BAR_TIME));
+			rcRawBuffer.add(rcRaw);
 
-			/* Slopes. */
+			/* Avg-Slopes. */
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
-				String nameAvg = stats.getNameAverage(avg);
+				String nameAvg = stats.getNameAvg(avg);
 				double prev = rcSrcPrev.getValue(nameAvg).getDouble();
 				double curr = rcSrc.getValue(nameAvg).getDouble();
 				double slope = 0;
 				if (prev != 0) {
 					slope = (curr / prev) - 1;
 				}
-				String nameSlope = stats.getNameSlope(avg);
+				String nameSlope = stats.getNameAvgSlope(avg);
 				rcRaw.setValue(nameSlope, slope);
 			}
 
-			/* Spreads. */
+			/* Avg-Spreads. */
 			for (int i = 0; i < averages.size(); i++) {
 				Average fast = averages.get(i);
-				String nameFast = stats.getNameAverage(fast);
+				String nameFast = stats.getNameAvg(fast);
 				double avgFast = rcSrc.getValue(nameFast).getDouble();
 				for (int j = i + 1; j < averages.size(); j++) {
 					Average slow = averages.get(j);
-					String nameSlow = stats.getNameAverage(slow);
+					String nameSlow = stats.getNameAvg(slow);
 					double avgSlow = rcSrc.getValue(nameSlow).getDouble();
-					double spread = (avgFast / avgSlow) - 1;
-					String nameSpread = stats.getNameSpread(fast, slow);
+					double spread = (avgSlow == 0 ? 0 : (avgFast / avgSlow) - 1);
+					String nameSpread = stats.getNameAvgSpread(fast, slow);
 					rcRaw.setValue(nameSpread, spread);
 				}
+			}
+
+			/* Vars. */
+			for (int i = 0; i < averages.size() - 1; i++) {
+				Average fast = averages.get(i);
+				Average slow = averages.get(i + 1);
+				String nameFast = stats.getNameAvg(fast);
+				String nameSlow = stats.getNameAvg(slow);
+				for (int j = i + 1; j < averages.size(); j++) {
+					int period = averages.get(j).getPeriod();
+					double var = getVariance(rcSrcBuffer, nameFast, nameSlow, period);
+					String nameVar = stats.getNameVar(fast, slow, period);
+					rcRaw.setValue(nameVar, var);
+				}
+			}
+
+			/* Var slopes. */
+			for (int i = 0; i < averages.size() - 1; i++) {
+				Average fast = averages.get(i);
+				Average slow = averages.get(i + 1);
+				for (int j = i + 1; j < averages.size(); j++) {
+					int period = averages.get(j).getPeriod();
+					String nameVar = stats.getNameVar(fast, slow, period);
+					String nameSlope = stats.getNameVarSlope(fast, slow, period);
+					Record rcCurr = rcRawBuffer.getLast(0);
+					Record rcPrev = null;
+					if (rcRawBuffer.size() > 1) {
+						rcPrev = rcRawBuffer.getLast(1);
+					}
+					double varCurr = rcCurr.getValue(nameVar).getDouble();
+					double varPrev = 0;
+					if (rcPrev != null) {
+						varPrev = rcPrev.getValue(nameVar).getDouble();
+					}
+					double slope = 0;
+					if (varPrev != 0) {
+						slope = (varCurr / varPrev) - 1;
+					}
+					rcRaw.setValue(nameSlope, slope);
+				}
+			}
+
+			/* Var-Spreads. */
+			for (int i = 0; i < varFields.size() - 1; i++) {
+				String nameFast = varFields.get(i).getName();
+				String nameSlow = varFields.get(i + 1).getName();
+				String nameSpread = stats.getNameVarSpread(nameFast, nameSlow);
+				double fast = rcRaw.getValue(nameFast).getDouble();
+				double slow = rcRaw.getValue(nameSlow).getDouble();
+				double spread = (slow == 0 ? 0 : (fast / slow) - 1);
+				rcRaw.setValue(nameSpread, spread);
 			}
 
 			/* Candles. */
 			for (int i = 0; i < averages.size(); i++) {
 				int size = stats.getCandleSize(i);
 				int count = stats.getCandleCount(i);
-				List<Data> candles = getCandles(size, count, rcBuffer);
+				List<Data> candles = getCandles(size, count, rcTickBuffer);
 				for (int index = 0; index < candles.size(); index++) {
 					Data candle = candles.get(index);
 					String range = stats.getNameCandle(size, index, DB.FIELD_CANDLE_RANGE);
 					rcRaw.setValue(range, new Value(OHLC.getRange(candle)));
-					String body_factor = stats.getNameCandle(size, index, DB.FIELD_CANDLE_BODY_FACTOR);
+					String body_factor =
+						stats.getNameCandle(size, index, DB.FIELD_CANDLE_BODY_FACTOR);
 					rcRaw.setValue(body_factor, new Value(OHLC.getBodyFactor(candle)));
 					String body_pos = stats.getNameCandle(size, index, DB.FIELD_CANDLE_BODY_POS);
 					rcRaw.setValue(body_pos, new Value(OHLC.getBodyPosition(candle)));
@@ -218,7 +276,9 @@ public class TaskAveragesRaw extends TaskAverages {
 					if (index < candles.size() - 1) {
 						Data previous = candles.get(index + 1);
 						String rel_pos = stats.getNameCandle(size, index, DB.FIELD_CANDLE_REL_POS);
-						rcRaw.setValue(rel_pos, new Value(OHLC.getRelativePosition(candle, previous)));
+						rcRaw.setValue(
+							rel_pos,
+							new Value(OHLC.getRelativePosition(candle, previous)));
 					}
 				}
 			}
@@ -291,7 +351,7 @@ public class TaskAveragesRaw extends TaskAverages {
 		criteria.add(Condition.fieldGT(ftime, vtime));
 		return criteria;
 	}
-	
+
 	/**
 	 * @return The last time of the sources (and raw) table.
 	 */
@@ -307,6 +367,31 @@ public class TaskAveragesRaw extends TaskAverages {
 		}
 		iter.close();
 		return time;
+	}
+
+	/**
+	 * @param rcRawBuffer Raw buffer.
+	 * @param nameFast    Fast average name.
+	 * @param nameSlow    Medium average name.
+	 * @param period      Slow period.
+	 * @return Variance.
+	 */
+	private double getVariance(
+		FixedSizeQueue<Record> rcRawBuffer,
+		String nameFast,
+		String nameSlow,
+		int period) {
+
+		period = Math.min(rcRawBuffer.size(), period);
+		double var = 0;
+		for (int i = 0; i < period; i++) {
+			Record rc = rcRawBuffer.getLast(i);
+			double fast = rc.getValue(nameFast).getDouble();
+			double medium = rc.getValue(nameSlow).getDouble();
+			var += (fast - medium);
+		}
+		var /= ((double) period);
+		return var;
 	}
 
 }

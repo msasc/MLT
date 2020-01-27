@@ -51,13 +51,7 @@ public class TaskAveragesRanges extends TaskAverages {
 		setTitle(stats.getLabel() + " - Calculate min-max raw values");
 		
 		persistorRanges = stats.getTableRanges().getPersistor();
-		fields = new ArrayList<>();
-		fields.addAll(stats.getFieldListSlopes());
-		fields.addAll(stats.getFieldListSpreads());
-		int size = stats.getAverages().size();
-		for (int i = 0; i < size; i++) {
-			fields.addAll(stats.getFieldListCandles(i));
-		}
+		fields = new ArrayList<>(stats.getFieldListPatterns(true));
 	}
 
 	/**

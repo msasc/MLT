@@ -46,22 +46,13 @@ public class FieldGroup implements Comparable<FieldGroup> {
 		return fieldGroup;
 	}
 
-	/**
-	 * The name of the group.
-	 */
+	/** The name. */
 	private String name;
-	/**
-	 * The title of the group. The title can be used in a tabbed pane as the tab
-	 * title.
-	 */
+	/** The title. The title can be used in a tabbed pane as the tab title. */
 	private String title;
-	/**
-	 * The description of the group.
-	 */
+	/** The description. */
 	private String description;
-	/**
-	 * The index or order in a presentation of fields inside field groups.
-	 */
+	/** The sort index. */
 	private int index = 0;
 
 	/**
@@ -74,9 +65,9 @@ public class FieldGroup implements Comparable<FieldGroup> {
 	/**
 	 * Constructor assigning fields.
 	 *
-	 * @param index       The sort index.
-	 * @param name        The name.
-	 * @param title       The title.
+	 * @param index The sort index.
+	 * @param name  The name.
+	 * @param title The title.
 	 */
 	public FieldGroup(int index, String name, String title) {
 		this(index, name, title, title);
@@ -106,8 +97,7 @@ public class FieldGroup implements Comparable<FieldGroup> {
 	 */
 	private void checkModifyEmpty() {
 		if (index < 0) {
-			throw new UnsupportedOperationException(
-				"The unique  empty field group can not be modified");
+			throw new UnsupportedOperationException("The unique  empty field group can not be modified");
 		}
 	}
 

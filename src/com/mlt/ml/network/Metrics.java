@@ -34,108 +34,179 @@ import com.mlt.util.Vector;
  *
  * @author Miquel Sas
  */
-public class Metrics {
+public class Metrics implements Comparable<Metrics> {
 
 	/**
+	 * @param metrics The list of values.
+	 * @param period  The period.
+	 * @param type    Average type ("SMA"/"WMA).
+	 * @return The list of the SMA averages.
+	 */
+	public static List<Metrics> averages(List<Metrics> metrics, int period, String type) {
+		if (!Strings.in(type, "SMA", "WMA")) {
+			throw new IllegalArgumentException("Invalid aveage type " + type);
+		}
+		List<Metrics> averages = new ArrayList<>();
+		for (int i = 0; i < metrics.size(); i++) {
+			int index = Math.max(0, i - period + 1);
+			List<double[]> rawValues = new ArrayList<>();
+			for (int j = index; j <= i; j++) {
+				rawValues.add(metrics.get(j).valuesRaw());
+			}
+			double[] rawAvg = null;
+			if (type.equals("SMA")) {
+				rawAvg = Vector.averageSMA(rawValues);
+			}
+			if (type.equals("WMA")) {
+				rawAvg = Vector.averageWMA(rawValues);
+			}
+			averages.add(new Metrics(rawAvg));
+		}
+		return averages;
+	}
+
+	/**
+	 * @param decimals     Decimals for number precision.
 	 * @param trainMetrics List of train metrics.
 	 * @param testMetrics  List of test metrics.
-	 * @return A full report.
+	 * @return The summary report.
 	 */
-	public static String getReport(List<Metrics> trainMetrics, List<Metrics> testMetrics) {
+	public static String summary(
+		int decimals,
+		List<Metrics> trainMetrics,
+		List<Metrics> testMetrics) {
 
-		/* Validate. */
-		if (trainMetrics.isEmpty() || testMetrics.isEmpty()) {
-			return "";
-		}
-		if (trainMetrics.size() != testMetrics.size()) {
-			return "";
-		}
-
-		Metrics master = trainMetrics.get(0);
-		int length = master.length;
-		int padNumber = master.decimals + 3;
-		int padVector = (length * padNumber) + ((length - 1) * 2);
+		int padNumber = decimals + 3;
+		int sepBlock = 2;
+		int sepItem = 1;
 		int size = trainMetrics.size();
-		List<String> titles = new ArrayList<>();
-		titles.add("Mean Absolute Error");
-		titles.add("Mean Square Error");
-		titles.add("Root Mean Square Error");
-		titles.add("R-Square");
+
+		List<String> titles = titles();
+
 		int padTitle = 0;
 		for (String title : titles) {
 			padTitle = Math.max(padTitle, title.length());
 		}
-		padTitle += 2;
-		int sep = 4;
+		padTitle = Math.max(padTitle, padNumber);
+
+		int padMetrics = titles.size() * padTitle + (titles.size() - 1) * sepItem;
+		int padIndex = Numbers.getDigits(size);
+		int sepIndex = 2;
 
 		StringWriter s = new StringWriter();
 		PrintWriter p = new PrintWriter(s);
 
-		p.print(Strings.repeat(" ", padTitle));
-		p.print(Strings.centerPad("Training", padVector, " "));
-		p.print(Strings.repeat(" ", sep));
-		p.print(Strings.centerPad("Test", padVector, " "));
+		/* Headers. */
+
+		p.print(Strings.repeat(" ", padIndex + sepIndex));
+		p.print(Strings.centerPad("Training", padMetrics, " "));
+		p.print(Strings.repeat(" ", sepBlock));
+		p.print(Strings.centerPad("Test", padMetrics, " "));
 		p.println();
 
-		p.print(Strings.repeat(" ", padTitle));
-		p.print(Strings.repeat("-", padVector));
-		p.print(Strings.repeat(" ", sep));
-		p.print(Strings.repeat("-", padVector));
+		p.print(Strings.repeat(" ", padIndex + sepIndex));
+		p.print(Strings.repeat("-", padMetrics));
+		p.print(Strings.repeat(" ", sepBlock));
+		p.print(Strings.repeat("-", padMetrics));
 		p.println();
 
+		p.print(Strings.repeat(" ", padIndex + sepIndex));
 		for (int i = 0; i < titles.size(); i++) {
 			String title = titles.get(i);
-			for (int j = 0; j < size; j++) {
-				if (j == 0) {
-					p.print(Strings.rightPad(title, padTitle));
-				} else {
-					p.print(Strings.repeat(" ", padTitle));
-				}
-				Metrics mtrain = trainMetrics.get(j); 
-				Metrics mtest = testMetrics.get(j); 
-				BigDecimal[] train = null;
-				BigDecimal[] test = null;
-				switch (i) {
-				case 0:
-					train = mtrain.getMeanAbsoluteErrorVector();
-					test = mtest.getMeanAbsoluteErrorVector();
-					break;
-				case 1:
-					train = mtrain.getMeanSquaredErrorVector();
-					test = mtest.getMeanSquaredErrorVector();
-					break;
-				case 2:
-					train = mtrain.getRootMeanSquaredErrorVector();
-					test = mtest.getRootMeanSquaredErrorVector();
-					break;
-				case 3:
-					train = mtrain.getRSquaredVector();
-					test = mtest.getRSquaredVector();
-					break;
-				}
-				p.println();
+			if (i > 0) {
+				p.print(Strings.repeat(" ", sepItem));
 			}
+			p.print(Strings.leftPad(title, padTitle, " "));
+		}
+		p.print(Strings.repeat(" ", sepBlock));
+		for (int i = 0; i < titles.size(); i++) {
+			String title = titles.get(i);
+			if (i > 0) {
+				p.print(Strings.repeat(" ", sepItem));
+			}
+			p.print(Strings.leftPad(title, padTitle, " "));
+		}
+		p.println();
+
+		p.print(Strings.repeat(" ", padIndex + sepIndex));
+		for (int i = 0; i < titles.size(); i++) {
+			if (i > 0) {
+				p.print(Strings.repeat(" ", sepItem));
+			}
+			p.print(Strings.repeat("-", padTitle));
+		}
+		p.print(Strings.repeat(" ", sepBlock));
+		for (int i = 0; i < titles.size(); i++) {
+			if (i > 0) {
+				p.print(Strings.repeat(" ", sepItem));
+			}
+			p.print(Strings.repeat("-", padTitle));
+		}
+		p.println();
+
+		/* Values. */
+
+		for (int m = 0; m < size; m++) {
+			Metrics vtr = trainMetrics.get(m);
+			Metrics vts = testMetrics.get(m);
+			if (m > 0) {
+				vtr.variance(trainMetrics.get(m - 1));
+				vts.variance(testMetrics.get(m - 1));
+			}
+			List<BigDecimal> vtrs = vtr.valuesFmt(decimals);
+			List<BigDecimal> vtss = vts.valuesFmt(decimals);
+
+			p.print(Strings.leftPad(m, padIndex));
+			p.print(Strings.repeat(" ", sepIndex));
+			for (int i = 0; i < vtrs.size(); i++) {
+				Number v = vtrs.get(i);
+				if (i > 0) {
+					p.print(Strings.repeat(" ", sepItem));
+				}
+				p.print(Strings.leftPad(v, padTitle));
+			}
+			p.print(Strings.repeat(" ", sepBlock));
+			for (int i = 0; i < vtss.size(); i++) {
+				Number v = vtss.get(i);
+				if (i > 0) {
+					p.print(Strings.repeat(" ", sepItem));
+				}
+				p.print(Strings.leftPad(v, padTitle));
+			}
+			p.println();
 		}
 
 		p.close();
 		return s.toString();
 	}
+	
+	/**
+	 * @return The list of titles.
+	 */
+	public static List<String> titles() {
+		List<String> titles = new ArrayList<>();
+		titles.add("Error");
+		titles.add("Err Var");
+		titles.add("Err Std");
+		titles.add("Perform");
+		titles.add("Perf Var");
+		return titles;
+	}
 
-	/** Label. */
-	private String label;
-	/** Decimals for presentation. */
-	private int decimals = 4;
+	/** Average absolute error. */
+	private double errAvg;
+	/** Average absolute error variation vs previous. */
+	private double errVar;
+	/** Average absolute error standard deviation. */
+	private double errStd;
 
-	/** Mean absolute error. */
-	private double[] meanAbsoluteError;
-	/** Mean squared error. */
-	private double[] meanSquaredError;
-	/** Root mean squared error. */
-	private double[] rootMeanSquaredError;
-	/** Coeficient of determination (R-Square). */
-	private double[] rSquared;
-	/** Overall performance. */
-	private double performance;
+	/** Performance. */
+	private double perf;
+	/** Performance variation vs previous. */
+	private double perfVar;
+
+	/** M-Squared vector. */
+	private double[] error;
 
 	/** Match function, default is match category. */
 	private Matcher matcher = new CategoryMatcher();
@@ -147,56 +218,50 @@ public class Metrics {
 	/** Number of matches. */
 	private int matches;
 
-	/** Mean correct data, necessary to calculate the r2. */
-	private double[] mdata;
-	/** Total square. */
-	private double[] sstot;
-	/** Total residual. */
-	private double[] ssres;
 	/** Calls to compute. */
 	private int calls;
-	/** Pass, 0 compute(a), 1 compute (a, b), 2 no more data. */
-	private int pass;
 
 	/**
-	 * Constructor.
-	 * 
 	 * @param length Length of the data, correct and predict, vectors.
 	 * @param size   Size of the pattern source.
 	 */
 	public Metrics(int length, int size) {
 		this.length = length;
 		this.size = size;
-		reset();
+		
+		matches = 0;
+		error = new double[length];
+		calls = 0;
+
+		errAvg = 0;
+		errVar = 0;
+		errStd = 0;
+
+		perf = 0;
+		perfVar = 0;
 	}
 
 	/**
-	 * Compute a pattern output to calculate the mean of data.
-	 * 
-	 * @param patternOutput The pattern output.
+	 * @param values Result values.
 	 */
-	public void compute(double[] patternOutput) {
-		if (patternOutput.length != length) {
-			throw new IllegalArgumentException();
-		}
-		if (pass != 0) {
-			throw new IllegalStateException();
-		}
-		for (int i = 0; i < length; i++) {
-			mdata[i] += patternOutput[i];
-		}
-		calls++;
-		if (calls == size) {
-			calls = 0;
-			pass = 1;
-			for (int i = 0; i < length; i++) {
-				mdata[i] /= ((double) size);
-			}
-		}
+	private Metrics(double[] values) {
+		errAvg = values[0];
+		errVar = values[1];
+		errStd = values[2];
+		perf = values[3];
+		perfVar = values[4];
 	}
 
 	/**
-	 * Comput a pattern and a network output to calculate the rest of values.
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int compareTo(Metrics m) {
+		return Double.compare(perf, m.perf);
+	}
+
+	/**
+	 * Compute a pattern and a network output to calculate the rest of values.
 	 * 
 	 * @param patternOutput The pattern output.
 	 * @param networkOutput The network output.
@@ -205,127 +270,65 @@ public class Metrics {
 		if (patternOutput.length != length || networkOutput.length != length) {
 			throw new IllegalArgumentException();
 		}
-		if (pass != 1) {
-			throw new IllegalStateException();
-		}
 		for (int i = 0; i < length; i++) {
-			double err = patternOutput[i] - networkOutput[i];
-			meanAbsoluteError[i] += Math.abs(err);
-			meanSquaredError[i] += Math.pow(err, 2);
-			sstot[i] += Math.pow(patternOutput[i] - mdata[i], 2);
-			ssres[i] += Math.pow(patternOutput[i] - networkOutput[i], 2);
+			error[i] += Math.abs(patternOutput[i] - networkOutput[i]);
 		}
 		if (matcher.match(patternOutput, networkOutput)) {
 			matches++;
 		}
 		calls++;
-		if (calls == size) {
-			calls = 0;
-			pass = 2;
+		if (calls < size) {
+			double[] errorTmp = Vector.copy(error);
 			for (int i = 0; i < length; i++) {
-				meanAbsoluteError[i] /= ((double) size);
-				meanSquaredError[i] /= ((double) size);
-				rootMeanSquaredError[i] = Math.sqrt(meanSquaredError[i]);
-				rSquared[i] = 1 - ssres[i] / sstot[i];
+				errorTmp[i] /= ((double) calls);
 			}
-			performance = ((double) matches) / ((double) size);
+			errAvg = Vector.mean(errorTmp);
+			errStd = Vector.stddev(errorTmp, errAvg);
+			perf = ((double) matches) / ((double) calls);
+		}
+		if (calls == size) {
+			for (int i = 0; i < length; i++) {
+				error[i] /= ((double) size);
+			}
+			errAvg = Vector.mean(error);
+			errStd = Vector.stddev(error, errAvg);
+			perf = ((double) matches) / ((double) size);
 		}
 	}
 
 	/**
-	 * @param value The value to format.
-	 * @return The formatted value with decimals.
+	 * @return The errAvg.
 	 */
-	private BigDecimal getFormatted(double value) {
-		if (pass != 2) {
-			throw new IllegalStateException();
-		}
-		return Numbers.getBigDecimal(value, decimals);
+	public double getErrAvg() {
+		return errAvg;
 	}
 
 	/**
-	 * @param values The values to format.
-	 * @return The formatted values with decimals.
+	 * @return The errVar.
 	 */
-	private BigDecimal[] getFormatted(double[] values) {
-		if (pass != 2) {
-			throw new IllegalStateException();
-		}
-		BigDecimal[] fmt = new BigDecimal[length];
-		for (int i = 0; i < length; i++) {
-			fmt[i] = getFormatted(values[i]);
-		}
-		return fmt;
+	public double getErrVar() {
+		return errVar;
 	}
 
 	/**
-	 * @return The label.
+	 * @return The errStd.
 	 */
-	public String getLabel() {
-		return label;
+	public double getErrStd() {
+		return errStd;
 	}
 
 	/**
-	 * @return The mean absolute error.
+	 * @return The perf.
 	 */
-	public BigDecimal getMeanAbsoluteError() {
-		return getFormatted(Vector.mean(meanAbsoluteError));
+	public double getPerf() {
+		return perf;
 	}
 
 	/**
-	 * @return The mean absolute error.
+	 * @return The perfVar.
 	 */
-	public BigDecimal[] getMeanAbsoluteErrorVector() {
-		return getFormatted(meanAbsoluteError);
-	}
-
-	/**
-	 * @return The mean square error.
-	 */
-	public BigDecimal getMeanSquaredError() {
-		return getFormatted(Vector.mean(meanSquaredError));
-	}
-
-	/**
-	 * @return The mean square error.
-	 */
-	public BigDecimal[] getMeanSquaredErrorVector() {
-		return getFormatted(meanSquaredError);
-	}
-
-	/**
-	 * @return The overall performance.
-	 */
-	public BigDecimal getPerformance() {
-		return getFormatted(performance);
-	}
-
-	/**
-	 * @return The root mean square error.
-	 */
-	public BigDecimal getRootMeanSquaredError() {
-		return getFormatted(Vector.mean(rootMeanSquaredError));
-	}
-
-	/**
-	 * @return The root mean square error.
-	 */
-	public BigDecimal[] getRootMeanSquaredErrorVector() {
-		return getFormatted(rootMeanSquaredError);
-	}
-
-	/**
-	 * @return The coeficient of determination.
-	 */
-	public BigDecimal getRSquared() {
-		return getFormatted(Vector.mean(rSquared));
-	}
-
-	/**
-	 * @return The coeficient of determination.
-	 */
-	public BigDecimal[] getRSquaredVector() {
-		return getFormatted(rSquared);
+	public double getPerfVar() {
+		return perfVar;
 	}
 
 	/**
@@ -333,23 +336,57 @@ public class Metrics {
 	 */
 	public void reset() {
 		matches = 0;
-		meanAbsoluteError = new double[length];
-		meanSquaredError = new double[length];
-		rootMeanSquaredError = new double[length];
-		rSquared = new double[length];
-		performance = 0;
-
-		mdata = new double[length];
-		sstot = new double[length];
-		ssres = new double[length];
+		error = new double[length];
 		calls = 0;
-		pass = 0;
+
+		errAvg = 0;
+		errVar = 0;
+		errStd = 0;
+
+		perf = 0;
+		perfVar = 0;
 	}
 
 	/**
-	 * @param label The label.
+	 * @param decimals Decimals to format values.
+	 * @return The list of values.
 	 */
-	public void setLabel(String label) {
-		this.label = label;
+	public List<BigDecimal> valuesFmt(int decimals) {
+		List<BigDecimal> values = new ArrayList<>();
+
+		values.add(Numbers.getBigDecimal(errAvg, decimals));
+		values.add(Numbers.getBigDecimal(errVar, decimals));
+		values.add(Numbers.getBigDecimal(errStd, decimals));
+
+		values.add(Numbers.getBigDecimal(perf, decimals));
+		values.add(Numbers.getBigDecimal(perfVar, decimals));
+
+		return values;
+	}
+
+	/**
+	 * @return The array of raw values.
+	 */
+	public double[] valuesRaw() {
+		return new double[] {
+			errAvg, errVar, errStd, perf, perfVar
+		};
+	}
+
+	/**
+	 * Calculate variations vs the previous metrics.
+	 * 
+	 * @param m The previous metrics.
+	 */
+	public void variance(Metrics m) {
+		if (m == null) {
+			return;
+		}
+		if (m.errAvg != 0) {
+			errVar = (errAvg / m.errAvg) - 1;
+		}
+		if (m.perf != 0) {
+			perfVar = (perf / m.perf) - 1;
+		}
 	}
 }

@@ -85,8 +85,11 @@ public abstract class Node {
 	/**
 	 * Adjust internal paramenters after processing a batch of patterns or an entire
 	 * iteration. This method is intended to be overwritten.
+	 * 
+	 * @param stagnation A boolean indicating whether the network is entering
+	 *                   stagnation over iterations or epochs.
 	 */
-	public void adjustBatch() {}
+	public void adjustBatch(boolean stagnation) {}
 
 	/**
 	 * Adjust internal paramenters after processing a step, a single pattern. This

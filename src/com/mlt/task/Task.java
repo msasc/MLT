@@ -184,6 +184,22 @@ public abstract class Task implements Runnable, Callable<Void> {
 	}
 
 	/**
+	 * @param workDone  Work done.
+	 * @param totalWork Total work.
+	 * @return A boolean indicating whether to update messages based on the progress
+	 *         modulus.
+	 */
+	protected boolean checkUpdate(long workDone, long totalWork) {
+		boolean update = true;
+		if (progressModulus > 0 && workDone < totalWork) {
+			if (workDone % progressModulus != 0) {
+				update = false;
+			}
+		}
+		return update;
+	}
+
+	/**
 	 * Clear the main message.
 	 */
 	protected void clearMessage() {
@@ -1013,13 +1029,7 @@ public abstract class Task implements Runnable, Callable<Void> {
 		if (isPooled()) {
 			return;
 		}
-		boolean update = true;
-		if (progressModulus > 0 && workDone < totalWork) {
-			if (workDone % progressModulus != 0) {
-				update = false;
-			}
-		}
-		if (update) {
+		if (checkUpdate(workDone, totalWork)) {
 			updateProgress(workDone, totalWork);
 			updateMessage(message);
 			updateProgressMessage();
@@ -1086,11 +1096,13 @@ public abstract class Task implements Runnable, Callable<Void> {
 				setTotalWork(totalWork);
 				// Parent workDone and total work to submit.
 				long parentWorkDone =
-					(taskPool.getWorkDone() < 0 ? workDoneDelta
-						: taskPool.getWorkDone() + workDoneDelta);
+					(taskPool.getWorkDone() < 0 ?
+						workDoneDelta :
+						taskPool.getWorkDone() + workDoneDelta);
 				long parentTotalWork =
-					(taskPool.getTotalWork() < 0 ? totalWorkDelta
-						: taskPool.getTotalWork() + totalWorkDelta);
+					(taskPool.getTotalWork() < 0 ?
+						totalWorkDelta :
+						taskPool.getTotalWork() + totalWorkDelta);
 				// Do submit.
 				taskPool.updateProgress(parentWorkDone, parentTotalWork);
 				taskPool.updateProgressMessage();

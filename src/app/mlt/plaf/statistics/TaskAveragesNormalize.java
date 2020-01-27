@@ -100,10 +100,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 		}
 
 		/* List of aliases and normalizers. */
-		List<Field> fields = new ArrayList<>();
-		fields.addAll(stats.getFieldListSlopes());
-		fields.addAll(stats.getFieldListSpreads());
-		fields.addAll(stats.getFieldListCandles());
+		List<Field> fields = new ArrayList<>(stats.getFieldListPatterns(true));
 		HashMap<String, Normalizer> map = getNormalizers();
 		List<String> aliases = new ArrayList<>();
 		List<Normalizer> normalizers = new ArrayList<>();
@@ -184,7 +181,10 @@ public class TaskAveragesNormalize extends TaskAverages {
 	 * @return The map of normalizers.
 	 */
 	private HashMap<String, Normalizer> getNormalizers() throws PersistorException {
-		RecordSet rs = stats.getTableRanges().getPersistor().select(null);
+		Field fname = stats.getTableRanges().getField(DB.FIELD_RANGE_NAME);
+		Order order = new Order();
+		order.add(fname);
+		RecordSet rs = stats.getTableRanges().getPersistor().select(null, order);
 		HashMap<String, Normalizer> map = new HashMap<>();
 		for (Record rc : rs) {
 			String name = rc.getValue(DB.FIELD_RANGE_NAME).getString();

@@ -39,13 +39,6 @@ import com.mlt.util.Queue;
 public class WeightsNode extends Node {
 
 	/**
-	 * Enumerates the gradient softeners.
-	 */
-	public static enum GradientSoftener {
-		NONE, SMA, WMA
-	}
-
-	/**
 	 * Gradients data structure.
 	 */
 	class Gradients {
@@ -128,6 +121,13 @@ public class WeightsNode extends Node {
 	/**
 	 * Learning rate (eta - wiki nomenclature) data structure.
 	 */
+
+	/**
+	 * Enumerates the gradient softeners.
+	 */
+	public static enum GradientSoftener {
+		NONE, SMA, WMA
+	}
 
 	/**
 	 * Momentum (alpha - wiki nomenclature) data structure.
@@ -535,7 +535,7 @@ public class WeightsNode extends Node {
 	 */
 	private void initializeLearningRates() {
 		learningRates = new double[inputSize][outputSize];
-		Matrix.fill(learningRates, 0.01);
+		Matrix.fill(learningRates, 0.001);
 	}
 
 	/**

@@ -45,7 +45,7 @@ public class TaskAveragesRanges extends TaskAverages {
 	/**
 	 * @param stats
 	 */
-	public TaskAveragesRanges(StatisticsAverages stats) {
+	public TaskAveragesRanges(Statistics stats) {
 		super(stats);
 		setId("averages-ranges");
 		setTitle(stats.getLabel() + " - Calculate min-max raw values");

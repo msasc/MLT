@@ -53,7 +53,7 @@ public class LinePlotter extends DataPlotter {
 	 * @param index The data index.
 	 */
 	public LinePlotter(int index) {
-		super("line");
+		super();
 		setIndex(index);
 	}
 

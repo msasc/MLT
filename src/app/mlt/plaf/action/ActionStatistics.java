@@ -63,7 +63,7 @@ import com.mlt.util.Logs;
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
 import app.mlt.plaf.statistics.Average;
-import app.mlt.plaf.statistics.StatisticsAverages;
+import app.mlt.plaf.statistics.Statistics;
 
 /**
  * Define and manage statistics on tickers.
@@ -79,8 +79,8 @@ public class ActionStatistics extends ActionRun {
 	 *         two parameters.
 	 */
 	static final boolean checkAveragesModified(
-		StatisticsAverages statsPrev,
-		StatisticsAverages statsNext) {
+		Statistics statsPrev,
+		Statistics statsNext) {
 		List<Average> avgsPrev = statsPrev.getAverages();
 		List<Average> avgsNext = statsNext.getAverages();
 		if (avgsPrev.size() != avgsNext.size()) {
@@ -138,7 +138,6 @@ public class ActionStatistics extends ActionRun {
 				form.addField(DB.FIELD_INSTRUMENT_ID);
 				form.addField(DB.FIELD_PERIOD_NAME);
 				form.addField(DB.FIELD_STATISTICS_ID);
-				form.addField(DB.FIELD_STATISTICS_KEY);
 				form.addField(DB.FIELD_STATISTICS_PARAMS);
 
 				form.getEditContext(DB.FIELD_SERVER_ID).getEditField().setEnabled(false);
@@ -179,7 +178,7 @@ public class ActionStatistics extends ActionRun {
 
 				/* Everyting ok, setup the statistics. */
 				rc = form.getRecord();
-				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
+				Statistics stats = Statistics.getStatistics(rc);
 
 				/* Do create the tables again. */
 				List<Table> tables = stats.getTables();
@@ -229,7 +228,7 @@ public class ActionStatistics extends ActionRun {
 				}
 
 				/* Statistics averages. */
-				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
+				Statistics stats = Statistics.getStatistics(rc);
 
 				/* Statistics persistor. */
 				Persistor persistor = DB.persistor_statistics();
@@ -272,7 +271,7 @@ public class ActionStatistics extends ActionRun {
 					return;
 				}
 				/* Current statistics. */
-				StatisticsAverages statsPrev = StatisticsAverages.getStatistics(rc);
+				Statistics statsPrev = Statistics.getStatistics(rc);
 				
 				/* Form. */
 				FormRecordPane form = new FormRecordPane(rc);
@@ -282,14 +281,12 @@ public class ActionStatistics extends ActionRun {
 				form.addField(DB.FIELD_INSTRUMENT_ID);
 				form.addField(DB.FIELD_PERIOD_NAME);
 				form.addField(DB.FIELD_STATISTICS_ID);
-				form.addField(DB.FIELD_STATISTICS_KEY);
 				form.addField(DB.FIELD_STATISTICS_PARAMS);
 
 				form.getEditContext(DB.FIELD_SERVER_ID).getEditField().setEnabled(false);
 				form.getEditContext(DB.FIELD_INSTRUMENT_ID).getEditField().setEnabled(false);
 				form.getEditContext(DB.FIELD_PERIOD_NAME).getEditField().setEnabled(false);
 				form.getEditContext(DB.FIELD_STATISTICS_ID).getEditField().setEnabled(false);
-				form.getEditContext(DB.FIELD_STATISTICS_KEY).getEditField().setEnabled(false);
 
 				form.layout();
 				form.updateEditors();
@@ -324,7 +321,7 @@ public class ActionStatistics extends ActionRun {
 				}
 				
 				/* Modified statistics. */
-				StatisticsAverages statsNext = StatisticsAverages.getStatistics(form.getRecord());
+				Statistics statsNext = Statistics.getStatistics(form.getRecord());
 				
 				/* Add to model. */
 				RecordSet recordSet = tableStats.getModel().getRecordSet();
@@ -375,7 +372,7 @@ public class ActionStatistics extends ActionRun {
 			Record rc = tableStats.getSelectedRecord();
 			if (rc != null) {
 				try {
-					StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
+					Statistics stats = Statistics.getStatistics(rc);
 					List<Option> options = stats.getOptions();
 					Option.sort(options);
 					popup.addSeparator();
@@ -415,13 +412,8 @@ public class ActionStatistics extends ActionRun {
 				if (vStatId.isEmpty()) {
 					throw new Exception("Statistics id can not be empty");
 				}
-				/* Statistics key. */
-				Value vStatKey = rc.getValue(DB.FIELD_STATISTICS_KEY);
-				if (vStatKey.isEmpty()) {
-					throw new Exception("Statistics key can not be empty");
-				}
 				/* Validate and retrieve averages parameters. */
-				StatisticsAverages stats = StatisticsAverages.getStatistics(rc);
+				Statistics stats = Statistics.getStatistics(rc);
 				stats.validate();
 				/* Everything ok, apply controls to record. */
 				form.updateRecord();
@@ -463,7 +455,6 @@ public class ActionStatistics extends ActionRun {
 			model.addColumn(DB.FIELD_INSTRUMENT_ID);
 			model.addColumn(DB.FIELD_PERIOD_NAME);
 			model.addColumn(DB.FIELD_STATISTICS_ID);
-			model.addColumn(DB.FIELD_STATISTICS_KEY);
 			model.addColumn(DB.FIELD_STATISTICS_PARAMS_DESC);
 			model.setRecordSet(recordSet);
 

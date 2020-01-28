@@ -152,6 +152,30 @@ public class OHLC {
 	}
 
 	/**
+	 * @param dataCurr  The current data candlestick.
+	 * @param dataPrev The previous data candlestick.
+	 * @return The relative ranges of two consecutive candles.
+	 */
+	public static double getRelativeRange(Data dataCurr, Data dataPrev) {
+		double current = getRange(dataCurr);
+		double previous = getRange(dataPrev);
+		double factor = (previous == 0 ? 0 : (current / previous) - 1);
+		return factor;
+	}
+
+	/**
+	 * @param dataCurr  The current data candlestick.
+	 * @param dataPrev The previous data candlestick.
+	 * @return The relative bodies of two consecutive candles.
+	 */
+	public static double getRelativeBody(Data dataCurr, Data dataPrev) {
+		double current = getBody(dataCurr);
+		double previous = getBody(dataPrev);
+		double factor = (previous == 0 ? 0 : (current / previous) - 1);
+		return factor;
+	}
+
+	/**
 	 * @param data The data candlestick.
 	 * @return The sign as a weighted value between -1:1
 	 */

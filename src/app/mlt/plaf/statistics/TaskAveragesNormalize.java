@@ -51,7 +51,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 	/**
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesNormalize(StatisticsAverages stats) {
+	public TaskAveragesNormalize(Statistics stats) {
 		super(stats);
 		setId("averages-nrm");
 		setTitle(stats.getLabel() + " - Normalize raw values");

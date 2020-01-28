@@ -48,7 +48,7 @@ public class TaskAveragesPivots extends TaskAverages {
 	 * 
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesPivots(StatisticsAverages stats) {
+	public TaskAveragesPivots(Statistics stats) {
 		super(stats);
 		setId("averages-zigzag");
 		setTitle(stats.getLabel() + " - Calculate zig-zag pivots");

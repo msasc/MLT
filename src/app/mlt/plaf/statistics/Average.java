@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.mlt.util.FixedSizeQueue;
+import com.mlt.util.Numbers;
 
 /**
  * Defines a smoothed average used as a movement descriptor.
@@ -30,62 +31,27 @@ import com.mlt.util.FixedSizeQueue;
  */
 public class Average implements Comparable<Average> {
 
-	private static double getAverage(Type type, int period, FixedSizeQueue<Double> buffer) {
+	private static double getAverage(int period, double delta, FixedSizeQueue<Double> buffer) {
 		int startIndex = (buffer.size() < period ? 0 : buffer.size() - period);
 		int endIndex = buffer.size() - 1;
-		switch (type) {
-		case SMA:
-			return getAverageSMA(startIndex, endIndex, buffer);
-		case WMA:
-			return getAverageWMA(startIndex, endIndex, buffer);
-		}
-		throw new IllegalArgumentException();
-	}
-
-	private static double getAverageSMA(
-		int startIndex,
-		int endIndex,
-		FixedSizeQueue<Double> buffer) {
-
-		double average = 0;
-		for (int index = startIndex; index <= endIndex; index++) {
-			average += buffer.getFirst(index);
-		}
-		average /= ((double) (endIndex - startIndex + 1));
-		return average;
-	}
-
-	private static double getAverageWMA(
-		int startIndex,
-		int endIndex,
-		FixedSizeQueue<Double> buffer) {
-
 		double average = 0;
 		double weight = 1;
 		double totalWeight = 0;
 		for (int index = startIndex; index <= endIndex; index++) {
 			average += (buffer.getFirst(index) * weight);
 			totalWeight += weight;
-			weight += 1;
+			weight += delta;
 		}
 		average /= totalWeight;
 		return average;
 	}
-	
-	/**
-	 * Types of averages used.
-	 */
-	public enum Type {
-		SMA,
-		WMA
-	}
 
 	/** Average period. */
 	private int period;
+	/** Average delta (WMA weight delta). */
+	private double delta = 1.0;
 	/** Smoothing periods. */
 	private int[] smooths;
-	/** Average type. */
-	private Type type = Type.SMA;
 
 	/** Smooth buffers. */
 	private List<FixedSizeQueue<Double>> smoothBuffers;
@@ -93,20 +59,20 @@ public class Average implements Comparable<Average> {
 	/**
 	 * Constructor.
 	 * 
-	 * @param type    The average type.
 	 * @param period  Average period.
+	 * @param delta   WMA weight delta.
 	 * @param smooths Smoothing periods.
 	 */
-	public Average(Type type, int period, int... smooths) {
+	public Average(int period, double delta, int... smooths) {
 		super();
-		if (type == null) {
-			throw new NullPointerException("Type can not be null");
-		}
 		if (period <= 0) {
 			throw new IllegalArgumentException("Period must be greater than zero");
 		}
-		this.type = type;
+		if (delta <= 0) {
+			throw new IllegalArgumentException("Delta must be greater than zero");
+		}
 		this.period = period;
+		this.delta = delta;
 		this.smooths = (smooths == null ? new int[0] : smooths);
 	}
 
@@ -130,7 +96,7 @@ public class Average implements Comparable<Average> {
 		if (o instanceof Average) {
 			Average a = (Average) o;
 			if (getPeriod() == a.getPeriod()) {
-				if (getType().equals(a.getType())) {
+				if (getDelta() == a.getDelta()) {
 					if (Arrays.equals(getSmooths(), a.getSmooths())) {
 						return true;
 					}
@@ -147,23 +113,30 @@ public class Average implements Comparable<Average> {
 	 * @return The average value, conveniently smoothed.
 	 */
 	public double getAverage(FixedSizeQueue<Double> buffer) {
-		double average = getAverage(type, period, buffer);
+		double average = getAverage(period, delta, buffer);
 		for (int i = 0; i < smooths.length; i++) {
 			int smooth = smooths[i];
 			FixedSizeQueue<Double> smoothBuffer = getSmoothBuffers().get(i);
 			smoothBuffer.add(average);
-			average = getAverage(type, smooth, smoothBuffer);
+			average = getAverage(smooth, 1.0, smoothBuffer);
 		}
 		return average;
 	}
 
 	/**
-	 * Returns the SMA period.
+	 * Returns the WMA weight delta.
 	 * 
-	 * @return The SMA period.
+	 * @return The WMA weight delta.
 	 */
 	public int getPeriod() {
 		return period;
+	}
+
+	/**
+	 * @return The SMA period.
+	 */
+	public double getDelta() {
+		return delta;
 	}
 
 	/**
@@ -189,24 +162,15 @@ public class Average implements Comparable<Average> {
 	}
 
 	/**
-	 * Returns the type.
-	 * 
-	 * @return The type.
-	 */
-	public Type getType() {
-		return type;
-	}
-
-	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public String toString() {
 		StringBuilder b = new StringBuilder();
-		b.append(type.toString());
-		b.append("(");
+		b.append("[");
 		b.append(period);
-		b.append(")");
+		b.append("; ");
+		b.append(Numbers.getBigDecimal(delta, 2));
 		if (smooths.length > 0) {
 			b.append(" (");
 			for (int i = 0; i < smooths.length; i++) {
@@ -217,6 +181,7 @@ public class Average implements Comparable<Average> {
 			}
 			b.append(")");
 		}
+		b.append("]");
 		return b.toString();
 	}
 }

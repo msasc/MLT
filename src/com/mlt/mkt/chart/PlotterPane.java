@@ -267,7 +267,7 @@ public class PlotterPane extends BorderPane {
 				}
 				boolean indicator = (dataList instanceof IndicatorDataList);
 				if (!indicator) {
-					for (DataPlotter plotter : dataList.getDataPlotters()) {
+					for (DataPlotter plotter : dataList.getPlotters()) {
 						plotterLists.add(new PlotterList(plotter, dataList));
 					}
 				}
@@ -278,7 +278,7 @@ public class PlotterPane extends BorderPane {
 				}
 				boolean indicator = (dataList instanceof IndicatorDataList);
 				if (indicator) {
-					for (DataPlotter plotter : dataList.getDataPlotters()) {
+					for (DataPlotter plotter : dataList.getPlotters()) {
 						plotterLists.add(new PlotterList(plotter, dataList));
 					}
 				}

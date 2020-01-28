@@ -47,7 +47,7 @@ import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
 
-import app.mlt.plaf.statistics.StatisticsAverages;
+import app.mlt.plaf.statistics.Statistics;
 
 /**
  * Statically centralizes access to lookups, persistors, records, recordsets,
@@ -87,11 +87,10 @@ public class DB {
 	static class ParamsDesc implements Calculator {
 		@Override
 		public Value getValue(Record record) {
-			String id = record.getValue(FIELD_STATISTICS_ID).toString();
 			String params = record.getValue(FIELD_STATISTICS_PARAMS).toString();
-			if (id.equals("AVG") && !params.isEmpty()) {
+			if (!params.isEmpty()) {
 				try {
-					StatisticsAverages stats = StatisticsAverages.getStatistics(record);
+					Statistics stats = Statistics.getStatistics(record);
 					return new Value(stats.getParametersDescription());
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -112,14 +111,18 @@ public class DB {
 	public static final String FIELD_CANDLE_RANGE = "range";
 	public static final String FIELD_CANDLE_BODY_FACTOR = "fbody";
 	public static final String FIELD_CANDLE_BODY_POS = "pbody";
-	public static final String FIELD_CANDLE_REL_POS = "frelpos";
 	public static final String FIELD_CANDLE_SIGN = "sign";
+	public static final String FIELD_CANDLE_REL_POS = "frelpos";
+	public static final String FIELD_CANDLE_REL_RANGE = "frelrange";
+	public static final String FIELD_CANDLE_REL_BODY = "frelbody";
 	public static final String[] CANDLE_NAMES = new String[] {
 		FIELD_CANDLE_RANGE,
 		FIELD_CANDLE_BODY_FACTOR,
 		FIELD_CANDLE_BODY_POS,
+		FIELD_CANDLE_SIGN,
 		FIELD_CANDLE_REL_POS,
-		FIELD_CANDLE_SIGN
+		FIELD_CANDLE_REL_RANGE,
+		FIELD_CANDLE_REL_BODY
 	};
 
 	public static final String FIELD_INSTRUMENT_ID = "instr_id";
@@ -158,7 +161,6 @@ public class DB {
 	public static final String FIELD_SOURCES_REFV_EDIT = "refv_edit";
 	
 	public static final String FIELD_STATISTICS_ID = "stats_id";
-	public static final String FIELD_STATISTICS_KEY = "stats_key";
 	public static final String FIELD_STATISTICS_PARAMS = "stats_params";
 	public static final String FIELD_STATISTICS_PARAMS_DESC = "stats_params_desc";
 
@@ -781,10 +783,7 @@ public class DB {
 		table.addField(field_string(FIELD_PERIOD_ID, 5, "Period id"));
 
 		table.addField(field_string(FIELD_STATISTICS_ID, 5, "Id", "Statistics id"));
-		table.getField(FIELD_STATISTICS_ID).addPossibleValue("AVG", "Averages");
-
-		table.addField(field_string(FIELD_STATISTICS_KEY, 2, "Key", "Statistics key"));
-		table.getField(FIELD_STATISTICS_KEY).setUppercase(true);
+		table.getField(FIELD_STATISTICS_ID).setUppercase(true);;
 
 		Field params =
 			field_string(
@@ -811,7 +810,6 @@ public class DB {
 		table.getField(FIELD_INSTRUMENT_ID).setPrimaryKey(true);
 		table.getField(FIELD_PERIOD_ID).setPrimaryKey(true);
 		table.getField(FIELD_STATISTICS_ID).setPrimaryKey(true);
-		table.getField(FIELD_STATISTICS_KEY).setPrimaryKey(true);
 
 		Table tablePeriods = table_periods();
 		ForeignKey fkPeriods = new ForeignKey(false);
@@ -826,7 +824,6 @@ public class DB {
 		order.add(tablePeriods.getField(FIELD_PERIOD_UNIT_INDEX));
 		order.add(tablePeriods.getField(FIELD_PERIOD_SIZE));
 		order.add(table.getField(FIELD_STATISTICS_ID));
-		order.add(table.getField(FIELD_STATISTICS_KEY));
 
 		table.setPersistor(
 			new DBPersistor(MLT.getDBEngine(), table.getComplexView(order)));

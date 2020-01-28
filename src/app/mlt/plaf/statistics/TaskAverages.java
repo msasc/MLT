@@ -30,14 +30,14 @@ import com.mlt.util.HTML;
 public abstract class TaskAverages extends Task {
 
 	/** Underlying statistics averages. */
-	protected StatisticsAverages stats;
+	protected Statistics stats;
 
 	/**
 	 * Constructor.
 	 * 
 	 * @param stats The statistics averages.
 	 */
-	public TaskAverages(StatisticsAverages stats) {
+	public TaskAverages(Statistics stats) {
 		super();
 		this.stats = stats;
 	}

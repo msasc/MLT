@@ -34,7 +34,7 @@ public class TaskAveragesNetwork extends TaskAverages {
 	/**
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesNetwork(StatisticsAverages stats) {
+	public TaskAveragesNetwork(Statistics stats) {
 		super(stats);
 		setId("averages-net");
 		setTitle(stats.getLabel() + " - Apply network labels");

@@ -35,22 +35,20 @@ import com.mlt.mkt.chart.DataContext;
  */
 public class Plotter {
 
-	/** String identifier. */
+	/** Identifier. */
 	private String id;
+	/** Description. */
+	private String description;
 	/** The plotter context. */
 	private DataContext context;
 
 	/**
 	 * Constructor.
-	 * 
-	 * @param id Identifier.
 	 */
-	public Plotter(String id) {
+	public Plotter() {
 		super();
-		if (id == null) {
-			throw new NullPointerException();
-		}
-		this.id = id;
+		this.id = getClass().getSimpleName();
+		this.description = getClass().getSimpleName();
 	}
 
 	/**
@@ -68,6 +66,13 @@ public class Plotter {
 	}
 
 	/**
+	 * @return The description.
+	 */
+	public String getDescription() {
+		return description;
+	}
+
+	/**
 	 * @return The string identifier.
 	 */
 	public String getId() {
@@ -75,8 +80,6 @@ public class Plotter {
 	}
 
 	/**
-	 * Returns the plotter context.
-	 * 
 	 * @return The plotter context.
 	 */
 	public DataContext getContext() {
@@ -84,11 +87,23 @@ public class Plotter {
 	}
 
 	/**
-	 * Sets the plotter context.
-	 * 
 	 * @param context The plotter context.
 	 */
 	public void setContext(DataContext context) {
 		this.context = context;
+	}
+
+	/**
+	 * @param description The description.
+	 */
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	/**
+	 * @param id The string identifier.
+	 */
+	public void setId(String id) {
+		this.id = id;
 	}
 }

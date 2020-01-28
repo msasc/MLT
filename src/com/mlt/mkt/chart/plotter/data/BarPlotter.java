@@ -50,7 +50,7 @@ public class BarPlotter extends DataPlotter {
 	 * @param close Close index.
 	 */
 	public BarPlotter(int open, int high, int low, int close) {
-		super("bar");
+		super();
 		setIndexes(new int[] { open, high, low, close });
 	}
 

@@ -28,6 +28,7 @@ import java.util.List;
 import com.mlt.mkt.chart.plotter.DataPlotter;
 import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.util.Numbers;
+import com.mlt.util.Properties;
 
 /**
  * A container for the data to plot in a <i>JChartContainer</i>.
@@ -38,6 +39,10 @@ public class PlotData implements Iterable<DataList> {
 
 	/** Identifier (optional) */
 	private String id;
+	/** Description. */
+	private String description;
+	/** User properties. */
+	private Properties properties = new Properties();
 
 	/**
 	 * The number of bars to show at start when start and end indexes are not
@@ -92,6 +97,7 @@ public class PlotData implements Iterable<DataList> {
 		super();
 		if (id == null) throw new NullPointerException();
 		this.id = id;
+		this.description = id;
 	}
 
 	/**
@@ -225,7 +231,7 @@ public class PlotData implements Iterable<DataList> {
 				if (i < minIndex) {
 					minIndex = i;
 				}
-				List<DataPlotter> dataPlotters = dataList.getDataPlotters();
+				List<DataPlotter> dataPlotters = dataList.getPlotters();
 				for (DataPlotter dataPlotter : dataPlotters) {
 					double[] values = dataPlotter.getValues(data);
 					for (double value : values) {
@@ -444,6 +450,13 @@ public class PlotData implements Iterable<DataList> {
 	}
 
 	/**
+	 * @return The description.
+	 */
+	public String getDescription() {
+		return description;
+	}
+
+	/**
 	 * Returns the end index to plot.
 	 *
 	 * @return The end index.
@@ -586,6 +599,14 @@ public class PlotData implements Iterable<DataList> {
 		}
 		throw new UnsupportedOperationException("Pip scale can not be resolved");
 	}
+	
+	public List<DataPlotter> getPlotters() {
+		List<DataPlotter> plotters = new ArrayList<>();
+		for (DataList dataList : dataLists) {
+			plotters.addAll(dataList.getPlotters());
+		}
+		return plotters;
+	}
 
 	/**
 	 * Returns the scale to plot this data.
@@ -594,6 +615,13 @@ public class PlotData implements Iterable<DataList> {
 	 */
 	public PlotScale getPlotScale() {
 		return plotScale;
+	}
+
+	/**
+	 * @return The user properties.
+	 */
+	public Properties getProperties() {
+		return properties;
 	}
 
 	/**
@@ -883,6 +911,13 @@ public class PlotData implements Iterable<DataList> {
 		startIndex = 0 - minimumVisibleData + 1;
 		endIndex = startIndex + currentVisible - 1;
 		return true;
+	}
+
+	/**
+	 * @param description The description.
+	 */
+	public void setDescription(String description) {
+		this.description = description;
 	}
 
 	/**

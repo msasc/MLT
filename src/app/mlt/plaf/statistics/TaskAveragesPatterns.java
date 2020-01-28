@@ -55,7 +55,7 @@ public class TaskAveragesPatterns extends TaskAverages {
 	 * @param trainingFactor Training factor.
 	 */
 	public TaskAveragesPatterns(
-		StatisticsAverages stats,
+		Statistics stats,
 		boolean calculated,
 		double trainingFactor) {
 

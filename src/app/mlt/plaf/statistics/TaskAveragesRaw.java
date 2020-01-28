@@ -54,7 +54,7 @@ public class TaskAveragesRaw extends TaskAverages {
 	/**
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesRaw(StatisticsAverages stats) {
+	public TaskAveragesRaw(Statistics stats) {
 		super(stats);
 		setId("averages-raw");
 		setTitle(stats.getLabel() + " - Calculate raw values");
@@ -264,21 +264,37 @@ public class TaskAveragesRaw extends TaskAverages {
 				List<Data> candles = getCandles(size, count, rcTickBuffer);
 				for (int index = 0; index < candles.size(); index++) {
 					Data candle = candles.get(index);
+					
 					String range = stats.getNameCandle(size, index, DB.FIELD_CANDLE_RANGE);
 					rcRaw.setValue(range, new Value(OHLC.getRange(candle)));
+					
 					String body_factor =
 						stats.getNameCandle(size, index, DB.FIELD_CANDLE_BODY_FACTOR);
 					rcRaw.setValue(body_factor, new Value(OHLC.getBodyFactor(candle)));
+					
 					String body_pos = stats.getNameCandle(size, index, DB.FIELD_CANDLE_BODY_POS);
 					rcRaw.setValue(body_pos, new Value(OHLC.getBodyPosition(candle)));
+					
 					String sign = stats.getNameCandle(size, index, DB.FIELD_CANDLE_SIGN);
 					rcRaw.setValue(sign, new Value(OHLC.getSign(candle)));
+					
 					if (index < candles.size() - 1) {
 						Data previous = candles.get(index + 1);
+						
 						String rel_pos = stats.getNameCandle(size, index, DB.FIELD_CANDLE_REL_POS);
 						rcRaw.setValue(
 							rel_pos,
 							new Value(OHLC.getRelativePosition(candle, previous)));
+						
+						String rel_range = stats.getNameCandle(size, index, DB.FIELD_CANDLE_REL_RANGE);
+						rcRaw.setValue(
+							rel_range,
+							new Value(OHLC.getRelativeRange(candle, previous)));
+						
+						String rel_body = stats.getNameCandle(size, index, DB.FIELD_CANDLE_REL_BODY);
+						rcRaw.setValue(
+							rel_body,
+							new Value(OHLC.getRelativeBody(candle, previous)));
 					}
 				}
 			}

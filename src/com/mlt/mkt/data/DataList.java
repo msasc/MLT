@@ -225,7 +225,7 @@ public abstract class DataList {
 	 *
 	 * @return The list of data plotters.
 	 */
-	public List<DataPlotter> getDataPlotters() {
+	public List<DataPlotter> getPlotters() {
 		if (dataPlotters.isEmpty()) {
 			switch (getPlotType()) {
 			case BAR:
@@ -485,7 +485,7 @@ public abstract class DataList {
 	 * @param context The plotter context.
 	 */
 	public void setContext(DataContext context) {
-		getDataPlotters().forEach(plotter -> plotter.setContext(context));
+		getPlotters().forEach(plotter -> plotter.setContext(context));
 	}
 
 	/**

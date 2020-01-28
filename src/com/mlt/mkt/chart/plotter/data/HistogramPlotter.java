@@ -52,7 +52,7 @@ public class HistogramPlotter extends DataPlotter {
 	 * @param index The index to plot.
 	 */
 	public HistogramPlotter(int index) {
-		super("histogram");
+		super();
 		setIndex(index);
 	}
 

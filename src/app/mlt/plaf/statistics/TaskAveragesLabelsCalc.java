@@ -44,7 +44,7 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 	 * 
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesLabelsCalc(StatisticsAverages stats) {
+	public TaskAveragesLabelsCalc(Statistics stats) {
 		super(stats);
 		setId("averages-label-calc");
 		setTitle(stats.getLabel() + " - Labels on calculated pivots");

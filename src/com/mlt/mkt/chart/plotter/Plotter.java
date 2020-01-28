@@ -17,6 +17,7 @@
 package com.mlt.mkt.chart.plotter;
 
 import com.mlt.mkt.chart.DataContext;
+import com.mlt.util.Properties;
 
 /**
  * Base abstract class of all plotter subclasses. Note that the frame for the
@@ -41,6 +42,8 @@ public class Plotter {
 	private String description;
 	/** The plotter context. */
 	private DataContext context;
+	/** User properties. */
+	private Properties properties = new Properties();
 
 	/**
 	 * Constructor.
@@ -91,6 +94,13 @@ public class Plotter {
 	 */
 	public void setContext(DataContext context) {
 		this.context = context;
+	}
+
+	/**
+	 * @return The user properties.
+	 */
+	public Properties getProperties() {
+		return properties;
 	}
 
 	/**

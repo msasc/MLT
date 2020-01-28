@@ -238,10 +238,7 @@ public class TaskAveragesRaw extends TaskAverages {
 					if (rcPrev != null) {
 						varPrev = rcPrev.getValue(nameVar).getDouble();
 					}
-					double slope = 0;
-					if (varPrev != 0) {
-						slope = (varCurr / varPrev) - 1;
-					}
+					double slope = varCurr - varPrev;
 					rcRaw.setValue(nameSlope, slope);
 				}
 			}

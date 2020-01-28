@@ -26,14 +26,22 @@ import java.util.Locale;
 import javax.swing.Icon;
 
 import com.mlt.db.Field;
+import com.mlt.db.FieldGroup;
+import com.mlt.db.FieldList;
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Record;
+import com.mlt.db.Types;
+import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.desktop.Option;
 import com.mlt.desktop.Option.Group;
+import com.mlt.desktop.OptionWindow;
 import com.mlt.desktop.action.ActionRun;
 import com.mlt.desktop.control.Canvas.Context;
 import com.mlt.desktop.control.Control;
+import com.mlt.desktop.control.Dialog;
+import com.mlt.desktop.control.FormRecordPane;
+import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.PopupMenu;
 import com.mlt.desktop.graphic.Path;
 import com.mlt.desktop.graphic.Stroke;
@@ -530,6 +538,8 @@ public class ActionChart extends ActionRun {
 		return pivots;
 	}
 
+	/** Plot data list. */
+	private List<PlotData> plotDataList;
 	/** Data converter. */
 	private DataConverter dataConverter;
 	/** List persistor. */
@@ -544,6 +554,104 @@ public class ActionChart extends ActionRun {
 	 */
 	public ActionChart(Statistics stats) {
 		this.stats = stats;
+	}
+
+	private void configurePlotters(ChartContainer chart, PlotData plotData) {
+
+		FieldList fields = new FieldList();
+		List<DataPlotter> plotters = plotData.getPlotters();
+		for (DataPlotter plotter : plotters) {
+			Field field = new Field();
+			field.setType(Types.BOOLEAN);
+			field.setEditBooleanInCheckBox(true);
+			field.setName(plotter.getId());
+			field.setHeader(plotter.getDescription());
+			field.setLabel(plotter.getDescription());
+			field.setTitle(plotter.getDescription());
+			field.getProperties().setObject("PLOTTER", plotter);
+			fields.addField(field);
+		}
+
+		Record rc = new Record(fields);
+		for (int i = 0; i < rc.size(); i++) {
+			DataPlotter plotter = (DataPlotter) rc.getField(i).getProperties().getObject("PLOTTER");
+			rc.setValue(i, plotter.isPlot());
+		}
+
+		FormRecordPane form = new FormRecordPane(rc);
+		form.setLayoutByRows(FieldGroup.EMPTY_FIELD_GROUP);
+		for (Field field : fields) {
+			String alias = field.getAlias();
+			form.addField(alias);
+		}
+
+		form.layout();
+		form.updateEditors();
+
+		OptionWindow wnd = new OptionWindow(new Dialog(null, new GridBagPane()));
+		wnd.setTitle("Configure plotters");
+		wnd.setOptionsBottom();
+		wnd.setCenter(form.getPane());
+		
+		Option select = new Option();
+		select.setKey("select");
+		select.setText("Select all");
+		select.setAction(e -> {
+			for (Field field : fields) {
+				String alias = field.getAlias();
+				form.getEditContext(alias).setValue(new Value(true));
+			}
+		});
+		wnd.getOptionPane().add(select);
+
+		Option clear = new Option();
+		clear.setKey("clear");
+		clear.setText("Clear all");
+		clear.setAction(e -> {
+			for (Field field : fields) {
+				String alias = field.getAlias();
+				form.getEditContext(alias).setValue(new Value(false));
+			}
+		});
+		wnd.getOptionPane().add(clear);
+
+		Option accept = new Option();
+		accept.setKey("accept");
+		accept.setText("Accept");
+		accept.setCloseWindow(true);
+		wnd.getOptionPane().add(accept);
+
+		Option cancel = new Option();
+		cancel.setKey("cancel");
+		cancel.setText("Cancel");
+		cancel.setCloseWindow(true);
+		wnd.getOptionPane().add(cancel);
+
+		wnd.getOptionPane().setMnemonics();
+
+		wnd.pack();
+		wnd.centerOnScreen();
+		wnd.show();
+
+		Option option = wnd.getOptionExecuted();
+		if (option.equals(cancel)) {
+			return;
+		}
+
+		form.updateRecord();
+		rc = form.getRecord();
+		for (int i = 0; i < rc.size(); i++) {
+			Field field = rc.getField(i);
+			Value value = rc.getValue(i);
+			for (DataPlotter plotter : plotters) {
+				if (plotter.getId().equals(field.getAlias())) {
+					plotter.setPlot(value.getBoolean());
+					break;
+				}
+			}
+		}
+
+		chart.refreshAll();
 	}
 
 	/**
@@ -601,7 +709,11 @@ public class ActionChart extends ActionRun {
 	 * @return A list with all plot datas.
 	 */
 	private List<PlotData> getPlotDataList() {
-		List<PlotData> plotDataList = new ArrayList<>();
+		if (plotDataList != null) {
+			return plotDataList;
+		}
+
+		plotDataList = new ArrayList<>();
 
 		/* Prices and averages. */
 		{
@@ -636,6 +748,8 @@ public class ActionChart extends ActionRun {
 			}
 
 			PlotterPivots plotterPivots = new PlotterPivots();
+			plotterPivots.setId("Pivots");
+			plotterPivots.setDescription("Pivots on prices");
 			plotterPivots.indexPivot = getDataConverter().getIndex(DB.FIELD_SOURCES_PIVOT_CALC);
 			plotterPivots.indexData = getDataConverter().getIndex(DB.FIELD_SOURCES_REFV_CALC);
 			plotterPivots.setIndex(getDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
@@ -702,7 +816,7 @@ public class ActionChart extends ActionRun {
 			plotData.getProperties().setString("GROUP", "vars");
 			plotDataList.add(plotData);
 		}
-		
+
 		/* Spreads on variances. */
 		{
 			PlotData plotData =
@@ -713,7 +827,7 @@ public class ActionChart extends ActionRun {
 			plotData.getProperties().setString("GROUP", "vars");
 			plotDataList.add(plotData);
 		}
-		
+
 		/* Labels and pivots. */
 		{
 			DataInfo info = new DataInfo();
@@ -721,9 +835,12 @@ public class ActionChart extends ActionRun {
 			info.setName("key-labels");
 			info.setDescription("Calculated labels and pivots");
 			info.setPeriod(stats.getPeriod());
-			DataListSource dataList = new DataListSource(info, getListPersistor(), getDataConverter());
+			DataListSource dataList =
+				new DataListSource(info, getListPersistor(), getDataConverter());
 
 			PlotterLabels plotter = new PlotterLabels();
+			plotter.setId("labels-pivots");
+			plotter.setDescription("Labels and pivots");
 			plotter.indexPivot = getDataConverter().getIndex(DB.FIELD_SOURCES_PIVOT_CALC);
 			plotter.indexData = getDataConverter().getIndex(DB.FIELD_SOURCES_REFV_CALC);
 			plotter.aliasLabel = DB.FIELD_SOURCES_LABEL_CALC;
@@ -734,17 +851,17 @@ public class ActionChart extends ActionRun {
 			plotData.setDescription("Calculated labels and pivots");
 			plotData.getProperties().setString("GROUP", "labels");
 			plotData.add(dataList);
-			
+
 			plotDataList.add(plotData);
 		}
-		
+
 		/* Candles. */
 		{
 			List<Average> averages = stats.getAverages();
 			for (int i = 1; i < averages.size(); i++) {
 				int size = stats.getCandleSize(i);
 				int count = stats.getCandleCount(i);
-				
+
 				String name = "key-candles-" + size;
 
 				DataInfo info = new DataInfo(new CandlesFormatter(size, count));
@@ -764,7 +881,7 @@ public class ActionChart extends ActionRun {
 				plotData.setDescription("Candles size " + size);
 				plotData.getProperties().setString("GROUP", "candles");
 				plotData.add(dataList);
-				
+
 				plotDataList.add(plotData);
 			}
 		}
@@ -818,13 +935,12 @@ public class ActionChart extends ActionRun {
 		}
 		List<PlotData> plotDataList = getPlotDataList();
 		PopupMenu popup = new PopupMenu();
-		ChartContainer container = (ChartContainer) control;
+		ChartContainer chart = (ChartContainer) control;
 		String group = null;
 		for (PlotData plotData : plotDataList) {
-			if (group == null) {
-				group = plotData.getProperties().getString("GROUP");
-			}
-			if (!container.containsPlotData(plotData.getId())) {
+
+			/* Plot data not contained, add option to select it. */
+			if (!chart.containsPlotData(plotData.getId())) {
 				Option option = new Option();
 				option.setKey(plotData.getId());
 				option.setText(plotData.getDescription());
@@ -832,53 +948,57 @@ public class ActionChart extends ActionRun {
 				option.setOptionGroup(Group.CONFIGURE);
 				option.setDefaultClose(false);
 				option.setCloseWindow(false);
-				option.setAction(l -> container.addPlotData(plotData, true));
-				
+				option.setAction(l -> chart.addPlotData(plotData, true));
+
 				String plotDataGroup = plotData.getProperties().getString("GROUP");
+				if (group == null) {
+					group = plotDataGroup;
+				}
 				if (!group.equals(plotDataGroup)) {
 					popup.addSeparator();
 				}
 				popup.add(option.getMenuItem());
-				
+				group = plotDataGroup;
+			}
+
+			/* Skip candles. */
+			if (plotData.getId().startsWith("key-candles")) {
+				continue;
+			}
+
+			/*
+			 * The plot data if contained. Give the oportunity to activate/deactivate
+			 * plotters, except for the candles plotter.
+			 */
+			if (chart.containsPlotData(plotData.getId())) {
+				Option option = new Option();
+				option.setKey(plotData.getId());
+				StringBuilder text = new StringBuilder();
+				text.append("Configure plotters of ");
+				text.append(plotData.getDescription().toLowerCase());
+				option.setText(text.toString());
+				option.setToolTip(plotData.getDescription());
+				option.setOptionGroup(Group.CONFIGURE);
+				option.setDefaultClose(false);
+				option.setCloseWindow(false);
+				option.setAction(l -> configurePlotters(chart, plotData));
+
+				String plotDataGroup = plotData.getProperties().getString("GROUP");
+				if (group == null) {
+					group = plotDataGroup;
+				}
+				if (!group.equals(plotDataGroup)) {
+					popup.addSeparator();
+				}
+				popup.add(option.getMenuItem());
 				group = plotDataGroup;
 			}
 		}
 
-		if (container.containsPlotData("key-prices-and-averages")) {
-			PlotData plotData = container.getPlotData("key-prices-and-averages");
-			PlotterPivots zz = new PlotterPivots();
-			if (plotData.get(0).isPlotter(zz)) {
-				Option option = new Option();
-				option.setKey("key-pivots");
-				option.setText("Remove zig-zag plotter");
-				option.setToolTip("Remove zig-zag plotter");
-				option.setOptionGroup(Group.CONFIGURE);
-				option.setDefaultClose(false);
-				option.setCloseWindow(false);
-				option.setAction(l -> {
-					plotData.get(0).removePlotter(zz);
-					container.refreshAll();
-				});
-				popup.add(option.getMenuItem());
-			} else {
-				Option option = new Option();
-				option.setKey("key-pivots");
-				option.setText("Add zig-zag plotter");
-				option.setToolTip("Add zig-zag plotter");
-				option.setOptionGroup(Group.CONFIGURE);
-				option.setDefaultClose(false);
-				option.setCloseWindow(false);
-				option.setAction(l -> {
-					plotData.get(0).addPlotter(zz);
-					container.refreshAll();
-				});
-				popup.add(option.getMenuItem());
-			}
-		}
 		List<Average> averages = stats.getAverages();
 		for (int i = 1; i < averages.size(); i++) {
 			int size = stats.getCandleSize(i);
-			if (container.containsPlotData("key-candles-" + size)) {
+			if (chart.containsPlotData("key-candles-" + size)) {
 				Option option = new Option();
 				option.setKey("toggle-plot-all-candles");
 				if (plotAllCandles) {
@@ -893,7 +1013,7 @@ public class ActionChart extends ActionRun {
 				option.setCloseWindow(false);
 				option.setAction(l -> {
 					plotAllCandles = !plotAllCandles;
-					container.refreshAll();
+					chart.refreshAll();
 				});
 				popup.add(option.getMenuItem());
 			}

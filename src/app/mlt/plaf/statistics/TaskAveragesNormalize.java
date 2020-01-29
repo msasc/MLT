@@ -110,7 +110,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 		}
 
 		/* Concurrent pool. */
-		Concurrent concurrent = new Concurrent(50, 500);
+		Concurrent concurrent = new Concurrent(10, 50);
 
 		/* Iterate raw values. */
 		Order order = persistorRaw.getView().getMasterTable().getPrimaryKey();

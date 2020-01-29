@@ -512,6 +512,10 @@ public class ActionChart extends ActionRun {
 				pivots.add(new Pivot(pivot, value, index));
 			}
 		}
+		if (pivots.isEmpty()) {
+			return pivots;
+		}
+		
 		/* Check any pivot before. */
 		int firstIndex = (!pivots.isEmpty() ? pivots.get(0).index : startIndex);
 		for (int index = firstIndex - 1; index >= 0; index--) {
@@ -823,7 +827,7 @@ public class ActionChart extends ActionRun {
 				getPlotDataFieldList(
 					"key-var-spreads",
 					"Variance spreads",
-					stats.getFieldListVarSlopes());
+					stats.getFieldListVarSpreads());
 			plotData.getProperties().setString("GROUP", "vars");
 			plotDataList.add(plotData);
 		}

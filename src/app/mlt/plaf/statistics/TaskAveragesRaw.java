@@ -48,7 +48,7 @@ import app.mlt.plaf.DB;
 public class TaskAveragesRaw extends TaskAverages {
 
 	private Persistor persistorTicker;
-	private Persistor persistorSources;
+	private Persistor persistorSrc;
 	private Persistor persistorRaw;
 
 	/**
@@ -62,7 +62,7 @@ public class TaskAveragesRaw extends TaskAverages {
 		Instrument instrument = stats.getInstrument();
 		Period period = stats.getPeriod();
 		persistorTicker = DB.persistor_ticker(instrument, period);
-		persistorSources = stats.getTableSources().getPersistor();
+		persistorSrc = stats.getTableSources().getPersistor();
 		persistorRaw = stats.getTableRaw().getPersistor();
 	}
 
@@ -109,7 +109,7 @@ public class TaskAveragesRaw extends TaskAverages {
 		}
 
 		/* Concurrent pool. */
-		Concurrent concurrent = new Concurrent(50, 500);
+		Concurrent concurrent = new Concurrent(10, 50);
 
 		/* Buffers. */
 		List<Average> averages = stats.getAverages();
@@ -153,7 +153,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			update(b.toString(), workDone, totalWork);
 
 			/* Sources record. */
-			Record rcSrc = persistorSources.getDefaultRecord();
+			Record rcSrc = persistorSrc.getDefaultRecord();
 			rcSrc.setValue(DB.FIELD_BAR_TIME, rcTick.getValue(DB.FIELD_BAR_TIME));
 			rcSrc.setValue(DB.FIELD_BAR_OPEN, rcTick.getValue(DB.FIELD_BAR_OPEN));
 			rcSrc.setValue(DB.FIELD_BAR_HIGH, rcTick.getValue(DB.FIELD_BAR_HIGH));
@@ -183,10 +183,7 @@ public class TaskAveragesRaw extends TaskAverages {
 				String nameAvg = stats.getNameAvg(avg);
 				double prev = rcSrcPrev.getValue(nameAvg).getDouble();
 				double curr = rcSrc.getValue(nameAvg).getDouble();
-				double slope = 0;
-				if (prev != 0) {
-					slope = (curr / prev) - 1;
-				}
+				double slope = Numbers.relative(curr, prev);
 				String nameSlope = stats.getNameAvgSlope(avg);
 				rcRaw.setValue(nameSlope, slope);
 			}
@@ -200,13 +197,14 @@ public class TaskAveragesRaw extends TaskAverages {
 					Average slow = averages.get(j);
 					String nameSlow = stats.getNameAvg(slow);
 					double avgSlow = rcSrc.getValue(nameSlow).getDouble();
-					double spread = (avgSlow == 0 ? 0 : (avgFast / avgSlow) - 1);
+					double spread = Numbers.relative(avgFast, avgSlow);
 					String nameSpread = stats.getNameAvgSpread(fast, slow);
 					rcRaw.setValue(nameSpread, spread);
 				}
 			}
 
-			/* Vars. */
+			/* Variances on averages. */
+			long time = rcTick.getValue(DB.FIELD_BAR_TIME).getLong();
 			for (int i = 0; i < averages.size() - 1; i++) {
 				Average fast = averages.get(i);
 				Average slow = averages.get(i + 1);
@@ -238,7 +236,7 @@ public class TaskAveragesRaw extends TaskAverages {
 					if (rcPrev != null) {
 						varPrev = rcPrev.getValue(nameVar).getDouble();
 					}
-					double slope = varCurr - varPrev;
+					double slope = Numbers.relative(varCurr, varPrev);
 					rcRaw.setValue(nameSlope, slope);
 				}
 			}
@@ -250,7 +248,7 @@ public class TaskAveragesRaw extends TaskAverages {
 				String nameSpread = stats.getNameVarSpread(nameFast, nameSlow);
 				double fast = rcRaw.getValue(nameFast).getDouble();
 				double slow = rcRaw.getValue(nameSlow).getDouble();
-				double spread = (slow == 0 ? 0 : (fast / slow) - 1);
+				double spread = Numbers.relative(fast, slow);
 				rcRaw.setValue(nameSpread, spread);
 			}
 
@@ -300,7 +298,7 @@ public class TaskAveragesRaw extends TaskAverages {
 			rcSrcPrev = rcSrc;
 
 			/* Queue insert. */
-			concurrent.add(new Record.Insert(rcSrc, persistorSources));
+			concurrent.add(new Record.Insert(rcSrc, persistorSrc));
 			concurrent.add(new Record.Insert(rcRaw, persistorRaw));
 		}
 		iter.close();
@@ -370,10 +368,10 @@ public class TaskAveragesRaw extends TaskAverages {
 	 */
 	private long getLastSourcesTime() throws Throwable {
 		long time = 0;
-		Field ftime = persistorSources.getField(DB.FIELD_BAR_TIME);
+		Field ftime = persistorSrc.getField(DB.FIELD_BAR_TIME);
 		Order order = new Order();
 		order.add(ftime, false);
-		RecordIterator iter = persistorSources.iterator(null, order);
+		RecordIterator iter = persistorSrc.iterator(null, order);
 		if (iter.hasNext()) {
 			Record rc = iter.next();
 			time = rc.getValue(DB.FIELD_BAR_TIME).getLong();
@@ -383,28 +381,29 @@ public class TaskAveragesRaw extends TaskAverages {
 	}
 
 	/**
-	 * @param rcRawBuffer Raw buffer.
+	 * @param rcScrBuffer Raw buffer.
 	 * @param nameFast    Fast average name.
 	 * @param nameSlow    Medium average name.
 	 * @param period      Slow period.
 	 * @return Variance.
 	 */
 	private double getVariance(
-		FixedSizeQueue<Record> rcRawBuffer,
+		FixedSizeQueue<Record> rcScrBuffer,
 		String nameFast,
 		String nameSlow,
 		int period) {
-
-		period = Math.min(rcRawBuffer.size(), period);
-		double var = 0;
+		
+		period = Math.min(rcScrBuffer.size(), period);
+		double variance = 0;
 		for (int i = 0; i < period; i++) {
-			Record rc = rcRawBuffer.getLast(i);
+			Record rc = rcScrBuffer.getLast(i);
 			double fast = rc.getValue(nameFast).getDouble();
-			double medium = rc.getValue(nameSlow).getDouble();
-			var += (fast - medium);
+			double slow = rc.getValue(nameSlow).getDouble();
+			double var = Numbers.relative(fast - slow, slow);
+			variance += var;
 		}
-		var /= ((double) period);
-		return var;
+		variance /= ((double) period);
+		return variance;
 	}
 
 }

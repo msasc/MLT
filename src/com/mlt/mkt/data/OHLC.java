@@ -17,6 +17,8 @@
 
 package com.mlt.mkt.data;
 
+import com.mlt.util.Numbers;
+
 /**
  * Centralizes function on bars or candlesticks related data, that is, data
  * structures that have its first values are open, high, low, close and
@@ -70,7 +72,7 @@ public class OHLC {
 		if (body > range) {
 			body = range;
 		}
-		double factor = (range != 0 ? body / range : 0);
+		double factor = Numbers.relative(body, range);
 		return factor;
 	}
 
@@ -82,7 +84,7 @@ public class OHLC {
 		double center = getBodyCenter(data);
 		double range = getRange(data);
 		double low = getLow(data);
-		double pos = (range != 0 ? (center - low) / range : 0);
+		double pos = Numbers.relative(center - low, range);
 		return pos;
 	}
 
@@ -147,7 +149,7 @@ public class OHLC {
 	public static double getRelativePosition(Data dataCurr, Data dataPrev) {
 		double current = getWeightedClosePrice(dataCurr);
 		double previous = getWeightedClosePrice(dataPrev);
-		double factor = (current / previous) - 1;
+		double factor = Numbers.relative(current, previous);
 		return factor;
 	}
 
@@ -159,7 +161,7 @@ public class OHLC {
 	public static double getRelativeRange(Data dataCurr, Data dataPrev) {
 		double current = getRange(dataCurr);
 		double previous = getRange(dataPrev);
-		double factor = (previous == 0 ? 0 : (current / previous) - 1);
+		double factor = Numbers.relative(current, previous);
 		return factor;
 	}
 
@@ -171,7 +173,7 @@ public class OHLC {
 	public static double getRelativeBody(Data dataCurr, Data dataPrev) {
 		double current = getBody(dataCurr);
 		double previous = getBody(dataPrev);
-		double factor = (previous == 0 ? 0 : (current / previous) - 1);
+		double factor = Numbers.relative(current, previous);
 		return factor;
 	}
 

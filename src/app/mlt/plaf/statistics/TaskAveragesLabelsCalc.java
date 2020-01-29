@@ -77,7 +77,7 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 		calculateTotalWork();
 
 		/* Concurrent manager. */
-		Concurrent concurrent = new Concurrent(50, 500);
+		Concurrent concurrent = new Concurrent(10, 50);
 
 		/* Iterate states. */
 		double percentCalc = stats.getPercentCalc();

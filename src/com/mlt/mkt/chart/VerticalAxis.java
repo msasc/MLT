@@ -17,6 +17,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -45,9 +46,6 @@ import com.mlt.util.Numbers;
  */
 class VerticalAxis extends GridBagPane {
 
-	/** Cursor index. */
-	private static final int CURSOR = 0;
-
 	/**
 	 * Axis canvas.
 	 */
@@ -56,6 +54,39 @@ class VerticalAxis extends GridBagPane {
 		protected void paintCanvas(Canvas.Context gc) {
 			plot(gc);
 		}
+	}
+
+	/** Cursor index. */
+	private static final int CURSOR = 0;
+
+	/**
+	 * Returns a list of increases to apply.
+	 *
+	 * @param integerDigits The number of integer digits.
+	 * @param decimalDigits The number of decimal digits.
+	 * @param multipliers   The list of multipliers.
+	 * @return The list of increases.
+	 */
+	public static List<BigDecimal> getIncreases(
+		int integerDigits,
+		int decimalDigits,
+		int... multipliers) {
+	
+		List<BigDecimal> increaments = new ArrayList<>();
+		int upperScale = decimalDigits;
+		int lowerScale = (integerDigits - 1) * (-1);
+		for (int scale = upperScale; scale >= lowerScale; scale--) {
+			for (int multiplier : multipliers) {
+				double number = Math.pow(10, -scale);
+				if (Double.isFinite(number)) {
+					BigDecimal value = Numbers.getBigDecimal(number, scale);
+					BigDecimal multiplicand =
+						new BigDecimal(multiplier).setScale(0, RoundingMode.HALF_UP);
+					increaments.add(value.multiply(multiplicand));
+				}
+			}
+		}
+		return increaments;
 	}
 
 	/** The plotter pane (chart) that contains this info pane. */
@@ -104,6 +135,14 @@ class VerticalAxis extends GridBagPane {
 	}
 
 	/**
+	 * Clear the cursor.
+	 */
+	public void clearCursor() {
+		cursorOperation = ChartContainer.CURSOR_CLEAR;
+		canvas.repaintImmediately();
+	}
+
+	/**
 	 * Returns the value by which should be increased an initial value to plot the rounded values.
 	 *
 	 * @param value The starting value.
@@ -126,7 +165,7 @@ class VerticalAxis extends GridBagPane {
 		double y = dc.getCoordinateY(value);
 
 		// The list of increases.
-		List<BigDecimal> increases = Numbers.getIncreases(integerDigits, decimalDigits, 1, 2, 5, 10);
+		List<BigDecimal> increases = VerticalAxis.getIncreases(integerDigits, decimalDigits, 1, 2, 5, 10);
 
 		// Take the first increase that do not overlaps the text.
 		for (BigDecimal incr : increases) {
@@ -139,6 +178,45 @@ class VerticalAxis extends GridBagPane {
 		}
 
 		return increase;
+	}
+
+	/**
+	 * Return the minimum width required by the axis.
+	 * 
+	 * @return The minimum width.
+	 */
+	public double getMinimumWidth() {
+		Locale locale = Locale.getDefault();
+		PlotData plotData = chart.getDataContext().getPlotData();
+		double maxValue = plotData.getMaximumValue();
+		double minValue = plotData.getMinimumValue();
+		int tickScale = plotData.getTickScale();
+		String maximum = Formats.fromDouble(maxValue, tickScale, locale);
+		String minimum = Formats.fromDouble(minValue, tickScale, locale);
+		double widthMax = Text.getSize(maximum, textFont).getWidth();
+		double widthMin = Text.getSize(minimum, textFont).getWidth();
+		double textWidth = Math.max(widthMax, widthMin);
+		double width = lineLength + textInsets.getLeft() + textWidth + textInsets.getRight();
+		return width;
+	}
+
+	/**
+	 * Build a sample with zeros as digits from the value string, to calculate the width of the text.
+	 *
+	 * @param str The value string.
+	 * @return The sample string.
+	 */
+	private String getSample(String str) {
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < str.length(); i++) {
+			char c = str.charAt(i);
+			if (Character.isDigit(c)) {
+				b.append('0');
+			} else {
+				b.append(c);
+			}
+		}
+		return b.toString();
 	}
 
 	/**
@@ -159,25 +237,6 @@ class VerticalAxis extends GridBagPane {
 			plotScale(gc);
 			cursor.clearSave();
 		}
-	}
-
-	/**
-	 * Build a sample with zeros as digits from the value string, to calculate the width of the text.
-	 *
-	 * @param str The value string.
-	 * @return The sample string.
-	 */
-	private String getSample(String str) {
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < str.length(); i++) {
-			char c = str.charAt(i);
-			if (Character.isDigit(c)) {
-				b.append('0');
-			} else {
-				b.append(c);
-			}
-		}
-		return b.toString();
 	}
 
 	/**
@@ -305,34 +364,6 @@ class VerticalAxis extends GridBagPane {
 		Text text = new Text(strValue, textFont, xStr, yStr);
 		text.setFillPaint(textColor);
 		gc.fill(text);
-	}
-
-	/**
-	 * Clear the cursor.
-	 */
-	public void clearCursor() {
-		cursorOperation = ChartContainer.CURSOR_CLEAR;
-		canvas.repaintImmediately();
-	}
-
-	/**
-	 * Return the minimum width required by the axis.
-	 * 
-	 * @return The minimum width.
-	 */
-	public double getMinimumWidth() {
-		Locale locale = Locale.getDefault();
-		PlotData plotData = chart.getDataContext().getPlotData();
-		double maxValue = plotData.getMaximumValue();
-		double minValue = plotData.getMinimumValue();
-		int tickScale = plotData.getTickScale();
-		String maximum = Formats.fromDouble(maxValue, tickScale, locale);
-		String minimum = Formats.fromDouble(minValue, tickScale, locale);
-		double widthMax = Text.getSize(maximum, textFont).getWidth();
-		double widthMin = Text.getSize(minimum, textFont).getWidth();
-		double textWidth = Math.max(widthMax, widthMin);
-		double width = lineLength + textInsets.getLeft() + textWidth + textInsets.getRight();
-		return width;
 	}
 
 	/**

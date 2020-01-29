@@ -83,7 +83,7 @@ public class TaskAveragesPivots extends TaskAverages {
 		calculateTotalWork();
 		
 		/* Concurrent pool. */
-		Concurrent concurrent = new Concurrent(50, 500);
+		Concurrent concurrent = new Concurrent(10, 50);
 
 		/* Previous pivot tracked and its index. */
 		int previousPivot = 0;

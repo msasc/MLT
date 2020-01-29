@@ -20,8 +20,6 @@ package com.mlt.util;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Number utilities.
@@ -81,36 +79,6 @@ public class Numbers {
 	}
 
 	/**
-	 * Returns a list of increases to apply.
-	 *
-	 * @param integerDigits The number of integer digits.
-	 * @param decimalDigits The number of decimal digits.
-	 * @param multipliers   The list of multipliers.
-	 * @return The list of increases.
-	 */
-	public static List<BigDecimal> getIncreases(
-		int integerDigits,
-		int decimalDigits,
-		int... multipliers) {
-
-		List<BigDecimal> increaments = new ArrayList<>();
-		int upperScale = decimalDigits;
-		int lowerScale = (integerDigits - 1) * (-1);
-		for (int scale = upperScale; scale >= lowerScale; scale--) {
-			for (int multiplier : multipliers) {
-				double number = Math.pow(10, -scale);
-				if (Double.isFinite(number)) {
-					BigDecimal value = Numbers.getBigDecimal(number, scale);
-					BigDecimal multiplicand =
-						new BigDecimal(multiplier).setScale(0, RoundingMode.HALF_UP);
-					increaments.add(value.multiply(multiplicand));
-				}
-			}
-		}
-		return increaments;
-	}
-
-	/**
 	 * Check if the number is even.
 	 *
 	 * @param l The number.
@@ -165,7 +133,7 @@ public class Numbers {
 		}
 		return max;
 	}
-	
+
 	/**
 	 * Return the maximum.
 	 *
@@ -183,6 +151,15 @@ public class Numbers {
 	}
 
 	/**
+	 * @param base    The base.
+	 * @param compare The compare.
+	 * @return The percentage of the base versus the compare.
+	 */
+	public static double percent(double base, double compare) {
+		return 100.0 * relative(base, compare);
+	}
+
+	/**
 	 * Returns the remainder of the division of two integers.
 	 *
 	 * @param numerator   The numerator.
@@ -191,6 +168,18 @@ public class Numbers {
 	 */
 	public static int remainder(int numerator, int denominator) {
 		return numerator % denominator;
+	}
+
+	/**
+	 * @param base    The base.
+	 * @param compare The compare.
+	 * @return The relative value of the base versus the compare.
+	 */
+	public static double relative(double base, double compare) {
+		if (compare == 0) {
+			return 0;
+		}
+		return ((base / compare) - 1);
 	}
 
 	/**

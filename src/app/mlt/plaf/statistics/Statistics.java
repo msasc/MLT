@@ -664,15 +664,17 @@ public class Statistics {
 		Field field;
 		for (int i = 0; i < averages.size() - 1; i++) {
 			Average fast = averages.get(i);
-			Average slow = averages.get(i + 1);
 			for (int j = i + 1; j < averages.size(); j++) {
-				int period = averages.get(j).getPeriod();
-				name = getNameVar(fast, slow, period);
-				header = getHeader(name);
-				field = DB.field_double(name, header);
-				field.setStringConverter(new NumberScaleConverter(8));
-				field.setFieldGroup(getFieldGroup("group-vars"));
-				fields.add(field);
+				Average slow = averages.get(j);
+				for (int k = j; k < averages.size(); k++) {
+					int period = averages.get(k).getPeriod();
+					name = getNameVar(fast, slow, period);
+					header = getHeader(name);
+					field = DB.field_double(name, header);
+					field.setStringConverter(new NumberScaleConverter(8));
+					field.setFieldGroup(getFieldGroup("group-vars"));
+					fields.add(field);
+				}
 			}
 		}
 		return fields;
@@ -687,15 +689,17 @@ public class Statistics {
 		Field field;
 		for (int i = 0; i < averages.size() - 1; i++) {
 			Average fast = averages.get(i);
-			Average slow = averages.get(i + 1);
 			for (int j = i + 1; j < averages.size(); j++) {
-				int period = averages.get(j).getPeriod();
-				name = getNameVarSlope(fast, slow, period);
-				header = getHeader(name);
-				field = DB.field_double(name, header);
-				field.setStringConverter(new NumberScaleConverter(8));
-				field.setFieldGroup(getFieldGroup("group-var-slopes"));
-				fields.add(field);
+				Average slow = averages.get(j);
+				for (int k = j; k < averages.size(); k++) {
+					int period = averages.get(k).getPeriod();
+					name = getNameVarSlope(fast, slow, period);
+					header = getHeader(name);
+					field = DB.field_double(name, header);
+					field.setStringConverter(new NumberScaleConverter(8));
+					field.setFieldGroup(getFieldGroup("group-var-slopes"));
+					fields.add(field);
+				}
 			}
 		}
 		return fields;
@@ -882,6 +886,7 @@ public class Statistics {
 			} else {
 				activation = new ActivationSigmoid();
 			}
+//			activation = new ActivationSigmoid();
 			outputSize = sizes[i];
 			network.addBranch(Builder.branchPerceptron(inputSize, outputSize, activation));
 		}
@@ -1438,7 +1443,7 @@ public class Statistics {
 	 */
 	private Trainer getTrainer() throws Exception {
 
-		Network network = getNetwork(512, 64);
+		Network network = getNetwork(512);
 
 		Trainer trainer = new Trainer();
 		trainer.setProgressModulus(10);

@@ -629,6 +629,7 @@ public class ActionChart extends ActionRun {
 		cancel.setKey("cancel");
 		cancel.setText("Cancel");
 		cancel.setCloseWindow(true);
+		cancel.setDefaultClose(true);
 		wnd.getOptionPane().add(cancel);
 
 		wnd.getOptionPane().setMnemonics();

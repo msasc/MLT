@@ -204,40 +204,43 @@ public class TaskAveragesRaw extends TaskAverages {
 			}
 
 			/* Variances on averages. */
-			long time = rcTick.getValue(DB.FIELD_BAR_TIME).getLong();
 			for (int i = 0; i < averages.size() - 1; i++) {
 				Average fast = averages.get(i);
-				Average slow = averages.get(i + 1);
 				String nameFast = stats.getNameAvg(fast);
-				String nameSlow = stats.getNameAvg(slow);
 				for (int j = i + 1; j < averages.size(); j++) {
-					int period = averages.get(j).getPeriod();
-					double var = getVariance(rcSrcBuffer, nameFast, nameSlow, period);
-					String nameVar = stats.getNameVar(fast, slow, period);
-					rcRaw.setValue(nameVar, var);
+					Average slow = averages.get(j);
+					String nameSlow = stats.getNameAvg(slow);
+					for (int k = j; k < averages.size(); k++) {
+						int period = averages.get(k).getPeriod();
+						double var = getVariance(rcSrcBuffer, nameFast, nameSlow, period);
+						String nameVar = stats.getNameVar(fast, slow, period);
+						rcRaw.setValue(nameVar, var);
+					}
 				}
 			}
 
 			/* Var slopes. */
 			for (int i = 0; i < averages.size() - 1; i++) {
 				Average fast = averages.get(i);
-				Average slow = averages.get(i + 1);
 				for (int j = i + 1; j < averages.size(); j++) {
-					int period = averages.get(j).getPeriod();
-					String nameVar = stats.getNameVar(fast, slow, period);
-					String nameSlope = stats.getNameVarSlope(fast, slow, period);
-					Record rcCurr = rcRawBuffer.getLast(0);
-					Record rcPrev = null;
-					if (rcRawBuffer.size() > 1) {
-						rcPrev = rcRawBuffer.getLast(1);
+					Average slow = averages.get(j);
+					for (int k = j; k < averages.size(); k++) {
+						int period = averages.get(k).getPeriod();
+						String nameVar = stats.getNameVar(fast, slow, period);
+						String nameSlope = stats.getNameVarSlope(fast, slow, period);
+						Record rcCurr = rcRawBuffer.getLast(0);
+						Record rcPrev = null;
+						if (rcRawBuffer.size() > 1) {
+							rcPrev = rcRawBuffer.getLast(1);
+						}
+						double varCurr = rcCurr.getValue(nameVar).getDouble();
+						double varPrev = 0;
+						if (rcPrev != null) {
+							varPrev = rcPrev.getValue(nameVar).getDouble();
+						}
+						double slope = Numbers.relative(varCurr, varPrev);
+						rcRaw.setValue(nameSlope, slope);
 					}
-					double varCurr = rcCurr.getValue(nameVar).getDouble();
-					double varPrev = 0;
-					if (rcPrev != null) {
-						varPrev = rcPrev.getValue(nameVar).getDouble();
-					}
-					double slope = Numbers.relative(varCurr, varPrev);
-					rcRaw.setValue(nameSlope, slope);
 				}
 			}
 

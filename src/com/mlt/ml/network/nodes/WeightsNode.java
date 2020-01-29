@@ -197,7 +197,7 @@ public class WeightsNode extends Node {
 		 */
 		void restoreProperties() {
 			momentums = properties.getDouble2A("momentums");
-			strategy = MomentumStrategy.valueOf(properties.getString("momentum-strategy"));
+//			strategy = MomentumStrategy.valueOf(properties.getString("momentum-strategy"));
 			increase = properties.getDouble("momentum-increase");
 			decrease = properties.getDouble("momentum-decrease");
 			maximum = properties.getDouble("momentum-maximum");
@@ -209,7 +209,7 @@ public class WeightsNode extends Node {
 		 */
 		void saveProperties() {
 			properties.setDouble2A("momentums", momentums);
-			properties.setString("momentum-strategy", strategy.name());
+//			properties.setString("momentum-strategy", strategy.name());
 			properties.setDouble("momentum-increase", increase);
 			properties.setDouble("momentum-decrease", decrease);
 			properties.setDouble("momentum-maximum", maximum);

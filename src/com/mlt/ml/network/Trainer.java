@@ -191,6 +191,12 @@ public class Trainer extends Task {
 				return metrics;
 			}
 
+			Pattern pattern = source.get(i);
+			double[] patternInput = pattern.getInputValues();
+			double[] patternOutput = pattern.getOutputValues();
+			double[] networkOutput = network.calculate(patternInput);
+			metrics.compute(patternOutput, networkOutput);
+
 			int index = i + 1;
 			double percent = (double) (index * 100) / (double) size;
 			StringBuilder msg = new StringBuilder();
@@ -202,14 +208,9 @@ public class Trainer extends Task {
 			msg.append(size);
 			msg.append(" (");
 			msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
-			msg.append("%)");
+			msg.append("%) Performance ");
+			msg.append(Numbers.getBigDecimal(metrics.getPerf(), decimals));
 			updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, index, size);
-
-			Pattern pattern = source.get(i);
-			double[] patternInput = pattern.getInputValues();
-			double[] patternOutput = pattern.getOutputValues();
-			double[] networkOutput = network.calculate(patternInput);
-			metrics.compute(patternOutput, networkOutput);
 		}
 
 		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
@@ -397,6 +398,7 @@ public class Trainer extends Task {
 			}
 
 			/* Calculate metrics. */
+			trainMetrics = calculateMetrics(true);
 			testMetrics = calculateMetrics(false);
 			trainMetricsHistory.add(trainMetrics);
 			testMetricsHistory.add(testMetrics);

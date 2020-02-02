@@ -40,7 +40,7 @@ public class TaskAveragesNetwork extends TaskAverages {
 		setTitle(stats.getLabel() + " - Apply network labels");
 		
 		this.persistorSrc = stats.getTableSources().getPersistor();
-		this.persistorView = stats.getView(true, false, true, true, true, true, true, true).getPersistor();;
+		this.persistorView = stats.getView(true, true).getPersistor();
 	}
 
 	@Override

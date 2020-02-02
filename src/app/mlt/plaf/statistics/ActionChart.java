@@ -103,10 +103,10 @@ public class ActionChart extends ActionRun {
 			this.size = size;
 			this.count = count;
 
-			this.indexOpen = getDataConverter().getIndex(DB.FIELD_BAR_OPEN);
-			this.indexHigh = getDataConverter().getIndex(DB.FIELD_BAR_HIGH);
-			this.indexLow = getDataConverter().getIndex(DB.FIELD_BAR_LOW);
-			this.indexClose = getDataConverter().getIndex(DB.FIELD_BAR_CLOSE);
+			this.indexOpen = converter.getIndex(DB.FIELD_BAR_OPEN);
+			this.indexHigh = converter.getIndex(DB.FIELD_BAR_HIGH);
+			this.indexLow = converter.getIndex(DB.FIELD_BAR_LOW);
+			this.indexClose = converter.getIndex(DB.FIELD_BAR_CLOSE);
 		}
 
 		@Override
@@ -220,10 +220,10 @@ public class ActionChart extends ActionRun {
 			this.size = size;
 			this.count = count;
 
-			this.indexOpen = getDataConverter().getIndex(DB.FIELD_BAR_OPEN);
-			this.indexHigh = getDataConverter().getIndex(DB.FIELD_BAR_HIGH);
-			this.indexLow = getDataConverter().getIndex(DB.FIELD_BAR_LOW);
-			this.indexClose = getDataConverter().getIndex(DB.FIELD_BAR_CLOSE);
+			this.indexOpen = converter.getIndex(DB.FIELD_BAR_OPEN);
+			this.indexHigh = converter.getIndex(DB.FIELD_BAR_HIGH);
+			this.indexLow = converter.getIndex(DB.FIELD_BAR_LOW);
+			this.indexClose = converter.getIndex(DB.FIELD_BAR_CLOSE);
 
 			setIndexes(indexOpen, indexHigh, indexLow, indexClose);
 		}
@@ -515,7 +515,7 @@ public class ActionChart extends ActionRun {
 		if (pivots.isEmpty()) {
 			return pivots;
 		}
-		
+
 		/* Check any pivot before. */
 		int firstIndex = (!pivots.isEmpty() ? pivots.get(0).index : startIndex);
 		for (int index = firstIndex - 1; index >= 0; index--) {
@@ -545,7 +545,7 @@ public class ActionChart extends ActionRun {
 	/** Plot data list. */
 	private List<PlotData> plotDataList;
 	/** Data converter. */
-	private DataConverter dataConverter;
+	private DataConverter converter;
 	/** List persistor. */
 	private ListPersistor persistor;
 	/** Plot all candles flag. */
@@ -558,6 +558,45 @@ public class ActionChart extends ActionRun {
 	 */
 	public ActionChart(Statistics stats) {
 		this.stats = stats;
+
+		View view = stats.getView(true, false);
+
+		/* Store the list persistor. */
+		persistor = new ListPersistor(view.getPersistor());
+
+		/* Configure the data converter. */
+		List<Integer> list = new ArrayList<>();
+
+		/* Open, high, low, close. */
+		list.add(view.getFieldIndex(DB.FIELD_BAR_OPEN));
+		list.add(view.getFieldIndex(DB.FIELD_BAR_HIGH));
+		list.add(view.getFieldIndex(DB.FIELD_BAR_LOW));
+		list.add(view.getFieldIndex(DB.FIELD_BAR_CLOSE));
+
+		/* Pivots, reference values and labels. */
+		list.add(view.getFieldIndex(DB.FIELD_SOURCES_PIVOT_CALC));
+		list.add(view.getFieldIndex(DB.FIELD_SOURCES_REFV_CALC));
+
+		/* Rest of fields. */
+		List<Field> fields = new ArrayList<>();
+		fields.addAll(stats.getFieldListAverages());
+		fields.addAll(stats.getFieldListAvgDeltas());
+		fields.addAll(stats.getFieldListAvgSlopes());
+		fields.addAll(stats.getFieldListAvgSpreads());
+		fields.addAll(stats.getFieldListVariances());
+		fields.addAll(stats.getFieldListVarSlopes());
+		fields.addAll(stats.getFieldListVarSpreads());
+		for (Field field : fields) {
+			int index = view.getFieldIndex(field.getAlias());
+			list.add(index);
+		}
+
+		int indexTime = view.getFieldIndex(DB.FIELD_BAR_TIME);
+		int[] indexes = Lists.toIntegerArray(list);
+		Record masterRecord = view.getDefaultRecord();
+		converter = new DataConverter(masterRecord, indexTime, indexes);
+		converter.addProperty(DB.FIELD_SOURCES_LABEL_CALC);
+		converter.addProperty(DB.FIELD_SOURCES_LABEL_NETC);
 	}
 
 	private void configurePlotters(ChartContainer chart, PlotData plotData) {
@@ -596,7 +635,7 @@ public class ActionChart extends ActionRun {
 		wnd.setTitle("Configure plotters");
 		wnd.setOptionsBottom();
 		wnd.setCenter(form.getPane());
-		
+
 		Option select = new Option();
 		select.setKey("select");
 		select.setText("Select all");
@@ -660,57 +699,6 @@ public class ActionChart extends ActionRun {
 	}
 
 	/**
-	 * @return The chart converter to data structure.
-	 */
-	private DataConverter getDataConverter() {
-		if (dataConverter != null) {
-			return dataConverter;
-		}
-
-		View view = stats.getView(true, true, true, true, true, true, true, false);
-		List<Integer> list = new ArrayList<>();
-
-		/* Open, high, low, close. */
-		list.add(view.getFieldIndex(DB.FIELD_BAR_OPEN));
-		list.add(view.getFieldIndex(DB.FIELD_BAR_HIGH));
-		list.add(view.getFieldIndex(DB.FIELD_BAR_LOW));
-		list.add(view.getFieldIndex(DB.FIELD_BAR_CLOSE));
-
-		/* Pivots, reference values and labels. */
-		list.add(view.getFieldIndex(DB.FIELD_SOURCES_PIVOT_CALC));
-		list.add(view.getFieldIndex(DB.FIELD_SOURCES_REFV_CALC));
-
-		/* Rest of fields. */
-		List<Field> fields = new ArrayList<>();
-		fields.addAll(stats.getFieldListAverages());
-		fields.addAll(stats.getFieldListPatterns(false));
-		for (Field field : fields) {
-			int index = view.getFieldIndex(field.getAlias());
-			list.add(index);
-		}
-
-		int indexTime = view.getFieldIndex(DB.FIELD_BAR_TIME);
-		int[] indexes = Lists.toIntegerArray(list);
-		Record masterRecord = view.getDefaultRecord();
-		dataConverter = new DataConverter(masterRecord, indexTime, indexes);
-		dataConverter.addProperty(DB.FIELD_SOURCES_LABEL_CALC);
-		dataConverter.addProperty(DB.FIELD_SOURCES_LABEL_NETC);
-
-		return dataConverter;
-	}
-
-	/**
-	 * @return The chart list persistor.
-	 */
-	private ListPersistor getListPersistor() {
-		if (persistor == null) {
-			View view = stats.getView(true, true, true, true, true, true, true, false);
-			persistor = new ListPersistor(view.getPersistor());
-		}
-		return persistor;
-	}
-
-	/**
 	 * @return A list with all plot datas.
 	 */
 	private List<PlotData> getPlotDataList() {
@@ -727,8 +715,7 @@ public class ActionChart extends ActionRun {
 			info.setName("prices-averages");
 			info.setDescription("States prices and averages");
 			info.setPeriod(stats.getPeriod());
-			DataListSource dataList =
-				new DataListSource(info, getListPersistor(), getDataConverter());
+			DataListSource dataList = new DataListSource(info, persistor, converter);
 
 			info.addOutput("Open", "O", OHLC.OPEN, "Open data value");
 			info.addOutput("High", "H", OHLC.HIGH, "High data value");
@@ -744,7 +731,7 @@ public class ActionChart extends ActionRun {
 				String name = averages.get(i).toString();
 				Field field = stats.getFieldListAverages().get(i);
 				String label = field.getLabel();
-				int index = getDataConverter().getIndex(field.getAlias());
+				int index = converter.getIndex(field.getAlias());
 				info.addOutput(name, name, index, label);
 				LinePlotter linePlotter = new LinePlotter(index);
 				linePlotter.setId(field.getAlias());
@@ -755,9 +742,9 @@ public class ActionChart extends ActionRun {
 			PlotterPivots plotterPivots = new PlotterPivots();
 			plotterPivots.setId("Pivots");
 			plotterPivots.setDescription("Pivots on prices");
-			plotterPivots.indexPivot = getDataConverter().getIndex(DB.FIELD_SOURCES_PIVOT_CALC);
-			plotterPivots.indexData = getDataConverter().getIndex(DB.FIELD_SOURCES_REFV_CALC);
-			plotterPivots.setIndex(getDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
+			plotterPivots.indexPivot = converter.getIndex(DB.FIELD_SOURCES_PIVOT_CALC);
+			plotterPivots.indexData = converter.getIndex(DB.FIELD_SOURCES_REFV_CALC);
+			plotterPivots.setIndex(converter.getIndex(DB.FIELD_BAR_CLOSE));
 			dataList.addPlotter(plotterPivots);
 
 			PlotData plotData = new PlotData("key-prices-and-averages");
@@ -774,6 +761,17 @@ public class ActionChart extends ActionRun {
 					"key-avgs",
 					"Averages",
 					stats.getFieldListAverages());
+			plotData.getProperties().setString("GROUP", "avgs");
+			plotDataList.add(plotData);
+		}
+
+		/* Deltas on averages. */
+		{
+			PlotData plotData =
+				getPlotDataFieldList(
+					"key-avg-deltas",
+					"Average deltas",
+					stats.getFieldListAvgDeltas());
 			plotData.getProperties().setString("GROUP", "avgs");
 			plotDataList.add(plotData);
 		}
@@ -840,16 +838,15 @@ public class ActionChart extends ActionRun {
 			info.setName("key-labels");
 			info.setDescription("Calculated labels and pivots");
 			info.setPeriod(stats.getPeriod());
-			DataListSource dataList =
-				new DataListSource(info, getListPersistor(), getDataConverter());
+			DataListSource dataList = new DataListSource(info, persistor, converter);
 
 			PlotterLabels plotter = new PlotterLabels();
 			plotter.setId("labels-pivots");
 			plotter.setDescription("Labels and pivots");
-			plotter.indexPivot = getDataConverter().getIndex(DB.FIELD_SOURCES_PIVOT_CALC);
-			plotter.indexData = getDataConverter().getIndex(DB.FIELD_SOURCES_REFV_CALC);
+			plotter.indexPivot = converter.getIndex(DB.FIELD_SOURCES_PIVOT_CALC);
+			plotter.indexData = converter.getIndex(DB.FIELD_SOURCES_REFV_CALC);
 			plotter.aliasLabel = DB.FIELD_SOURCES_LABEL_CALC;
-			plotter.setIndex(getDataConverter().getIndex(DB.FIELD_BAR_CLOSE));
+			plotter.setIndex(converter.getIndex(DB.FIELD_BAR_CLOSE));
 			dataList.addPlotter(plotter);
 
 			PlotData plotData = new PlotData("key-labels");
@@ -874,8 +871,7 @@ public class ActionChart extends ActionRun {
 				info.setName(name);
 				info.setDescription("Candles size " + size);
 				info.setPeriod(stats.getPeriod());
-				DataListSource dataList =
-					new DataListSource(info, stats.getChartListPersistor(), stats.getChartDataConverter());
+				DataListSource dataList = new DataListSource(info, persistor, converter);
 
 				PlotterCandles plotter = new PlotterCandles(size, count);
 				plotter.setId(name);
@@ -907,13 +903,12 @@ public class ActionChart extends ActionRun {
 		info.setName(key);
 		info.setDescription(description);
 		info.setPeriod(stats.getPeriod());
-		DataListSource dataList =
-			new DataListSource(info, getListPersistor(), getDataConverter());
+		DataListSource dataList = new DataListSource(info, persistor, converter);
 
 		for (Field field : fields) {
 			String name = field.getHeader();
 			String label = field.getLabel();
-			int index = getDataConverter().getIndex(field.getAlias());
+			int index = converter.getIndex(field.getAlias());
 			info.addOutput(name, name, index, label);
 			LinePlotter plotter = new LinePlotter(index);
 			plotter.setId(field.getAlias());

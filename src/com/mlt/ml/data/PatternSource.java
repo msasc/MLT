@@ -77,11 +77,6 @@ public interface PatternSource {
 	int size();
 
 	/**
-	 * Shuffle the list.
-	 */
-	void shuffle();
-
-	/**
 	 * Check if the source is empty.
 	 * 
 	 * @return A boolean.

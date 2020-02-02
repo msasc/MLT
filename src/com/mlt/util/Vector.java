@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Operations on vectors.
@@ -424,7 +425,7 @@ public class Vector {
 	 * Tranform the source vector to have only one element with the maximum value
 	 * and the rest with the minimum.
 	 * 
-	 * @param a   The vector.
+	 * @param a       The vector.
 	 * @param maximum Maximum.
 	 * @param minimum Minimum.
 	 * @return The transformed vector.
@@ -460,6 +461,32 @@ public class Vector {
 			return 0;
 		}
 		return sum(x) / (double) x.length;
+	}
+
+	/**
+	 * Shuffle the list.
+	 *
+	 * @param list The list to shuffle.
+	 */
+	public static void shuffle(int[] list) {
+		shuffle(list, list.length * 2);
+	}
+
+	/**
+	 * Shuffle the list.
+	 *
+	 * @param list  The list to shuffle.
+	 * @param flips The number of flips to perform.
+	 */
+	public static void shuffle(int[] list, int flips) {
+		for (int i = 0; i < flips; i++) {
+			int indexFrom = ThreadLocalRandom.current().nextInt(list.length);
+			int valueFrom = list[indexFrom];
+			int indexTo = ThreadLocalRandom.current().nextInt(list.length);
+			int valueTo = list[indexTo];
+			list[indexTo] = valueFrom;
+			list[indexFrom] = valueTo;
+		}
 	}
 
 	/**
@@ -516,7 +543,7 @@ public class Vector {
 		}
 		return sum;
 	}
-	
+
 	/**
 	 * Returns the standard deviation for a list of values.
 	 * 
@@ -531,7 +558,7 @@ public class Vector {
 	 * Returns the standard deviation for a list of values and its mean.
 	 * 
 	 * @param values The list of values.
-	 * @param mean The mean of the list of values.
+	 * @param mean   The mean of the list of values.
 	 * @return The standard deviation.
 	 */
 	public static double stddev(double[] values, double mean) {
@@ -565,5 +592,18 @@ public class Vector {
 
 		int n = values.length - 1;
 		return sumsq / n - (sum / values.length) * (sum / n);
+	}
+	
+	public static String toString(int... v) {
+		StringBuilder b = new StringBuilder();
+		if (v != null) {
+			for (int i = 0; i < v.length; i++) {
+				if (i > 0) {
+					b.append(", ");
+				}
+				b.append(v[i]);
+			}
+		}
+		return b.toString();
 	}
 }

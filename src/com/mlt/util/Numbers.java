@@ -79,6 +79,38 @@ public class Numbers {
 	}
 
 	/**
+	 * Check in the list.
+	 *
+	 * @param value  The value to check.
+	 * @param values The list of values.
+	 * @return A boolean.
+	 */
+	public static boolean in(int value, int... values) {
+		for (int v : values) {
+			if (v == value) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Check in the list.
+	 *
+	 * @param value  The value to check.
+	 * @param values The list of values.
+	 * @return A boolean.
+	 */
+	public static boolean in(double value, double... values) {
+		for (double v : values) {
+			if (v == value) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Check if the number is even.
 	 *
 	 * @param l The number.
@@ -155,8 +187,8 @@ public class Numbers {
 	 * @param compare The compare.
 	 * @return The percentage of the base versus the compare.
 	 */
-	public static double percent(double base, double compare) {
-		return 100.0 * relative(base, compare);
+	public static double percentDelta(double base, double compare) {
+		return 100.0 * delta(base, compare);
 	}
 
 	/**
@@ -175,7 +207,20 @@ public class Numbers {
 	 * @param compare The compare.
 	 * @return The relative value of the base versus the compare.
 	 */
-	public static double relative(double base, double compare) {
+	public static double factor(double base, double compare) {
+		if (compare == 0) {
+			return 0;
+		}
+		return (base / compare);
+	}
+
+	/**
+	 * @param base    The base.
+	 * @param compare The compare.
+	 * @return The unitary delta (increase/decrease) value of the base versus the
+	 *         compare.
+	 */
+	public static double delta(double base, double compare) {
 		if (compare == 0) {
 			return 0;
 		}

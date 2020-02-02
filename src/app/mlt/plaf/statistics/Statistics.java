@@ -50,7 +50,6 @@ import com.mlt.desktop.control.TableRecordModel;
 import com.mlt.desktop.control.table.SelectionMode;
 import com.mlt.desktop.converters.NumberScaleConverter;
 import com.mlt.desktop.icon.IconGrid;
-import com.mlt.mkt.data.DataConverter;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
@@ -65,7 +64,6 @@ import com.mlt.ml.network.Builder;
 import com.mlt.ml.network.Network;
 import com.mlt.ml.network.Trainer;
 import com.mlt.util.IO;
-import com.mlt.util.Lists;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
 import com.mlt.util.Properties;
@@ -149,7 +147,7 @@ public class Statistics {
 
 				MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
-				View view = getView(normalized, true, true, true, true, true, true, true);
+				View view = getView(normalized, true);
 				ListPersistor persistor = new ListPersistor(view.getPersistor(), view.getOrderBy());
 				persistor.setCacheSize(10000);
 				persistor.setPageSize(100);
@@ -469,73 +467,6 @@ public class Statistics {
 	}
 
 	/**
-	 * @return The chart converter to data structure.
-	 */
-	DataConverter getChartDataConverter() {
-		DataConverter dataConverter = (DataConverter) properties.getObject("data_converter");
-		if (dataConverter != null) {
-			return dataConverter;
-		}
-
-		View view = getView(true, true, true, true, true, true, true, false);
-		List<Integer> list = new ArrayList<>();
-
-		/* Open, high, low, close. */
-		list.add(view.getFieldIndex(DB.FIELD_BAR_OPEN));
-		list.add(view.getFieldIndex(DB.FIELD_BAR_HIGH));
-		list.add(view.getFieldIndex(DB.FIELD_BAR_LOW));
-		list.add(view.getFieldIndex(DB.FIELD_BAR_CLOSE));
-
-		/* Pivots, reference values and labels. */
-		list.add(view.getFieldIndex(DB.FIELD_SOURCES_PIVOT_CALC));
-		list.add(view.getFieldIndex(DB.FIELD_SOURCES_REFV_CALC));
-
-		/* Rest of fields. */
-		List<Field> fields = new ArrayList<>();
-		fields.addAll(getFieldListAverages());
-		fields.addAll(getFieldListPatterns(false));
-		for (Field field : fields) {
-			int index = view.getFieldIndex(field.getAlias());
-			list.add(index);
-		}
-
-		int indexTime = view.getFieldIndex(DB.FIELD_BAR_TIME);
-		int[] indexes = Lists.toIntegerArray(list);
-		Record masterRecord = view.getDefaultRecord();
-		dataConverter = new DataConverter(masterRecord, indexTime, indexes);
-		dataConverter.addProperty(DB.FIELD_SOURCES_LABEL_CALC);
-		dataConverter.addProperty(DB.FIELD_SOURCES_LABEL_NETC);
-
-		properties.setObject("data_converter", dataConverter);
-		return dataConverter;
-	}
-
-	/**
-	 * @return The chart list persistor.
-	 */
-	ListPersistor getChartListPersistor() {
-		ListPersistor persistor = (ListPersistor) properties.getObject("data_persistor");
-		if (persistor == null) {
-			View view = getView(true, true, true, true, true, true, true, false);
-			persistor = new ListPersistor(view.getPersistor());
-			properties.setObject("data_persistor", persistor);
-		}
-		return persistor;
-	}
-
-//	private DataConverter getDataConverter(
-//		String key,
-//		FieldList fieldList,
-//		boolean prices,
-//		boolean pivotsAndLabels,
-//		boolean averages,
-//		boolean slopes,
-//		boolean spreads) {
-//		
-//		return null;
-//	}
-
-	/**
 	 * @param key The field group key.
 	 * @return The field group.
 	 */
@@ -556,6 +487,23 @@ public class Statistics {
 			Field field = DB.field_double(name, header);
 			field.setStringConverter(new NumberScaleConverter(8));
 			field.setFieldGroup(getFieldGroup("group-avgs"));
+			fields.add(field);
+		}
+		return fields;
+	}
+
+	/**
+	 * @return The list of average delta fields.
+	 */
+	List<Field> getFieldListAvgDeltas() {
+		List<Field> fields = new ArrayList<>();
+		for (int i = 0; i < averages.size(); i++) {
+			Average avg = averages.get(i);
+			String name = getNameAvgDelta(avg);
+			String header = getHeader(name);
+			Field field = DB.field_double(name, header);
+			field.setStringConverter(new NumberScaleConverter(8));
+			field.setFieldGroup(getFieldGroup("group-avg-deltas"));
 			fields.add(field);
 		}
 		return fields;
@@ -646,6 +594,7 @@ public class Statistics {
 	 */
 	List<Field> getFieldListPatterns(boolean candles) {
 		List<Field> fields = new ArrayList<>();
+		fields.addAll(getFieldListAvgDeltas());
 		fields.addAll(getFieldListAvgSlopes());
 		fields.addAll(getFieldListAvgSpreads());
 		fields.addAll(getFieldListVariances());
@@ -769,6 +718,14 @@ public class Statistics {
 	 * @param avg The average.
 	 * @return The field name.
 	 */
+	String getNameAvgDelta(Average avg) {
+		return "avg_delta_" + getPadded(avg.getPeriod());
+	}
+
+	/**
+	 * @param avg The average.
+	 * @return The field name.
+	 */
 	String getNameAvgSlope(Average avg) {
 		return "avg_slope_" + getPadded(avg.getPeriod());
 	}
@@ -886,7 +843,6 @@ public class Statistics {
 			} else {
 				activation = new ActivationSigmoid();
 			}
-//			activation = new ActivationSigmoid();
 			outputSize = sizes[i];
 			network.addBranch(Builder.branchPerceptron(inputSize, outputSize, activation));
 		}
@@ -993,9 +949,9 @@ public class Statistics {
 
 		/* Chart states. */
 		option = new Option();
-		option.setKey("CHART-SOURCES");
-		option.setText("Chart sources");
-		option.setToolTip("Chart on sources data");
+		option.setKey("CHART");
+		option.setText("Chart");
+		option.setToolTip("Chart on data");
 		option.setAction(new ActionChart(this));
 		option.setOptionGroup(groupChart);
 		option.setSortIndex(1);
@@ -1443,7 +1399,7 @@ public class Statistics {
 	 */
 	private Trainer getTrainer() throws Exception {
 
-		Network network = getNetwork(512);
+		Network network = getNetwork(512, 32);
 
 		Trainer trainer = new Trainer();
 		trainer.setProgressModulus(10);
@@ -1451,9 +1407,9 @@ public class Statistics {
 		trainer.setPatternSourceTraining(getPatternSource(true, true));
 		trainer.setPatternSourceTest(getPatternSource(true, false));
 
-		trainer.setShuffle(false);
-		trainer.setScore(false);
-		trainer.setEpochs(20);
+		trainer.setShuffle(true);
+		trainer.setScore(true);
+		trainer.setEpochs(200);
 		trainer.setGenerateReport(true, network.getName());
 
 		trainer.setFilePath("res/network/");
@@ -1477,42 +1433,15 @@ public class Statistics {
 	 */
 	View getView(
 		boolean normalized,
-		boolean averages,
-		boolean avgSlopes,
-		boolean avgSpreads,
-		boolean variances,
-		boolean varSlopes,
-		boolean varSpreads,
 		boolean candles) {
 		View view = new View();
 		StringBuilder b = new StringBuilder();
 		b.append(getLabel());
 		b.append("-view");
-		if (averages) {
-			b.append("-avgs");
-		}
 		if (normalized) {
 			b.append("-nrm");
 		} else {
 			b.append("-raw");
-		}
-		if (avgSlopes) {
-			b.append("-avg_slopes");
-		}
-		if (avgSpreads) {
-			b.append("-avg_spreads");
-		}
-		if (variances) {
-			b.append("-vars");
-		}
-		if (varSlopes) {
-			b.append("-vars_slopes");
-		}
-		if (varSpreads) {
-			b.append("-vars_spreads");
-		}
-		if (candles) {
-			b.append("-candles");
 		}
 		view.setName(b.toString());
 
@@ -1545,24 +1474,29 @@ public class Statistics {
 		view.addField(tableSrc.getField(DB.FIELD_SOURCES_LABEL_NETE));
 
 		List<Field> fields;
-		if (averages) {
-			fields = getFieldListAverages();
-			fields.forEach(field -> view.addField(tableSrc.getField(field.getAlias())));
-		}
+
+		/* Averages from sources. */
+		fields = getFieldListAverages();
+		fields.forEach(field -> view.addField(tableSrc.getField(field.getAlias())));
+
+		/* Rest from related, raw or normalized. */
 		fields = new ArrayList<>();
-		if (avgSlopes) fields.addAll(getFieldListAvgSlopes());
-		if (avgSpreads) fields.addAll(getFieldListAvgSpreads());
-		if (variances) fields.addAll(getFieldListVariances());
-		if (varSlopes) fields.addAll(getFieldListVarSlopes());
-		if (varSpreads) fields.addAll(getFieldListVarSpreads());
-		if (candles) fields.addAll(getFieldListCandles());
+		fields.addAll(getFieldListAvgDeltas());
+		fields.addAll(getFieldListAvgSlopes());
+		fields.addAll(getFieldListAvgSpreads());
+		fields.addAll(getFieldListVariances());
+		fields.addAll(getFieldListVarSlopes());
+		fields.addAll(getFieldListVarSpreads());
+		if (candles) {
+			fields.addAll(getFieldListCandles());
+		}
 		fields.forEach(field -> view.addField(tableRel.getField(field.getAlias())));
 
 		view.setOrderBy(tableSrc.getPrimaryKey());
 		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 		return view;
 	}
-
+	
 	private void setFieldGroups() {
 
 		List<String> groupKeys = new ArrayList<>();
@@ -1579,6 +1513,7 @@ public class Statistics {
 		properties.setObject("group-data", new FieldGroup(ndx++, "data", "Data"));
 		properties.setObject("group-labels", new FieldGroup(ndx++, "labels", "Labels"));
 		properties.setObject("group-avgs", new FieldGroup(ndx++, "avgs", "Averages"));
+		properties.setObject("group-avg-deltas", new FieldGroup(ndx++, "avg-deltas", "Avg-Deltas"));
 		properties.setObject("group-avg-slopes", new FieldGroup(ndx++, "avg-slopes", "Avg-Slopes"));
 		properties.setObject(
 			"group-avg-spreads",

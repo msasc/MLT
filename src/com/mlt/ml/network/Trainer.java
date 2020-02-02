@@ -39,6 +39,10 @@ import com.mlt.desktop.FileChooser;
 import com.mlt.desktop.Option;
 import com.mlt.ml.data.Pattern;
 import com.mlt.ml.data.PatternSource;
+import com.mlt.ml.function.Distance;
+import com.mlt.ml.function.Matcher;
+import com.mlt.ml.function.distance.DistanceEuclidean;
+import com.mlt.ml.function.match.CategoryMatcher;
 import com.mlt.task.Task;
 import com.mlt.util.Lists;
 import com.mlt.util.Numbers;
@@ -88,22 +92,17 @@ public class Trainer extends Task {
 		}
 	}
 
-	/** Label key to show the current error. */
-	private static final String LABEL_ERROR = "LABEL-ERROR";
-	/** Label key of an additional processes. */
-	private static final String LABEL_PROCESSING = "LABEL-PROCESSING";
-
 	/** Option new file. */
 	private static final String OPTION_NEW_FILE = "NEW-FILE";
 	/** Option use existing. */
 	private static final String OPTION_USE_EXISTING = "USE-EXISTING";
 	/** Option cancel. */
 	private static final String OPTION_CANCEL = "CANCEL";
+
+	/** Label key of an additional processes. */
+	private static final String LABEL_PROCESSING = "LABEL-PROCESSING";
 	/** Progress key of additional processes. */
 	private static final String PROGRESS_PROCESSING = "PROGRESS-PROCESSING";
-
-	/** Status key to show the current error. */
-	private static final String STATUS_ERROR = "STATUS-ERROR";
 	/** Status key of additional processes. */
 	private static final String STATUS_PROCESSING = "STATUS-PROCESSING";
 
@@ -130,10 +129,9 @@ public class Trainer extends Task {
 	private String filePath;
 	/** File root name. */
 	private String fileRoot;
-	/** History of train metrics. */
-	private List<Metrics> trainMetricsHistory = new ArrayList<>();
-	/** History of test metrics. */
-	private List<Metrics> testMetricsHistory = new ArrayList<>();
+
+	/** Metrics manager. */
+	private Metrics.Manager metricsMngr = new Metrics.Manager();
 
 	/**
 	 * A boolean that indicates if network data should be saved.When the trainer is
@@ -163,7 +161,6 @@ public class Trainer extends Task {
 	 */
 	public Trainer(Locale locale) {
 		super(locale);
-		addStatus(STATUS_ERROR);
 		addStatus(STATUS_PROCESSING);
 		setConsoleRequired(true);
 	}
@@ -174,15 +171,14 @@ public class Trainer extends Task {
 	 * @param train Train/test indicator.
 	 * @return The metrics.
 	 */
-	private Metrics calculateMetrics(boolean train) {
+	private Metrics calculateMetrics(String label, PatternSource source) {
 
 		removeStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
 		removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
 
-		PatternSource source = train ? sourceTrain : sourceTest;
 		int length = network.getOutputSize();
 		int size = source.size();
-		Metrics metrics = new Metrics(length, size);
+		Metrics metrics = new Metrics(label, length, size);
 
 		for (int i = 0; i < size; i++) {
 
@@ -201,7 +197,7 @@ public class Trainer extends Task {
 			double percent = (double) (index * 100) / (double) size;
 			StringBuilder msg = new StringBuilder();
 			msg.append("Calculating ");
-			msg.append(train ? "train" : "test");
+			msg.append(label);
 			msg.append(" metrics: ");
 			msg.append(index);
 			msg.append(" of ");
@@ -285,7 +281,6 @@ public class Trainer extends Task {
 		/* Clear messages. */
 		consoleClear();
 		clearMessage();
-		clearStatusLabel(STATUS_ERROR, LABEL_ERROR);
 		clearStatusLabel(STATUS_PROCESSING, LABEL_PROCESSING);
 		updateProgress(0, 0);
 
@@ -297,26 +292,27 @@ public class Trainer extends Task {
 		}
 
 		/* Clear history. */
-		trainMetricsHistory.clear();
-		testMetricsHistory.clear();
+		metricsMngr.clear();
 
 		/* Calculate metrics. */
-		Metrics trainMetrics = calculateMetrics(true);
-		Metrics testMetrics = calculateMetrics(false);
-		trainMetricsHistory.add(trainMetrics);
-		testMetricsHistory.add(testMetrics);
+		Metrics trainMetrics = calculateMetrics("INIT", sourceTrain);
+		Metrics testMetrics = calculateMetrics("INIT", sourceTest);
+		metricsMngr.add(testMetrics, testMetrics);
 		printMetrics();
 
 		/* Best metrics. */
 		Metrics bestTrainMetrics = trainMetrics;
 		Metrics bestTestMetrics = testMetrics;
 
+		Distance distanceFunction = new DistanceEuclidean();
+		Matcher matcherFunction = new CategoryMatcher();
+		TreeMap<Double, Integer> scoreMap = new TreeMap<>((a, b) -> (Double.compare(a, b) * -1));
+
 		/* Iterate epochs. Start with a flat scan. */
 		calculateTotalWork();
-		long totalWork = getTotalWork();
 		long workDone = 0;
+		long totalWork = getTotalWork();
 		boolean scanFlat = true;
-		TreeMap<Double, Integer> scoreMap = new TreeMap<>((a, b) -> (Double.compare(a, b) * -1));
 		for (int epoch = 1; epoch <= epochs; epoch++) {
 
 			/* Check cancelled. */
@@ -332,19 +328,16 @@ public class Trainer extends Task {
 			 */
 			int[] indexes = null;
 			if (scanFlat) {
-				if (shuffle) {
-					sourceTrain.shuffle();
-				}
 				indexes = getIndexesFlat(sourceTrain.size());
 			} else {
 				indexes = getIndexesScore(sourceTrain.size(), scoreMap);
 			}
+			if (shuffle) {
+				Vector.shuffle(indexes);
+			}
 
 			int size = indexes.length;
-			trainMetrics = new Metrics(network.getOutputSize(), size);
-			
 			removeStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING);
-			
 			for (int i = 0; i < size; i++) {
 
 				if (isCancelRequested()) {
@@ -353,7 +346,18 @@ public class Trainer extends Task {
 				}
 
 				workDone += 1;
-				update(getMessage(epoch, i + 1, size), workDone, totalWork);
+
+				boolean update = checkUpdate(i + 1, size);
+				if (update) {
+					update(getMessage(epoch, i + 1, size), workDone, totalWork);
+
+					StringBuilder msg = new StringBuilder();
+					msg.append("Calculating ");
+					msg.append(i + 1);
+					msg.append(" of ");
+					msg.append(size);
+					updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, i + 1, size);
+				}
 
 				int index = indexes[i];
 				Pattern pattern = sourceTrain.get(index);
@@ -361,29 +365,12 @@ public class Trainer extends Task {
 				double[] networkOutput = network.forward(pattern.getInputValues());
 				double[] networkDeltas = Vector.subtract(patternOutput, networkOutput);
 				network.backward(networkDeltas);
-				
-				trainMetrics.compute(patternOutput, networkOutput);
-				scoreMap.put(trainMetrics.getErrAvg(), index);
-				
-				boolean update = checkUpdate(i + 1, size);
-				if (update) {
-					StringBuilder msg = new StringBuilder();
-					msg.append("Epoch error ");
-					msg.append(Numbers.getBigDecimal(trainMetrics.getErrAvg(), decimals));
-					msg.append(" std-dev ");
-					msg.append(Numbers.getBigDecimal(trainMetrics.getErrStd(), decimals));
-					msg.append(" performance ");
-					msg.append(Numbers.getBigDecimal(trainMetrics.getPerf(), decimals));
-					updateStatusLabel(STATUS_ERROR, LABEL_ERROR, msg);
-					
-					msg = new StringBuilder();
-					msg.append("Calculating ");
-					msg.append(i + 1);
-					msg.append(" of ");
-					msg.append(size);
-					updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, i + 1, size);
-				}
-				
+
+				double distance = distanceFunction.distance(patternOutput, networkOutput);
+				boolean match = matcherFunction.match(patternOutput, networkOutput);
+				distance *= (match ? -1.0 : 1.0);
+				scoreMap.put(distance, index);
+
 				/* Adjust internal per step. */
 				network.adjustStep();
 			}
@@ -398,10 +385,10 @@ public class Trainer extends Task {
 			}
 
 			/* Calculate metrics. */
-			trainMetrics = calculateMetrics(true);
-			testMetrics = calculateMetrics(false);
-			trainMetricsHistory.add(trainMetrics);
-			testMetricsHistory.add(testMetrics);
+			String label = scanFlat ? "FLAT" : "SCORE";
+			trainMetrics = calculateMetrics(label, sourceTrain);
+			testMetrics = calculateMetrics("TEST", sourceTest);
+			metricsMngr.add(trainMetrics, testMetrics);
 			printMetrics();
 
 			/* Adjust internals per iteration or batch. */
@@ -411,10 +398,10 @@ public class Trainer extends Task {
 			if (saveNetworkData &&
 				trainMetrics.compareTo(bestTrainMetrics) > 0 &&
 				testMetrics.compareTo(bestTestMetrics) > 0) {
-				
+
 				bestTrainMetrics = trainMetrics;
 				bestTestMetrics = testMetrics;
-				
+
 				saveNetwork();
 			}
 
@@ -430,13 +417,7 @@ public class Trainer extends Task {
 			File file = new File(filePath, reportFile + ".txt");
 			FileWriter fw = new FileWriter(file, true);
 			PrintWriter pw = new PrintWriter(fw);
-			pw.print(Metrics.summary(decimals, trainMetricsHistory, testMetricsHistory));
-			pw.println();
-			pw.print(
-				Metrics.summary(
-					decimals,
-					Metrics.averages(trainMetricsHistory, 5, "SMA"),
-					Metrics.averages(testMetricsHistory, 5, "SMA")));
+			pw.print(metricsMngr.summary());
 			pw.println();
 			pw.close();
 		}
@@ -522,17 +503,20 @@ public class Trainer extends Task {
 	}
 
 	/**
-	 * @param epoch   The epoch.
-	 * @param pattern The pattern index.
-	 * @param size    The size or number of patterns.
+	 * @param epoch The epoch.
+	 * @param index Index.
+	 * @param size  Size.
 	 * @return The process message.
 	 */
-	private String getMessage(int epoch, int pattern, int size) {
-		double factor = (double) (pattern) / (double) size;
+	private String getMessage(int epoch, int index, int size) {
+		double factor = (double) (index) / (double) size;
+		if (index == size) {
+			factor = 1.0;
+		}
 		BigDecimal percent = new BigDecimal(100.0 * factor).setScale(2, RoundingMode.HALF_UP);
 		StringBuilder msg = new StringBuilder();
 		msg.append("Epoch " + epoch + " of " + epochs);
-		msg.append(" Pattern " + pattern);
+		msg.append(" Pattern " + index);
 		msg.append(" of ");
 		msg.append(size);
 		msg.append(" (" + percent + "%)");
@@ -567,13 +551,7 @@ public class Trainer extends Task {
 
 	private void printMetrics() {
 		consoleClear();
-		consolePrint(Metrics.summary(6, trainMetricsHistory, testMetricsHistory));
-		consolePrintln();
-		consolePrint(
-			Metrics.summary(
-				6,
-				Metrics.averages(trainMetricsHistory, 5, "SMA"),
-				Metrics.averages(testMetricsHistory, 5, "SMA")));
+		consolePrint(metricsMngr.summary());
 	}
 
 	/**
@@ -719,15 +697,6 @@ public class Trainer extends Task {
 			}
 			if (fileRoot == null) {
 				throw new IllegalStateException("The file root is required to save the network data");
-			}
-		}
-
-		/* Check shuffle supported. */
-		if (shuffle) {
-			try {
-				sourceTrain.shuffle();
-			} catch (Exception exc) {
-				shuffle = false;
 			}
 		}
 	}

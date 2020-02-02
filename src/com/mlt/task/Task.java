@@ -190,13 +190,13 @@ public abstract class Task implements Runnable, Callable<Void> {
 	 *         modulus.
 	 */
 	protected boolean checkUpdate(long workDone, long totalWork) {
-		boolean update = true;
-		if (progressModulus > 0 && workDone < totalWork) {
-			if (workDone % progressModulus != 0) {
-				update = false;
-			}
+		if (progressModulus <= 1) {
+			return true;
 		}
-		return update;
+		if (workDone == totalWork) {
+			return true;
+		}
+		return workDone % progressModulus == 0 && workDone < totalWork;
 	}
 
 	/**

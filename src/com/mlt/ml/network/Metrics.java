@@ -22,6 +22,7 @@ import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import com.mlt.ml.function.Matcher;
 import com.mlt.ml.function.match.CategoryMatcher;
@@ -35,6 +36,118 @@ import com.mlt.util.Vector;
  * @author Miquel Sas
  */
 public class Metrics implements Comparable<Metrics> {
+
+	/**
+	 * Manager of the teai and test history of metrics.
+	 */
+	public static class Manager {
+		/** Raw history of train metrics. */
+		private List<Metrics> trainHistoryRaw = new ArrayList<>();
+		/** Raw history of test metrics. */
+		private List<Metrics> testHistoryRaw = new ArrayList<>();
+		/** Average history of train metrics. */
+		private List<Metrics> trainHistoryAvg;
+		/** Average history of test metrics. */
+		private List<Metrics> testHistoryAvg;
+		/** Decimals to report values. */
+		private int decimals = 6;
+		/** Default average type. */
+		private String averageType = "SMA";
+		/** Funcion to compute the average period, ther argument is the history size. */
+		private Function<Integer, Integer> averagePeriod = (size) -> Math.max(5, size / 4);
+
+		/**
+		 * Default constructor.
+		 */
+		public Manager() {
+			super();
+		}
+
+		/**
+		 * @param decimals    Decimals to report values.
+		 * @param averageType Average type.
+		 */
+		public Manager(int decimals, String averageType) {
+			super();
+			if (!Strings.in(averageType, "SMA", "WMA")) {
+				throw new IllegalArgumentException();
+			}
+			this.decimals = decimals;
+			this.averageType = averageType;
+		}
+
+		/**
+		 * Add train and test metrics to the history.
+		 * 
+		 * @param trainMetrics Train metrics.
+		 * @param testMetrics  Test metrics.
+		 */
+		public void add(Metrics trainMetrics, Metrics testMetrics) {
+			trainHistoryRaw.add(trainMetrics);
+			testHistoryRaw.add(testMetrics);
+		}
+
+		/**
+		 * Calculate metrics averages.
+		 */
+		public void calculateAverages() {
+			int size = trainHistoryRaw.size();
+			int period = averagePeriod.apply(size);
+			trainHistoryAvg = averages(trainHistoryRaw, period, averageType);
+			testHistoryAvg = averages(testHistoryRaw, period, averageType);
+		}
+
+		/**
+		 * Clear the history.
+		 */
+		public void clear() {
+			trainHistoryRaw.clear();
+			testHistoryRaw.clear();
+		}
+		
+		/**
+		 * @return The average test history, for any analytical purposes.
+		 */
+		public List<Metrics> getTestHistoryAvg() {
+			return testHistoryAvg;
+		}
+
+		/**
+		 * @return The raw test history, for any analytical purposes.
+		 */
+		public List<Metrics> getTestHistoryRaw() {
+			return testHistoryRaw;
+		}
+
+		/**
+		 * @return The average train history, for any analytical purposes.
+		 */
+		public List<Metrics> getTrainHistoryAvg() {
+			return trainHistoryAvg;
+		}
+
+		/**
+		 * @return The raw train history, for any analytical purposes.
+		 */
+		public List<Metrics> getTrainHistoryRaw() {
+			return trainHistoryRaw;
+		}
+		
+		public String summary() {
+			
+			calculateAverages();
+			
+			StringWriter s = new StringWriter();
+			PrintWriter p = new PrintWriter(s);
+			
+			p.print(Metrics.summary(decimals, trainHistoryRaw, testHistoryRaw));
+			p.println();
+			p.print(Metrics.summary(decimals, trainHistoryAvg, testHistoryAvg));
+			
+			p.close();
+			return s.toString();
+		}
+	}
 
 	/**
 	 * @param metrics The list of values.
@@ -60,7 +173,17 @@ public class Metrics implements Comparable<Metrics> {
 			if (type.equals("WMA")) {
 				rawAvg = Vector.averageWMA(rawValues);
 			}
-			averages.add(new Metrics(rawAvg));
+
+			Metrics avg = new Metrics();
+			avg.label = type;
+			avg.period = period;
+			avg.errAvg = rawAvg[0];
+			avg.errVar = rawAvg[1];
+			avg.errStd = rawAvg[2];
+			avg.perf = rawAvg[3];
+			avg.perfVar = rawAvg[4];
+
+			averages.add(avg);
 		}
 		return averages;
 	}
@@ -179,7 +302,7 @@ public class Metrics implements Comparable<Metrics> {
 		p.close();
 		return s.toString();
 	}
-	
+
 	/**
 	 * @return The list of titles.
 	 */
@@ -192,6 +315,11 @@ public class Metrics implements Comparable<Metrics> {
 		titles.add("Perf Var");
 		return titles;
 	}
+
+	/** Label. */
+	private String label;
+	/** Average period. */
+	private int period;
 
 	/** Average absolute error. */
 	private double errAvg;
@@ -222,13 +350,20 @@ public class Metrics implements Comparable<Metrics> {
 	private int calls;
 
 	/**
-	 * @param length Length of the data, correct and predict, vectors.
-	 * @param size   Size of the pattern source.
+	 * Constructor for averages.
 	 */
-	public Metrics(int length, int size) {
+	private Metrics() {}
+
+	/**
+	 * @param Training label.
+	 * @param length   Length of the data, correct and predict, vectors.
+	 * @param size     Size of the pattern source.
+	 */
+	public Metrics(String label, int length, int size) {
+		this.label = label;
 		this.length = length;
 		this.size = size;
-		
+
 		matches = 0;
 		error = new double[length];
 		calls = 0;
@@ -239,17 +374,6 @@ public class Metrics implements Comparable<Metrics> {
 
 		perf = 0;
 		perfVar = 0;
-	}
-
-	/**
-	 * @param values Result values.
-	 */
-	private Metrics(double[] values) {
-		errAvg = values[0];
-		errVar = values[1];
-		errStd = values[2];
-		perf = values[3];
-		perfVar = values[4];
 	}
 
 	/**
@@ -318,6 +442,13 @@ public class Metrics implements Comparable<Metrics> {
 	}
 
 	/**
+	 * @return The label.
+	 */
+	public String getLabel() {
+		return label;
+	}
+
+	/**
 	 * @return The perf.
 	 */
 	public double getPerf() {
@@ -329,6 +460,13 @@ public class Metrics implements Comparable<Metrics> {
 	 */
 	public double getPerfVar() {
 		return perfVar;
+	}
+
+	/**
+	 * @return The period for averages.
+	 */
+	public int getPeriod() {
+		return period;
 	}
 
 	/**
@@ -345,6 +483,13 @@ public class Metrics implements Comparable<Metrics> {
 
 		perf = 0;
 		perfVar = 0;
+	}
+
+	/**
+	 * @param label The label.
+	 */
+	public void setLabel(String label) {
+		this.label = label;
 	}
 
 	/**

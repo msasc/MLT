@@ -24,7 +24,6 @@ import java.util.List;
 
 import com.mlt.ml.function.Matcher;
 import com.mlt.ml.function.match.CategoryMatcher;
-import com.mlt.util.Lists;
 
 /**
  * A list pattern source.
@@ -124,14 +123,6 @@ public class ListPatternSource implements PatternSource {
 	@Override
 	public int size() {
 		return patterns.size();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void shuffle() {
-		Lists.shuffle(patterns);
 	}
 
 	/**

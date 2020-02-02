@@ -31,6 +31,11 @@ import com.mlt.util.Numbers;
  */
 public class Average implements Comparable<Average> {
 
+	/**
+	 * @param period Average period.
+	 * @param delta  Weight delta (increase).
+	 * @param buffer Buffer of double values.
+	 */
 	private static double getAverage(int period, double delta, FixedSizeQueue<Double> buffer) {
 		int startIndex = (buffer.size() < period ? 0 : buffer.size() - period);
 		int endIndex = buffer.size() - 1;

@@ -326,22 +326,6 @@ public class Lists {
 	/**
 	 * Check in the list.
 	 *
-	 * @param i        The check integer.
-	 * @param integers The list of integers.
-	 * @return A boolean.
-	 */
-	public static boolean in(int i, int... integers) {
-		for (int c : integers) {
-			if (c == i) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Check in the list.
-	 *
 	 * @param <T>    The type to check.
 	 * @param value  The value to check.
 	 * @param values The list of values.

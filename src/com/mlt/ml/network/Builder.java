@@ -55,8 +55,8 @@ public class Builder {
 
 		Edge inputEdge = new Edge(inputSize);
 		WeightsNode weightsNode = new WeightsNode(inputSize, outputSize);
-		weightsNode.setGradientSoftener(GradientSoftener.WMA);
-		weightsNode.setMomentumStrategyGradients(0.3);
+		weightsNode.setGradientSoftener(GradientSoftener.NONE);
+		weightsNode.setMomentumStrategyGradients(0.6);
 		weightsNode.addInputEdge(inputEdge);
 		nodes.add(weightsNode);
 

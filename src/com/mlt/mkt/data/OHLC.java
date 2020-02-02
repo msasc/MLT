@@ -72,7 +72,7 @@ public class OHLC {
 		if (body > range) {
 			body = range;
 		}
-		double factor = Numbers.relative(body, range);
+		double factor = Numbers.delta(body, range);
 		return factor;
 	}
 
@@ -84,7 +84,7 @@ public class OHLC {
 		double center = getBodyCenter(data);
 		double range = getRange(data);
 		double low = getLow(data);
-		double pos = Numbers.relative(center - low, range);
+		double pos = Numbers.delta(center - low, range);
 		return pos;
 	}
 
@@ -149,7 +149,7 @@ public class OHLC {
 	public static double getRelativePosition(Data dataCurr, Data dataPrev) {
 		double current = getWeightedClosePrice(dataCurr);
 		double previous = getWeightedClosePrice(dataPrev);
-		double factor = Numbers.relative(current, previous);
+		double factor = Numbers.delta(current, previous);
 		return factor;
 	}
 
@@ -161,7 +161,7 @@ public class OHLC {
 	public static double getRelativeRange(Data dataCurr, Data dataPrev) {
 		double current = getRange(dataCurr);
 		double previous = getRange(dataPrev);
-		double factor = Numbers.relative(current, previous);
+		double factor = Numbers.delta(current, previous);
 		return factor;
 	}
 
@@ -173,7 +173,7 @@ public class OHLC {
 	public static double getRelativeBody(Data dataCurr, Data dataPrev) {
 		double current = getBody(dataCurr);
 		double previous = getBody(dataPrev);
-		double factor = Numbers.relative(current, previous);
+		double factor = Numbers.delta(current, previous);
 		return factor;
 	}
 

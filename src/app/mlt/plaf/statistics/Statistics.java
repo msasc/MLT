@@ -1399,7 +1399,7 @@ public class Statistics {
 	 */
 	private Trainer getTrainer() throws Exception {
 
-		Network network = getNetwork(512, 32);
+		Network network = getNetwork(128, 16);
 
 		Trainer trainer = new Trainer();
 		trainer.setProgressModulus(10);

@@ -46,9 +46,9 @@ public class Metrics implements Comparable<Metrics> {
 		/** Raw history of test metrics. */
 		private List<Metrics> testHistoryRaw = new ArrayList<>();
 		/** Average history of train metrics. */
-		private List<Metrics> trainHistoryAvg;
+		private List<Metrics> trainHistoryAvg = new ArrayList<>();
 		/** Average history of test metrics. */
-		private List<Metrics> testHistoryAvg;
+		private List<Metrics> testHistoryAvg = new ArrayList<>();
 		/** Decimals to report values. */
 		private int decimals = 6;
 		/** Default average type. */
@@ -91,10 +91,56 @@ public class Metrics implements Comparable<Metrics> {
 		 * Calculate metrics averages.
 		 */
 		public void calculateAverages() {
+
 			int size = trainHistoryRaw.size();
 			int period = averagePeriod.apply(size);
-			trainHistoryAvg = averages(trainHistoryRaw, period, averageType);
-			testHistoryAvg = averages(testHistoryRaw, period, averageType);
+
+			trainHistoryAvg.clear();
+			testHistoryAvg.clear();
+
+			for (int i = 0; i < size; i++) {
+				int index = Math.max(0, i - period + 1);
+
+				List<double[]> rawValuesTrain = new ArrayList<>();
+				for (int j = index; j <= i; j++) {
+					rawValuesTrain.add(trainHistoryRaw.get(j).valuesRaw());
+				}
+				List<double[]> rawValuesTest = new ArrayList<>();
+				for (int j = index; j <= i; j++) {
+					rawValuesTest.add(testHistoryRaw.get(j).valuesRaw());
+				}
+
+				double[] rawAvgTrain = null;
+				double[] rawAvgTest = null;
+				if (averageType.equals("SMA")) {
+					rawAvgTrain = Vector.averageSMA(rawValuesTrain);
+					rawAvgTest = Vector.averageSMA(rawValuesTest);
+				}
+				if (averageType.equals("WMA")) {
+					rawAvgTrain = Vector.averageWMA(rawValuesTrain);
+					rawAvgTest = Vector.averageWMA(rawValuesTest);
+				}
+
+				Metrics avgTrain = new Metrics();
+				avgTrain.label = averageType;
+				avgTrain.period = period;
+				avgTrain.errAvg = rawAvgTrain[0];
+				avgTrain.errVar = rawAvgTrain[1];
+				avgTrain.errStd = rawAvgTrain[2];
+				avgTrain.perf = rawAvgTrain[3];
+				avgTrain.perfVar = rawAvgTrain[4];
+				trainHistoryAvg.add(avgTrain);
+
+				Metrics avgTest = new Metrics();
+				avgTest.label = averageType;
+				avgTest.period = period;
+				avgTest.errAvg = rawAvgTest[0];
+				avgTest.errVar = rawAvgTest[1];
+				avgTest.errStd = rawAvgTest[2];
+				avgTest.perf = rawAvgTest[3];
+				avgTest.perfVar = rawAvgTest[4];
+				testHistoryAvg.add(avgTest);
+			}
 		}
 
 		/**
@@ -104,7 +150,7 @@ public class Metrics implements Comparable<Metrics> {
 			trainHistoryRaw.clear();
 			testHistoryRaw.clear();
 		}
-		
+
 		/**
 		 * @return The average test history, for any analytical purposes.
 		 */
@@ -132,188 +178,151 @@ public class Metrics implements Comparable<Metrics> {
 		public List<Metrics> getTrainHistoryRaw() {
 			return trainHistoryRaw;
 		}
-		
+
 		public String summary() {
-			
+
 			calculateAverages();
-			
+
 			StringWriter s = new StringWriter();
 			PrintWriter p = new PrintWriter(s);
-			
-			p.print(Metrics.summary(decimals, trainHistoryRaw, testHistoryRaw));
+
+			List<String> titles = new ArrayList<>();
+			titles.add("Err raw");
+			titles.add("Var raw");
+			titles.add("Err avg");
+			titles.add("Var avg");
+			titles.add("Prf raw");
+			titles.add("Var raw");
+			titles.add("Prf avg");
+			titles.add("Var avg");
+
+			int columns = titles.size();
+			int size = trainHistoryRaw.size();
+			int padNumber = decimals + 3;
+			int padColumn = 0;
+			for (String title : titles) {
+				padColumn = Math.max(padColumn, Math.max(padNumber, title.length()));
+			}
+
+			int padIndex = Numbers.getDigits(size);
+			int padLabel = 0;
+			for (Metrics metrics : trainHistoryRaw) {
+				padLabel = Math.max(padLabel, Strings.length(metrics.label));
+			}
+			padLabel++;
+			int sepPrefix = 2;
+			int sepColumn = 1;
+			int sepBlock = 2;
+			int padMetrics = padColumn * columns + sepColumn * (columns - 1);
+
+			/* Headers. */
+
+			p.print(Strings.repeat(" ", padIndex + padLabel + sepPrefix));
+			p.print(Strings.centerPad("Training", padMetrics, " "));
+			p.print(Strings.repeat(" ", sepBlock));
+			p.print(Strings.centerPad("Test", padMetrics, " "));
 			p.println();
-			p.print(Metrics.summary(decimals, trainHistoryAvg, testHistoryAvg));
+
+			p.print(Strings.repeat(" ", padIndex + padLabel + sepPrefix));
+			p.print(Strings.repeat("-", padMetrics));
+			p.print(Strings.repeat(" ", sepBlock));
+			p.print(Strings.repeat("-", padMetrics));
+			p.println();
+
+			p.print(Strings.repeat(" ", padIndex + padLabel + sepPrefix));
+			for (int i = 0; i < titles.size(); i++) {
+				String title = titles.get(i);
+				if (i > 0) {
+					p.print(Strings.repeat(" ", sepColumn));
+				}
+				p.print(Strings.leftPad(title, padColumn, " "));
+			}
+			p.print(Strings.repeat(" ", sepBlock));
+			for (int i = 0; i < titles.size(); i++) {
+				String title = titles.get(i);
+				if (i > 0) {
+					p.print(Strings.repeat(" ", sepColumn));
+				}
+				p.print(Strings.leftPad(title, padColumn, " "));
+			}
+			p.println();
 			
+			p.print(Strings.repeat(" ", padIndex + padLabel + sepPrefix));
+			for (int i = 0; i < titles.size(); i++) {
+				if (i > 0) {
+					p.print(Strings.repeat(" ", sepColumn));
+				}
+				p.print(Strings.repeat("-", padColumn));
+			}
+			p.print(Strings.repeat(" ", sepBlock));
+			for (int i = 0; i < titles.size(); i++) {
+				if (i > 0) {
+					p.print(Strings.repeat(" ", sepColumn));
+				}
+				p.print(Strings.repeat("-", padColumn));
+			}
+			p.println();
+			
+			/* Values. */
+
+			for (int m = 0; m < size; m++) {
+				
+				Metrics trainRaw = trainHistoryRaw.get(m);
+				Metrics testRaw = testHistoryRaw.get(m);
+				Metrics trainAvg = trainHistoryAvg.get(m);
+				Metrics testAvg = testHistoryAvg.get(m);
+				
+				if (m > 0) {
+					trainRaw.variance(trainHistoryRaw.get(m - 1));
+					testRaw.variance(testHistoryRaw.get(m - 1));
+					trainAvg.variance(trainHistoryAvg.get(m - 1));
+					testAvg.variance(testHistoryAvg.get(m - 1));
+				}
+				
+				List<BigDecimal> valuesTrain = new ArrayList<>();
+				valuesTrain.add(Numbers.getBigDecimal(trainRaw.errAvg, decimals));
+				valuesTrain.add(Numbers.getBigDecimal(trainRaw.errVar, decimals));
+				valuesTrain.add(Numbers.getBigDecimal(trainAvg.errAvg, decimals));
+				valuesTrain.add(Numbers.getBigDecimal(trainAvg.errVar, decimals));
+				valuesTrain.add(Numbers.getBigDecimal(trainRaw.perf, decimals));
+				valuesTrain.add(Numbers.getBigDecimal(trainRaw.perfVar, decimals));
+				valuesTrain.add(Numbers.getBigDecimal(trainAvg.perf, decimals));
+				valuesTrain.add(Numbers.getBigDecimal(trainAvg.perfVar, decimals));
+				
+				List<BigDecimal> valuesTest = new ArrayList<>();
+				valuesTest.add(Numbers.getBigDecimal(testRaw.errAvg, decimals));
+				valuesTest.add(Numbers.getBigDecimal(testRaw.errVar, decimals));
+				valuesTest.add(Numbers.getBigDecimal(testAvg.errAvg, decimals));
+				valuesTest.add(Numbers.getBigDecimal(testAvg.errVar, decimals));
+				valuesTest.add(Numbers.getBigDecimal(testRaw.perf, decimals));
+				valuesTest.add(Numbers.getBigDecimal(testRaw.perfVar, decimals));
+				valuesTest.add(Numbers.getBigDecimal(testAvg.perf, decimals));
+				valuesTest.add(Numbers.getBigDecimal(testAvg.perfVar, decimals));
+				
+				p.print(Strings.leftPad(m, padIndex));
+				p.print(Strings.leftPad(trainRaw.label, padLabel));
+				p.print(Strings.repeat(" ", sepPrefix));
+				for (int i = 0; i < valuesTrain.size(); i++) {
+					Number v = valuesTrain.get(i);
+					if (i > 0) {
+						p.print(Strings.repeat(" ", sepColumn));
+					}
+					p.print(Strings.leftPad(v, padColumn));
+				}
+				p.print(Strings.repeat(" ", sepBlock));
+				for (int i = 0; i < valuesTest.size(); i++) {
+					Number v = valuesTest.get(i);
+					if (i > 0) {
+						p.print(Strings.repeat(" ", sepColumn));
+					}
+					p.print(Strings.leftPad(v, padColumn));
+				}
+				p.println();
+			}
+
 			p.close();
 			return s.toString();
 		}
-	}
-
-	/**
-	 * @param metrics The list of values.
-	 * @param period  The period.
-	 * @param type    Average type ("SMA"/"WMA).
-	 * @return The list of the SMA averages.
-	 */
-	public static List<Metrics> averages(List<Metrics> metrics, int period, String type) {
-		if (!Strings.in(type, "SMA", "WMA")) {
-			throw new IllegalArgumentException("Invalid aveage type " + type);
-		}
-		List<Metrics> averages = new ArrayList<>();
-		for (int i = 0; i < metrics.size(); i++) {
-			int index = Math.max(0, i - period + 1);
-			List<double[]> rawValues = new ArrayList<>();
-			for (int j = index; j <= i; j++) {
-				rawValues.add(metrics.get(j).valuesRaw());
-			}
-			double[] rawAvg = null;
-			if (type.equals("SMA")) {
-				rawAvg = Vector.averageSMA(rawValues);
-			}
-			if (type.equals("WMA")) {
-				rawAvg = Vector.averageWMA(rawValues);
-			}
-
-			Metrics avg = new Metrics();
-			avg.label = type;
-			avg.period = period;
-			avg.errAvg = rawAvg[0];
-			avg.errVar = rawAvg[1];
-			avg.errStd = rawAvg[2];
-			avg.perf = rawAvg[3];
-			avg.perfVar = rawAvg[4];
-
-			averages.add(avg);
-		}
-		return averages;
-	}
-
-	/**
-	 * @param decimals     Decimals for number precision.
-	 * @param trainMetrics List of train metrics.
-	 * @param testMetrics  List of test metrics.
-	 * @return The summary report.
-	 */
-	public static String summary(
-		int decimals,
-		List<Metrics> trainMetrics,
-		List<Metrics> testMetrics) {
-
-		int padNumber = decimals + 3;
-		int sepBlock = 2;
-		int sepItem = 1;
-		int size = trainMetrics.size();
-
-		List<String> titles = titles();
-
-		int padTitle = 0;
-		for (String title : titles) {
-			padTitle = Math.max(padTitle, title.length());
-		}
-		padTitle = Math.max(padTitle, padNumber);
-
-		int padMetrics = titles.size() * padTitle + (titles.size() - 1) * sepItem;
-		int padIndex = Numbers.getDigits(size);
-		int sepIndex = 2;
-
-		StringWriter s = new StringWriter();
-		PrintWriter p = new PrintWriter(s);
-
-		/* Headers. */
-
-		p.print(Strings.repeat(" ", padIndex + sepIndex));
-		p.print(Strings.centerPad("Training", padMetrics, " "));
-		p.print(Strings.repeat(" ", sepBlock));
-		p.print(Strings.centerPad("Test", padMetrics, " "));
-		p.println();
-
-		p.print(Strings.repeat(" ", padIndex + sepIndex));
-		p.print(Strings.repeat("-", padMetrics));
-		p.print(Strings.repeat(" ", sepBlock));
-		p.print(Strings.repeat("-", padMetrics));
-		p.println();
-
-		p.print(Strings.repeat(" ", padIndex + sepIndex));
-		for (int i = 0; i < titles.size(); i++) {
-			String title = titles.get(i);
-			if (i > 0) {
-				p.print(Strings.repeat(" ", sepItem));
-			}
-			p.print(Strings.leftPad(title, padTitle, " "));
-		}
-		p.print(Strings.repeat(" ", sepBlock));
-		for (int i = 0; i < titles.size(); i++) {
-			String title = titles.get(i);
-			if (i > 0) {
-				p.print(Strings.repeat(" ", sepItem));
-			}
-			p.print(Strings.leftPad(title, padTitle, " "));
-		}
-		p.println();
-
-		p.print(Strings.repeat(" ", padIndex + sepIndex));
-		for (int i = 0; i < titles.size(); i++) {
-			if (i > 0) {
-				p.print(Strings.repeat(" ", sepItem));
-			}
-			p.print(Strings.repeat("-", padTitle));
-		}
-		p.print(Strings.repeat(" ", sepBlock));
-		for (int i = 0; i < titles.size(); i++) {
-			if (i > 0) {
-				p.print(Strings.repeat(" ", sepItem));
-			}
-			p.print(Strings.repeat("-", padTitle));
-		}
-		p.println();
-
-		/* Values. */
-
-		for (int m = 0; m < size; m++) {
-			Metrics vtr = trainMetrics.get(m);
-			Metrics vts = testMetrics.get(m);
-			if (m > 0) {
-				vtr.variance(trainMetrics.get(m - 1));
-				vts.variance(testMetrics.get(m - 1));
-			}
-			List<BigDecimal> vtrs = vtr.valuesFmt(decimals);
-			List<BigDecimal> vtss = vts.valuesFmt(decimals);
-
-			p.print(Strings.leftPad(m, padIndex));
-			p.print(Strings.repeat(" ", sepIndex));
-			for (int i = 0; i < vtrs.size(); i++) {
-				Number v = vtrs.get(i);
-				if (i > 0) {
-					p.print(Strings.repeat(" ", sepItem));
-				}
-				p.print(Strings.leftPad(v, padTitle));
-			}
-			p.print(Strings.repeat(" ", sepBlock));
-			for (int i = 0; i < vtss.size(); i++) {
-				Number v = vtss.get(i);
-				if (i > 0) {
-					p.print(Strings.repeat(" ", sepItem));
-				}
-				p.print(Strings.leftPad(v, padTitle));
-			}
-			p.println();
-		}
-
-		p.close();
-		return s.toString();
-	}
-
-	/**
-	 * @return The list of titles.
-	 */
-	public static List<String> titles() {
-		List<String> titles = new ArrayList<>();
-		titles.add("Error");
-		titles.add("Err Var");
-		titles.add("Err Std");
-		titles.add("Perform");
-		titles.add("Perf Var");
-		return titles;
 	}
 
 	/** Label. */
@@ -493,26 +502,9 @@ public class Metrics implements Comparable<Metrics> {
 	}
 
 	/**
-	 * @param decimals Decimals to format values.
-	 * @return The list of values.
-	 */
-	public List<BigDecimal> valuesFmt(int decimals) {
-		List<BigDecimal> values = new ArrayList<>();
-
-		values.add(Numbers.getBigDecimal(errAvg, decimals));
-		values.add(Numbers.getBigDecimal(errVar, decimals));
-		values.add(Numbers.getBigDecimal(errStd, decimals));
-
-		values.add(Numbers.getBigDecimal(perf, decimals));
-		values.add(Numbers.getBigDecimal(perfVar, decimals));
-
-		return values;
-	}
-
-	/**
 	 * @return The array of raw values.
 	 */
-	public double[] valuesRaw() {
+	private double[] valuesRaw() {
 		return new double[] {
 			errAvg, errVar, errStd, perf, perfVar
 		};

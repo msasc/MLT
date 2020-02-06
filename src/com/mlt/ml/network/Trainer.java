@@ -350,12 +350,18 @@ public class Trainer extends Task {
 				boolean update = checkUpdate(i + 1, size);
 				if (update) {
 					update(getMessage(epoch, i + 1, size), workDone, totalWork);
-
+					
+					double percent = (double) ((i + 1) * 100) / (double) size;
+					
 					StringBuilder msg = new StringBuilder();
 					msg.append("Calculating ");
 					msg.append(i + 1);
 					msg.append(" of ");
 					msg.append(size);
+					msg.append(" (");
+					msg.append(Numbers.getBigDecimal(percent, percentageDecimals));
+					msg.append("%)");
+
 					updateStatusProgress(STATUS_PROCESSING, PROGRESS_PROCESSING, msg, i + 1, size);
 				}
 

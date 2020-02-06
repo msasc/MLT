@@ -1029,12 +1029,10 @@ public abstract class Task implements Runnable, Callable<Void> {
 		if (isPooled()) {
 			return;
 		}
-		if (checkUpdate(workDone, totalWork)) {
-			updateProgress(workDone, totalWork);
-			updateMessage(message);
-			updateProgressMessage();
-			updateTimeMessage();
-		}
+		updateProgress(workDone, totalWork);
+		updateMessage(message);
+		updateProgressMessage();
+		updateTimeMessage();
 	}
 
 	/**

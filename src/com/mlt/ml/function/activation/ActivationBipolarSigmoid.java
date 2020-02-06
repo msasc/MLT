@@ -22,6 +22,9 @@ import com.mlt.ml.function.Activation;
  * @author Miquel Sas
  */
 public class ActivationBipolarSigmoid implements Activation {
+	
+	/** Steepness. */
+	private double sigma = 1.0;
 
 	/**
 	 * Constructor.
@@ -44,8 +47,10 @@ public class ActivationBipolarSigmoid implements Activation {
 	@Override
 	public double[] activations(double[] triggers) {
 		double[] outputs = new double[triggers.length];
+		double exp = 0;
 		for (int i = 0; i < triggers.length; i++) {
-			outputs[i] = (2 / (1 + Math.exp(-triggers[i]))) - 1;
+			exp = Math.exp(-(sigma*triggers[i]));
+			outputs[i] = (1 - exp) / (1 + exp);
 		}
 		return outputs;
 	}
@@ -56,8 +61,11 @@ public class ActivationBipolarSigmoid implements Activation {
 	@Override
 	public double[] derivatives(double[] outputs) {
 		double[] derivatives = new double[outputs.length];
+		double out = 0;
+		double sig = sigma / 2;
 		for (int i = 0; i < outputs.length; i++) {
-			derivatives[i] = (1 - (outputs[i] * outputs[i])) / 2;
+			out = outputs[i];
+			derivatives[i] = sig * (1 + out) * (1 - out);
 		}
 		return derivatives;
 	}

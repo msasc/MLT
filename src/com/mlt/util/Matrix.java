@@ -202,4 +202,23 @@ public class Matrix {
 	public static int rows(double[][] matrix) {
 		return matrix.length;
 	}
+
+	/**
+	 * Returns the argument matrix transposed.
+	 * 
+	 * @param matrix The matrix to transpose.
+	 * @return The transposed matrix.
+	 */
+	public static double[][] transpose(double[][] matrix) {
+		int rows = Matrix.rows(matrix);
+		int columns = Matrix.cols(matrix);
+		double[][] transposed = new double[columns][rows];
+		for (int row = 0; row < rows; row++) {
+			for (int column = 0; column < columns; column++) {
+				transposed[column][row] = matrix[row][column];
+			}
+		}
+		return transposed;
+	}
+
 }

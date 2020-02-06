@@ -58,8 +58,8 @@ import com.mlt.ml.data.ListPatternSource;
 import com.mlt.ml.data.Pattern;
 import com.mlt.ml.data.PatternSource;
 import com.mlt.ml.function.Activation;
-import com.mlt.ml.function.activation.ActivationSigmoid;
 import com.mlt.ml.function.activation.ActivationSoftMax;
+import com.mlt.ml.function.activation.ActivationTANH;
 import com.mlt.ml.network.Builder;
 import com.mlt.ml.network.Network;
 import com.mlt.ml.network.Trainer;
@@ -838,11 +838,7 @@ public class Statistics {
 			} else {
 				inputSize = sizes[i - 1];
 			}
-			if (i == sizes.length - 1) {
-				activation = new ActivationSoftMax();
-			} else {
-				activation = new ActivationSigmoid();
-			}
+			activation = new ActivationTANH();
 			outputSize = sizes[i];
 			network.addBranch(Builder.branchPerceptron(inputSize, outputSize, activation));
 		}
@@ -1399,7 +1395,7 @@ public class Statistics {
 	 */
 	private Trainer getTrainer() throws Exception {
 
-		Network network = getNetwork(128, 16);
+		Network network = getNetwork(768, 256, 64);
 
 		Trainer trainer = new Trainer();
 		trainer.setProgressModulus(10);
@@ -1408,8 +1404,8 @@ public class Statistics {
 		trainer.setPatternSourceTest(getPatternSource(true, false));
 
 		trainer.setShuffle(true);
-		trainer.setScore(true);
-		trainer.setEpochs(200);
+		trainer.setScore(false);
+		trainer.setEpochs(20);
 		trainer.setGenerateReport(true, network.getName());
 
 		trainer.setFilePath("res/network/");

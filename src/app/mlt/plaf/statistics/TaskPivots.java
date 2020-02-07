@@ -32,7 +32,7 @@ import app.mlt.plaf.DB;
  *
  * @author Miquel Sas
  */
-public class TaskAveragesPivots extends TaskAverages {
+public class TaskPivots extends TaskAverages {
 
 	/** Origin persistor. */
 	private Persistor persistor;
@@ -48,7 +48,7 @@ public class TaskAveragesPivots extends TaskAverages {
 	 * 
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesPivots(Statistics stats) {
+	public TaskPivots(Statistics stats) {
 		super(stats);
 		setId("averages-zigzag");
 		setTitle(stats.getLabel() + " - Calculate zig-zag pivots");

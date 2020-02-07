@@ -45,7 +45,7 @@ import app.mlt.plaf.DB;
  *
  * @author Miquel Sas
  */
-public class TaskAveragesRaw extends TaskAverages {
+public class TaskRaw extends TaskAverages {
 
 	private Persistor persistorTicker;
 	private Persistor persistorSrc;
@@ -54,7 +54,7 @@ public class TaskAveragesRaw extends TaskAverages {
 	/**
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesRaw(Statistics stats) {
+	public TaskRaw(Statistics stats) {
 		super(stats);
 		setId("averages-raw");
 		setTitle(stats.getLabel() + " - Calculate raw values");
@@ -89,7 +89,12 @@ public class TaskAveragesRaw extends TaskAverages {
 
 		/* If start from begining, rebuild all tables. */
 		if (option.equals("START")) {
-			List<Table> tables = stats.getTables();
+			List<Table> tables = new ArrayList<>();
+			tables.add(stats.getTableRaw());
+			tables.add(stats.getTableRawDeltas());
+			tables.add(stats.getTableRanges());
+			tables.add(stats.getTableNormalized());
+			tables.add(stats.getTableNormalizedDeltas());
 			for (Table table : tables) {
 				if (DB.ddl().existsTable(table)) {
 					DB.ddl().dropTable(table);
@@ -189,7 +194,7 @@ public class TaskAveragesRaw extends TaskAverages {
 				String nameDelta = stats.getNameAvgDelta(avg);
 				rcRaw.setValue(nameDelta, delta);
 			}
-			
+
 			/* Avg-Slopes. */
 			for (int i = 0; i < averages.size(); i++) {
 				Average avg = averages.get(i);
@@ -399,35 +404,32 @@ public class TaskAveragesRaw extends TaskAverages {
 	}
 
 	/**
-	 * @param srcBuffer Raw buffer.
-	 * @param nameAvg  Average name.
-	 * @param period    Slow period.
+	 * @param buffer  Raw buffer.
+	 * @param nameAvg Average name.
+	 * @param period  Slow period.
 	 * @return Variance between the close price and the average.
 	 */
-	private double getVariance(
-		FixedSizeQueue<Record> srcBuffer,
-		String nameAvg,
-		int period) {
-		return getVariance(srcBuffer, DB.FIELD_BAR_CLOSE, nameAvg, period);
+	private double getVariance(FixedSizeQueue<Record> buffer, String nameAvg, int period) {
+		return getVariance(buffer, DB.FIELD_BAR_CLOSE, nameAvg, period);
 	}
 
 	/**
-	 * @param srcBuffer Raw buffer.
-	 * @param nameFast  Fast average name.
-	 * @param nameSlow  Medium average name.
-	 * @param period    Slow period.
+	 * @param buffer   Raw buffer.
+	 * @param nameFast Fast average name.
+	 * @param nameSlow Medium average name.
+	 * @param period   Slow period.
 	 * @return Variance between the fast and slow averages.
 	 */
 	private double getVariance(
-		FixedSizeQueue<Record> srcBuffer,
+		FixedSizeQueue<Record> buffer,
 		String nameFast,
 		String nameSlow,
 		int period) {
 
-		period = Math.min(srcBuffer.size(), period);
+		period = Math.min(buffer.size(), period);
 		double variance = 0;
 		for (int i = 0; i < period; i++) {
-			Record rc = srcBuffer.getLast(i);
+			Record rc = buffer.getLast(i);
 			double fast = rc.getValue(nameFast).getDouble();
 			double slow = rc.getValue(nameSlow).getDouble();
 			double var = Numbers.delta(fast - slow, slow);

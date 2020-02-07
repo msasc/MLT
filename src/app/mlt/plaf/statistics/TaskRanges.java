@@ -20,12 +20,15 @@ package app.mlt.plaf.statistics;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mlt.db.Condition;
+import com.mlt.db.Criteria;
 import com.mlt.db.Field;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
+import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 
@@ -37,19 +40,19 @@ import app.mlt.plaf.MLT;
  *
  * @author Miquel Sas
  */
-public class TaskAveragesRanges extends TaskAverages {
-	
+public class TaskRanges extends TaskAverages {
+
 	private Persistor persistorRanges;
 	private List<Field> fields;
 
 	/**
 	 * @param stats
 	 */
-	public TaskAveragesRanges(Statistics stats) {
+	public TaskRanges(Statistics stats) {
 		super(stats);
 		setId("averages-ranges");
 		setTitle(stats.getLabel() + " - Calculate min-max raw values");
-		
+
 		persistorRanges = stats.getTableRanges().getPersistor();
 		fields = new ArrayList<>(stats.getFieldListPatterns(true));
 	}
@@ -59,7 +62,7 @@ public class TaskAveragesRanges extends TaskAverages {
 	 */
 	@Override
 	protected long calculateTotalWork() throws Throwable {
-		setTotalWork(fields.size());
+		setTotalWork(fields.size() * (stats.getDeltasHistory() + 1));
 		return getTotalWork();
 	}
 
@@ -68,14 +71,14 @@ public class TaskAveragesRanges extends TaskAverages {
 	 */
 	@Override
 	protected void compute() throws Throwable {
-		
+
 		/* Always calculate from scratch drop/create the table. */
 		Table tableRanges = stats.getTableRanges();
 		if (DB.ddl().existsTable(tableRanges)) {
 			DB.ddl().dropTable(tableRanges);
 		}
 		DB.ddl().buildTable(tableRanges);
-		
+
 		/* Count. */
 		calculateTotalWork();
 
@@ -89,24 +92,27 @@ public class TaskAveragesRanges extends TaskAverages {
 				setCancelled();
 				break;
 			}
-			
+
 			/* Retrieve values. */
 			String name = field.getAlias();
-			workDone += 1;
-			update(name, workDone, totalWork);
-			Record rcView = getDataRaw(name);
-			double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
-			double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
-			double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
-			double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
-			
-			Record rcRanges = persistorRanges.getDefaultRecord();
-			rcRanges.setValue(DB.FIELD_RANGE_NAME, name);
-			rcRanges.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
-			rcRanges.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
-			rcRanges.setValue(DB.FIELD_RANGE_AVERAGE, average);
-			rcRanges.setValue(DB.FIELD_RANGE_STDDEV, std_dev);
-			persistorRanges.insert(rcRanges);
+			for (int i = 0; i <= stats.getDeltasHistory(); i++) {
+				workDone += 1;
+				update(name, workDone, totalWork);
+				Record rcView = getDataRaw(name, i);
+				double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
+				double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
+				double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
+				double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
+
+				Record rcRanges = persistorRanges.getDefaultRecord();
+				rcRanges.setValue(DB.FIELD_RANGE_NAME, name);
+				rcRanges.setValue(DB.FIELD_DELTA, i);
+				rcRanges.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
+				rcRanges.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
+				rcRanges.setValue(DB.FIELD_RANGE_AVERAGE, average);
+				rcRanges.setValue(DB.FIELD_RANGE_STDDEV, std_dev);
+				persistorRanges.insert(rcRanges);
+			}
 		}
 	}
 
@@ -114,10 +120,14 @@ public class TaskAveragesRanges extends TaskAverages {
 	 * @param name The field name.
 	 * @return The record of the view to calculate the range for a field.
 	 */
-	private Record getDataRaw(String name) throws PersistorException {
+	private Record getDataRaw(String name, int delta) throws PersistorException {
 
 		View view = new View();
-		view.setMasterTable(stats.getTableRaw());
+		if (delta == 0) {
+			view.setMasterTable(stats.getTableRaw());
+		} else {
+			view.setMasterTable(stats.getTableRawDeltas());
+		}
 
 		Field minimum = DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum");
 		minimum.setFunction("min(" + name + ")");
@@ -136,8 +146,16 @@ public class TaskAveragesRanges extends TaskAverages {
 		view.addField(std_dev);
 
 		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+		
+		Criteria criteria = null;
+		if (delta > 0) {
+			criteria = new Criteria();
+			Field fDELTA = stats.getTableRawDeltas().getField(DB.FIELD_DELTA);
+			Value vDELTA = new Value(delta);
+			criteria.add(Condition.fieldEQ(fDELTA, vDELTA));
+		}
 
-		RecordSet rs = view.getPersistor().select(null);
+		RecordSet rs = view.getPersistor().select(criteria);
 		Record rc = rs.get(0);
 		return rc;
 	}

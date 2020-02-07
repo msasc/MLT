@@ -30,6 +30,7 @@ import org.xml.sax.SAXException;
 
 import com.mlt.db.Field;
 import com.mlt.db.FieldGroup;
+import com.mlt.db.Index;
 import com.mlt.db.ListPersistor;
 import com.mlt.db.Persistor;
 import com.mlt.db.Record;
@@ -58,7 +59,7 @@ import com.mlt.ml.data.ListPatternSource;
 import com.mlt.ml.data.Pattern;
 import com.mlt.ml.data.PatternSource;
 import com.mlt.ml.function.Activation;
-import com.mlt.ml.function.activation.ActivationSoftMax;
+import com.mlt.ml.function.activation.ActivationSigmoid;
 import com.mlt.ml.function.activation.ActivationTANH;
 import com.mlt.ml.network.Builder;
 import com.mlt.ml.network.Network;
@@ -99,6 +100,7 @@ public class Statistics {
 
 				TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
 				model.addColumn(DB.FIELD_RANGE_NAME);
+				model.addColumn(DB.FIELD_DELTA);
 				model.addColumn(DB.FIELD_RANGE_MINIMUM);
 				model.addColumn(DB.FIELD_RANGE_MAXIMUM);
 				model.addColumn(DB.FIELD_RANGE_AVERAGE);
@@ -106,7 +108,7 @@ public class Statistics {
 
 				model.setRecordSet(persistor.select(null));
 
-				TableRecord table = new TableRecord(true);
+				TableRecord table = new TableRecord(false);
 				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
 				table.setModel(model);
 				table.setSelectedRow(0);
@@ -160,7 +162,7 @@ public class Statistics {
 
 				model.setRecordSet(new DataRecordSet(persistor));
 
-				TableRecord table = new TableRecord(true);
+				TableRecord table = new TableRecord(false);
 				table.setSelectionMode(SelectionMode.SINGLE_ROW_SELECTION);
 				table.setModel(model);
 				table.setSelectedRow(0);
@@ -193,12 +195,13 @@ public class Statistics {
 		public void run() {
 			TaskFrame frame = new TaskFrame();
 			frame.setTitle(getLabel() + " - Calculate raw/normalized/pivots/labels");
-			frame.addTasks(new TaskAveragesRaw(Statistics.this));
-			frame.addTasks(new TaskAveragesRanges(Statistics.this));
-			frame.addTasks(new TaskAveragesNormalize(Statistics.this));
-			frame.addTasks(new TaskAveragesPivots(Statistics.this));
-			frame.addTasks(new TaskAveragesLabelsCalc(Statistics.this));
-			frame.addTasks(new TaskAveragesPatterns(Statistics.this, true, 0.8));
+			frame.addTasks(new TaskRaw(Statistics.this));
+			frame.addTasks(new TaskRawDeltas(Statistics.this));
+			frame.addTasks(new TaskRanges(Statistics.this));
+			frame.addTasks(new TaskNormalize(Statistics.this));
+			frame.addTasks(new TaskPivots(Statistics.this));
+			frame.addTasks(new TaskLabelsCalc(Statistics.this));
+			frame.addTasks(new TaskPatterns(Statistics.this, true, 0.8));
 			frame.show();
 		}
 
@@ -252,6 +255,8 @@ public class Statistics {
 
 		/** List of averages. */
 		List<Average> averages = new ArrayList<>();
+		/** Deltas history. */
+		int deltasHistory;
 		/** Bars ahead. */
 		int barsAhead;
 		/** Percentage for calculated labels. */
@@ -271,6 +276,7 @@ public class Statistics {
 			set("statistics/averages/average", "period", "integer");
 			set("statistics/averages/average", "delta", "double");
 			set("statistics/averages/average", "smooths", "integer-array", false);
+			set("statistics/deltas-history", "size", "integer");
 			set("statistics/zig-zag", "bars-ahead", "integer");
 			set("statistics/label-calc", "percent", "double");
 			set("statistics/label-edit", "percent", "double");
@@ -312,6 +318,13 @@ public class Statistics {
 					averages.add(new Average(period, delta, smooths));
 				}
 
+				/* Validate and retrieve deltas history parameter. */
+				if (path.equals("statistics/deltas-history")) {
+					deltasHistory = getInteger(attributes, "size");
+					if (deltasHistory <= 0) {
+						throw new Exception("Invalid deltas-history " + deltasHistory);
+					}
+				}
 				/* Validate and retrieve bars ahead parameter. */
 				if (path.equals("statistics/zig-zag")) {
 					barsAhead = getInteger(attributes, "bars-ahead");
@@ -391,6 +404,8 @@ public class Statistics {
 
 	/** List of averages. */
 	private List<Average> averages;
+	/** Deltas history. */
+	private int deltasHistory;
 	/** Bars ahead to calculate pivots. */
 	private int barsAhead;
 	/** Percentage to set calculated labels. */
@@ -438,7 +453,7 @@ public class Statistics {
 	}
 
 	/**
-	 * @return Tars ahead to calculate pivots.
+	 * @return Bars ahead to calculate pivots.
 	 */
 	int getBarsAhead() {
 		return barsAhead;
@@ -464,6 +479,13 @@ public class Statistics {
 	int getCandleSize(int index) {
 		int size = (index == 0 ? 1 : averages.get(index - 1).getPeriod());
 		return size;
+	}
+
+	/**
+	 * @return Deltas history.
+	 */
+	int getDeltasHistory() {
+		return deltasHistory;
 	}
 
 	/**
@@ -844,7 +866,7 @@ public class Statistics {
 		}
 		inputSize = sizes[sizes.length - 1];
 		outputSize = getPatternOutputSize();
-		activation = new ActivationSoftMax();
+		activation = new ActivationSigmoid();
 		network.addBranch(Builder.branchPerceptron(inputSize, outputSize, activation));
 
 		return network;
@@ -1208,6 +1230,43 @@ public class Statistics {
 	}
 
 	/**
+	 * @return The table with normalized values.
+	 */
+	Table getTableNormalizedDeltas() {
+
+		Table table = (Table) properties.getObject("table_nrm_deltas");
+		if (table != null) {
+			return table;
+		}
+
+		table = new Table();
+
+		Instrument instrument = getInstrument();
+		Period period = getPeriod();
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix("nrmd"));
+
+		table.setSchema(DB.schema_server());
+		table.setName(name);
+
+		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
+		table.addField(DB.field_timeFmt(period, DB.FIELD_BAR_TIME, "Time fmt"));
+		table.addField(DB.field_integer(DB.FIELD_DELTA, "Delta"));
+
+		List<Field> fields = getFieldListPatterns(true);
+		for (Field field : fields) {
+			table.addField(field);
+		}
+
+		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
+		table.getField(DB.FIELD_DELTA).setPrimaryKey(true);
+		
+		View view = table.getComplexView(table.getPrimaryKey());
+		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+		properties.setObject("table_nrm", table);
+		return table;
+	}
+
+	/**
 	 * @return The ranges table to calculate value means and standard deviations.
 	 */
 	Table getTableRanges() {
@@ -1227,6 +1286,8 @@ public class Statistics {
 		table.setName(name);
 
 		table.addField(DB.field_string(DB.FIELD_RANGE_NAME, 60, "Name"));
+		table.addField(DB.field_integer(DB.FIELD_DELTA, "Delta"));
+		
 		table.addField(DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum"));
 		table.addField(DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum"));
 		table.addField(DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average"));
@@ -1239,6 +1300,7 @@ public class Statistics {
 
 		/* Primary key. */
 		table.getField(DB.FIELD_RANGE_NAME).setPrimaryKey(true);
+		table.getField(DB.FIELD_DELTA).setPrimaryKey(true);
 
 		View view = table.getComplexView(table.getPrimaryKey());
 		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
@@ -1282,14 +1344,57 @@ public class Statistics {
 	}
 
 	/**
+	 * @return The table with raw values.
+	 */
+	Table getTableRawDeltas() {
+
+		Table table = (Table) properties.getObject("table_raw_deltas");
+		if (table != null) {
+			return table;
+		}
+
+		table = new Table();
+
+		Instrument instrument = getInstrument();
+		Period period = getPeriod();
+		String name = DB.name_ticker(instrument, period, getTableNameSuffix("rawd"));
+
+		table.setSchema(DB.schema_server());
+		table.setName(name);
+
+		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
+		table.addField(DB.field_timeFmt(period, DB.FIELD_BAR_TIME, "Time fmt"));
+		table.addField(DB.field_integer(DB.FIELD_DELTA, "Delta"));
+
+		List<Field> fields = getFieldListPatterns(true);
+		for (Field field : fields) {
+			table.addField(field);
+		}
+
+		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
+		table.getField(DB.FIELD_DELTA).setPrimaryKey(true);
+		
+		Index index = new Index();
+		index.setUnique(false);
+		index.add(table.getField(DB.FIELD_DELTA));
+		
+		View view = table.getComplexView(table.getPrimaryKey());
+		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
+		properties.setObject("table_raw_deltas", table);
+		return table;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	public List<Table> getTables() {
 		List<Table> tables = new ArrayList<>();
 		tables.add(getTableSources());
 		tables.add(getTableRaw());
+		tables.add(getTableRawDeltas());
 		tables.add(getTableRanges());
 		tables.add(getTableNormalized());
+		tables.add(getTableNormalizedDeltas());
 		return tables;
 	}
 
@@ -1395,17 +1500,17 @@ public class Statistics {
 	 */
 	private Trainer getTrainer() throws Exception {
 
-		Network network = getNetwork(768, 256, 64);
+		Network network = getNetwork(512, 128, 32);
 
 		Trainer trainer = new Trainer();
-		trainer.setProgressModulus(10);
+		trainer.setProgressModulus(100);
 		trainer.setNetwork(network);
 		trainer.setPatternSourceTraining(getPatternSource(true, true));
 		trainer.setPatternSourceTest(getPatternSource(true, false));
 
 		trainer.setShuffle(true);
 		trainer.setScore(false);
-		trainer.setEpochs(20);
+		trainer.setEpochs(100);
 		trainer.setGenerateReport(true, network.getName());
 
 		trainer.setFilePath("res/network/");
@@ -1546,6 +1651,7 @@ public class Statistics {
 		parser.parse(new ByteArrayInputStream(parameters.getBytes()), handler);
 		averages.clear();
 		averages.addAll(handler.averages);
+		deltasHistory = handler.deltasHistory;
 		barsAhead = handler.barsAhead;
 		percentCalc = handler.percentCalc;
 		percentEdit = handler.percentEdit;

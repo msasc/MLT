@@ -32,7 +32,7 @@ import app.mlt.plaf.DB;
  *
  * @author Miquel Sas
  */
-public class TaskAveragesLabelsCalc extends TaskAverages {
+public class TaskLabelsCalc extends TaskAverages {
 
 	/** Origin persistor. */
 	private Persistor persistor;
@@ -44,7 +44,7 @@ public class TaskAveragesLabelsCalc extends TaskAverages {
 	 * 
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesLabelsCalc(Statistics stats) {
+	public TaskLabelsCalc(Statistics stats) {
 		super(stats);
 		setId("averages-label-calc");
 		setTitle(stats.getLabel() + " - Labels on calculated pivots");

@@ -43,7 +43,7 @@ import app.mlt.plaf.DB;
  *
  * @author Miquel Sas
  */
-public class TaskAveragesNormalize extends TaskAverages {
+public class TaskNormalize extends TaskAverages {
 
 	private Persistor persistorRaw;
 	private Persistor persistorNrm;
@@ -51,7 +51,7 @@ public class TaskAveragesNormalize extends TaskAverages {
 	/**
 	 * @param stats The statistics averages.
 	 */
-	public TaskAveragesNormalize(Statistics stats) {
+	public TaskNormalize(Statistics stats) {
 		super(stats);
 		setId("averages-nrm");
 		setTitle(stats.getLabel() + " - Normalize raw values");

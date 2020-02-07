@@ -42,7 +42,7 @@ import app.mlt.plaf.DB;
  *
  * @author Miquel Sas
  */
-public class TaskAveragesPatterns extends TaskAverages {
+public class TaskPatterns extends TaskAverages {
 
 	private boolean calculated;
 	private double trainingFactor;
@@ -54,7 +54,7 @@ public class TaskAveragesPatterns extends TaskAverages {
 	 * @param calculated     Calculated label flag.
 	 * @param trainingFactor Training factor.
 	 */
-	public TaskAveragesPatterns(
+	public TaskPatterns(
 		Statistics stats,
 		boolean calculated,
 		double trainingFactor) {

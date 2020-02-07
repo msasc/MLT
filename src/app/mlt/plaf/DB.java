@@ -124,6 +124,8 @@ public class DB {
 		FIELD_CANDLE_REL_RANGE,
 		FIELD_CANDLE_REL_BODY
 	};
+	
+	public static final String FIELD_DELTA = "delta";
 
 	public static final String FIELD_INSTRUMENT_ID = "instr_id";
 	public static final String FIELD_INSTRUMENT_DESC = "instr_desc";
@@ -134,7 +136,7 @@ public class DB {
 	public static final String FIELD_INSTRUMENT_TICK_VALUE = "instr_tickv";
 	public static final String FIELD_INSTRUMENT_TICK_SCALE = "instr_ticks";
 	public static final String FIELD_INSTRUMENT_VOLUME_SCALE = "instr_vols";
-
+	
 	public static final String FIELD_PERIOD_ID = "period_id";
 	public static final String FIELD_PERIOD_NAME = "period_name";
 	public static final String FIELD_PERIOD_SIZE = "period_size";

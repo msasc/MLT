@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import com.mlt.desktop.Alert;
 import com.mlt.desktop.Option;

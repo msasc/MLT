@@ -15,12 +15,11 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf;
+package app.mlt.plaf_old;
 
 import java.awt.Font;
 import java.text.SimpleDateFormat;
 import java.util.Currency;
-import java.util.function.Function;
 
 import com.mlt.db.Calculator;
 import com.mlt.db.Condition;
@@ -47,9 +46,8 @@ import com.mlt.desktop.layout.Dimension;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
-import com.mlt.util.Strings;
 
-import app.mlt.plaf.statistics.Statistics;
+import app.mlt.plaf_old.statistics.Statistics;
 
 /**
  * Statically centralizes access to lookups, persistors, records, recordsets,
@@ -92,8 +90,8 @@ public class DB {
 			String params = record.getValue(FIELD_STATISTICS_PARAMS).toString();
 			if (!params.isEmpty()) {
 				try {
-					Statistics stats = Statistics.get(record);
-					return new Value(stats.getParameters().getDescription());
+					Statistics stats = Statistics.getStatistics(record);
+					return new Value(stats.getParametersDescription());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -139,9 +137,6 @@ public class DB {
 	public static final String FIELD_INSTRUMENT_TICK_SCALE = "instr_ticks";
 	public static final String FIELD_INSTRUMENT_VOLUME_SCALE = "instr_vols";
 	
-	public static final String FIELD_PATTERN_NAME = "pattern_name";
-	public static final String FIELD_PATTERN_ACTIVE = "pattern_active";
-	
 	public static final String FIELD_PERIOD_ID = "period_id";
 	public static final String FIELD_PERIOD_NAME = "period_name";
 	public static final String FIELD_PERIOD_SIZE = "period_size";
@@ -173,17 +168,6 @@ public class DB {
 
 	public static final String FIELD_TABLE_NAME = "table_name";
 
-	public static final String GROUP_AVG = "group-avg";
-	public static final String GROUP_AVG_DELTAS = "group-avg-deltas";
-	public static final String GROUP_AVG_SLOPES = "group-avg-slopes";
-	public static final String GROUP_AVG_SPREADS = "group-avg-spreads";
-	public static final String GROUP_DATA = "group-data";
-	public static final String GROUP_LABELS = "group-labels";
-	public static final String GROUP_VAR = "group-var";
-	public static final String GROUP_VAR_SLOPES = "group-var-slopes";
-	public static final String GROUP_VAR_SPREADS = "group-var-spreads";
-	public static final Function<Integer, String> GROUP_CANDLES = i -> "candles-" + i;
-	
 	public static final String TABLE_INSTRUMENTS = "instruments";
 	public static final String TABLE_PERIODS = "periods";
 	public static final String TABLE_SERVERS = "servers";
@@ -403,23 +387,6 @@ public class DB {
 		String pattern = period.getTimeFmtPattern();
 		field.setStringConverter(new TimeFmtConverter(new SimpleDateFormat(pattern)));
 		return field;
-	}
-
-	/**
-	 * @param name The field name with underline separators.
-	 * @return A suitable header.
-	 */
-	public static String header(String name) {
-		String[] tokens = Strings.parse(name, "_");
-		tokens[0] = Strings.capitalize(tokens[0]);
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < tokens.length; i++) {
-			if (i > 0) {
-				b.append(" ");
-			}
-			b.append(tokens[i]);
-		}
-		return b.toString();
 	}
 
 	/**

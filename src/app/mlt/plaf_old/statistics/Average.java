@@ -15,17 +15,14 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.mlt.db.Record;
 import com.mlt.util.BlockQueue;
 import com.mlt.util.Numbers;
-
-import app.mlt.plaf.DB;
 
 /**
  * Defines a smoothed average used as a movement descriptor.
@@ -39,7 +36,7 @@ public class Average implements Comparable<Average> {
 	 * @param delta  Weight delta (increase).
 	 * @param buffer Buffer of double values.
 	 */
-	private static double getAverage(int period, BlockQueue<Double> buffer) {
+	private static double getAverage(int period, double delta, BlockQueue<Double> buffer) {
 		int startIndex = (buffer.size() < period ? 0 : buffer.size() - period);
 		int endIndex = buffer.size() - 1;
 		double average = 0;
@@ -47,27 +44,6 @@ public class Average implements Comparable<Average> {
 		double totalWeight = 0;
 		for (int index = startIndex; index <= endIndex; index++) {
 			average += (buffer.getFirst(index) * weight);
-			totalWeight += weight;
-			weight += 1;
-		}
-		average /= totalWeight;
-		return average;
-	}
-
-	/**
-	 * @param period Average period.
-	 * @param delta  Weight delta (increase).
-	 * @param buffer Buffer of source records.
-	 */
-	private static double getAverage(int period, double delta, BlockQueue<Record> buffer) {
-		int startIndex = (buffer.size() < period ? 0 : buffer.size() - period);
-		int endIndex = buffer.size() - 1;
-		double average = 0;
-		double weight = 1;
-		double totalWeight = 0;
-		for (int index = startIndex; index <= endIndex; index++) {
-			double value = buffer.getFirst(index).getValue(DB.FIELD_BAR_CLOSE).getDouble();
-			average += (value * weight);
 			totalWeight += weight;
 			weight += delta;
 		}
@@ -141,13 +117,13 @@ public class Average implements Comparable<Average> {
 	 * @param buffer The fixed size list buffer of values to average.
 	 * @return The average value, conveniently smoothed.
 	 */
-	public double getAverage(BlockQueue<Record> buffer) {
+	public double getAverage(BlockQueue<Double> buffer) {
 		double average = getAverage(period, delta, buffer);
 		for (int i = 0; i < smooths.length; i++) {
 			int smooth = smooths[i];
 			BlockQueue<Double> smoothBuffer = getSmoothBuffers().get(i);
 			smoothBuffer.add(average);
-			average = getAverage(smooth, smoothBuffer);
+			average = getAverage(smooth, 1.0, smoothBuffer);
 		}
 		return average;
 	}

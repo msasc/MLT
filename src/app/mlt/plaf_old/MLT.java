@@ -14,10 +14,9 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package app.mlt.plaf;
+package app.mlt.plaf_old;
 
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.time.LocalDate;
@@ -56,9 +55,10 @@ import com.mlt.util.Properties;
 import com.mlt.util.Resources;
 import com.mlt.util.Strings;
 
-import app.mlt.plaf.action.ActionInstruments;
-import app.mlt.plaf.action.ActionStatistics;
-import app.mlt.plaf.action.ActionTickers;
+import app.mlt.plaf_old.action.ActionExitApplication;
+import app.mlt.plaf_old.action.ActionInstruments;
+import app.mlt.plaf_old.action.ActionStatistics;
+import app.mlt.plaf_old.action.ActionTickers;
 
 /**
  * MLT platform entry.
@@ -74,20 +74,6 @@ public class MLT {
 		System.setProperty("log4j.configurationFile", "res/log4j/Logger.xml");
 		Resources.addBaseTextResource("res/strings/StringsLibrary.xml");
 		Locale.setDefault(Locale.US);
-	}
-	
-	/**
-	 * Exit application.
-	 */
-	static class ActionExitApplication implements ActionListener {
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			Option option = Alert.confirm("Confirm exit", "<html><h2>Exit MLT-Platform?</h2></html>");
-			if (Option.isCancel(option)) {
-				return;
-			}
-			System.exit(0);
-		}
 	}
 
 	/**

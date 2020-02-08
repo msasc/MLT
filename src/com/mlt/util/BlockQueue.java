@@ -28,7 +28,7 @@ import java.util.Iterator;
  *
  * @author Miquel Sas
  */
-public class FixedSizeQueue<E> extends AbstractList<E> implements Queue<E> {
+public class BlockQueue<E> extends AbstractList<E> implements Queue<E> {
 
 	/**
 	 * Internal ascending iterator.
@@ -61,7 +61,7 @@ public class FixedSizeQueue<E> extends AbstractList<E> implements Queue<E> {
 			if (!nextCalled) {
 				throw new IllegalStateException("Next has not been called");
 			}
-			FixedSizeQueue.this.remove(index);
+			BlockQueue.this.remove(index);
 			index--;
 			nextCalled = false;
 		}
@@ -99,7 +99,7 @@ public class FixedSizeQueue<E> extends AbstractList<E> implements Queue<E> {
 			if (!nextCalled) {
 				throw new IllegalStateException("Next has not been called");
 			}
-			FixedSizeQueue.this.remove(index);
+			BlockQueue.this.remove(index);
 			index--;
 			nextCalled = false;
 		}
@@ -120,7 +120,7 @@ public class FixedSizeQueue<E> extends AbstractList<E> implements Queue<E> {
 	 * 
 	 * @param maximumSize Maximum size.
 	 */
-	public FixedSizeQueue(int maximumSize) {
+	public BlockQueue(int maximumSize) {
 		this(maximumSize, 4);
 	}
 
@@ -130,7 +130,7 @@ public class FixedSizeQueue<E> extends AbstractList<E> implements Queue<E> {
 	 * @param maximumSize Maximum size.
 	 * @param sizeFactor  Size factor, GE than 2.
 	 */
-	public FixedSizeQueue(int maximumSize, int sizeFactor) {
+	public BlockQueue(int maximumSize, int sizeFactor) {
 		super();
 		if (maximumSize <= 0) {
 			throw new IllegalArgumentException("Invalid maximum size");

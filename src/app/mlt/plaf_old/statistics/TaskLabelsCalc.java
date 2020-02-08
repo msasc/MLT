@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import com.mlt.db.Criteria;
 import com.mlt.db.ListPersistor;
@@ -25,7 +25,7 @@ import com.mlt.db.Value;
 import com.mlt.db.ValueMap;
 import com.mlt.task.Concurrent;
 
-import app.mlt.plaf.DB;
+import app.mlt.plaf_old.DB;
 
 /**
  * Setup labels on calculated pivots.

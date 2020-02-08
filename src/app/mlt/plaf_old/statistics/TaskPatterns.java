@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -35,7 +35,7 @@ import com.mlt.db.Value;
 import com.mlt.ml.data.Pattern;
 import com.mlt.util.IO;
 
-import app.mlt.plaf.DB;
+import app.mlt.plaf_old.DB;
 
 /**
  * Generates files with patterns for training, test, and all the data.

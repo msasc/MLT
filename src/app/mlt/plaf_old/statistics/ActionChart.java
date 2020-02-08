@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import java.awt.Color;
 import java.awt.RenderingHints;
@@ -63,8 +63,8 @@ import com.mlt.util.Lists;
 import com.mlt.util.Logs;
 import com.mlt.util.Numbers;
 
-import app.mlt.plaf.DB;
-import app.mlt.plaf.MLT;
+import app.mlt.plaf_old.DB;
+import app.mlt.plaf_old.MLT;
 
 /**
  * Charts on statistics.
@@ -579,11 +579,11 @@ public class ActionChart extends ActionRun {
 
 		/* Rest of fields. */
 		List<Field> fields = new ArrayList<>();
-		fields.addAll(stats.getFieldListAverages());
+		fields.addAll(stats.getFieldListAvg());
 		fields.addAll(stats.getFieldListAvgDeltas());
 		fields.addAll(stats.getFieldListAvgSlopes());
 		fields.addAll(stats.getFieldListAvgSpreads());
-		fields.addAll(stats.getFieldListVariances());
+		fields.addAll(stats.getFieldListVar());
 		fields.addAll(stats.getFieldListVarSlopes());
 		fields.addAll(stats.getFieldListVarSpreads());
 		for (Field field : fields) {
@@ -729,7 +729,7 @@ public class ActionChart extends ActionRun {
 			List<Average> averages = stats.getAverages();
 			for (int i = 0; i < averages.size(); i++) {
 				String name = averages.get(i).toString();
-				Field field = stats.getFieldListAverages().get(i);
+				Field field = stats.getFieldListAvg().get(i);
 				String label = field.getLabel();
 				int index = converter.getIndex(field.getAlias());
 				info.addOutput(name, name, index, label);
@@ -760,7 +760,7 @@ public class ActionChart extends ActionRun {
 				getPlotDataFieldList(
 					"key-avgs",
 					"Averages",
-					stats.getFieldListAverages());
+					stats.getFieldListAvg());
 			plotData.getProperties().setString("GROUP", "avgs");
 			plotDataList.add(plotData);
 		}
@@ -804,7 +804,7 @@ public class ActionChart extends ActionRun {
 				getPlotDataFieldList(
 					"key-vars",
 					"Average variances",
-					stats.getFieldListVariances());
+					stats.getFieldListVar());
 			plotData.getProperties().setString("GROUP", "vars");
 			plotDataList.add(plotData);
 		}

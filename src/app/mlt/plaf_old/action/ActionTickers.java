@@ -16,7 +16,7 @@
  * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
-package app.mlt.plaf.action;
+package app.mlt.plaf_old.action;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -51,12 +51,12 @@ import com.mlt.desktop.layout.Insets;
 import com.mlt.desktop.layout.Orientation;
 import com.mlt.mkt.chart.ChartContainer;
 import com.mlt.mkt.chart.plotter.data.HistogramPlotter;
+import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.DataListSource;
 import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.mkt.data.IndicatorDataList;
 import com.mlt.mkt.data.IndicatorUtils;
 import com.mlt.mkt.data.Instrument;
-import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Period;
 import com.mlt.mkt.data.PlotData;
 import com.mlt.mkt.data.PlotType;
@@ -67,8 +67,8 @@ import com.mlt.util.Colors;
 import com.mlt.util.HTML;
 import com.mlt.util.Logs;
 
-import app.mlt.plaf.DB;
-import app.mlt.plaf.MLT;
+import app.mlt.plaf_old.DB;
+import app.mlt.plaf_old.MLT;
 
 /**
  * Packs the tickers actions, starting with the main tickers browse.

@@ -2,12 +2,12 @@ package test;
 
 import java.util.Iterator;
 
-import com.mlt.util.FixedSizeQueue;
+import com.mlt.util.BlockQueue;
 
 public class TestFSQueue {
 
 	public static void main(String[] args) {
-		FixedSizeQueue<Integer> q = new FixedSizeQueue<>(10);
+		BlockQueue<Integer> q = new BlockQueue<>(10);
 		for (int i = 0; i < 30; i++) {
 			q.addLast(i);
 			System.out.println(q.toString());

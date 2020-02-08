@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,7 +36,7 @@ import com.mlt.desktop.Option;
 import com.mlt.ml.function.Normalizer;
 import com.mlt.task.Concurrent;
 
-import app.mlt.plaf.DB;
+import app.mlt.plaf_old.DB;
 
 /**
  * Normalize values.

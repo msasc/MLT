@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,10 +35,10 @@ import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.OHLC;
 import com.mlt.mkt.data.Period;
 import com.mlt.task.Concurrent;
-import com.mlt.util.FixedSizeQueue;
+import com.mlt.util.BlockQueue;
 import com.mlt.util.Numbers;
 
-import app.mlt.plaf.DB;
+import app.mlt.plaf_old.DB;
 
 /**
  * Gearate source and raw values.
@@ -91,10 +91,8 @@ public class TaskRaw extends TaskAverages {
 		if (option.equals("START")) {
 			List<Table> tables = new ArrayList<>();
 			tables.add(stats.getTableRaw());
-			tables.add(stats.getTableRawDeltas());
 			tables.add(stats.getTableRanges());
 			tables.add(stats.getTableNormalized());
-			tables.add(stats.getTableNormalizedDeltas());
 			for (Table table : tables) {
 				if (DB.ddl().existsTable(table)) {
 					DB.ddl().dropTable(table);
@@ -121,13 +119,13 @@ public class TaskRaw extends TaskAverages {
 		int maxPeriod = averages.get(averages.size() - 1).getPeriod();
 
 		/* Buffer of close value to calculate averages. */
-		FixedSizeQueue<Double> avgBuffer = new FixedSizeQueue<>(maxPeriod);
+		BlockQueue<Double> avgBuffer = new BlockQueue<>(maxPeriod);
 		/* Record buffers. */
-		FixedSizeQueue<Record> tickBuffer = new FixedSizeQueue<>(maxPeriod);
-		FixedSizeQueue<Record> srcBuffer = new FixedSizeQueue<>(maxPeriod);
-		FixedSizeQueue<Record> rawBuffer = new FixedSizeQueue<>(maxPeriod);
+		BlockQueue<Record> tickBuffer = new BlockQueue<>(maxPeriod);
+		BlockQueue<Record> srcBuffer = new BlockQueue<>(maxPeriod);
+		BlockQueue<Record> rawBuffer = new BlockQueue<>(maxPeriod);
 
-		List<Field> varFields = stats.getFieldListVariances();
+		List<Field> varFields = stats.getFieldListVar();
 
 		/* Iterate ticker. */
 		Record rcSrcPrev = null;
@@ -334,7 +332,7 @@ public class TaskRaw extends TaskAverages {
 	 * @param buffer Buffer of records.
 	 * @return The list of candles between periods.
 	 */
-	private List<Data> getCandles(int size, int count, FixedSizeQueue<Record> buffer) {
+	private List<Data> getCandles(int size, int count, BlockQueue<Record> buffer) {
 		List<Data> candles = new ArrayList<>();
 		for (int i = 0; i < count; i++) {
 			int start = buffer.size() - (size * (i + 1));
@@ -409,7 +407,7 @@ public class TaskRaw extends TaskAverages {
 	 * @param period  Slow period.
 	 * @return Variance between the close price and the average.
 	 */
-	private double getVariance(FixedSizeQueue<Record> buffer, String nameAvg, int period) {
+	private double getVariance(BlockQueue<Record> buffer, String nameAvg, int period) {
 		return getVariance(buffer, DB.FIELD_BAR_CLOSE, nameAvg, period);
 	}
 
@@ -421,7 +419,7 @@ public class TaskRaw extends TaskAverages {
 	 * @return Variance between the fast and slow averages.
 	 */
 	private double getVariance(
-		FixedSizeQueue<Record> buffer,
+		BlockQueue<Record> buffer,
 		String nameFast,
 		String nameSlow,
 		int period) {

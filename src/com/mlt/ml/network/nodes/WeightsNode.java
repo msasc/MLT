@@ -26,7 +26,7 @@ import com.mlt.ml.function.RangeFunction;
 import com.mlt.ml.network.Edge;
 import com.mlt.ml.network.Gaussian;
 import com.mlt.ml.network.Node;
-import com.mlt.util.FixedSizeQueue;
+import com.mlt.util.BlockQueue;
 import com.mlt.util.Matrix;
 import com.mlt.util.Queue;
 
@@ -586,8 +586,8 @@ public class WeightsNode extends Node {
 		}
 
 		/* Clear queues and initialize output queue with the last gradients. */
-		g.inputQueue = new FixedSizeQueue<>(queueSize);
-		g.outputQueue = new FixedSizeQueue<>(queueSize);
+		g.inputQueue = new BlockQueue<>(queueSize);
+		g.outputQueue = new BlockQueue<>(queueSize);
 		g.outputQueue.addLast(new double[inputSize][outputSize]);
 	}
 

@@ -15,25 +15,22 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package app.mlt.plaf.statistics;
+package app.mlt.plaf_old.statistics;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mlt.db.Condition;
-import com.mlt.db.Criteria;
 import com.mlt.db.Field;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
 import com.mlt.db.RecordSet;
 import com.mlt.db.Table;
-import com.mlt.db.Value;
 import com.mlt.db.View;
 import com.mlt.db.rdbms.DBPersistor;
 
-import app.mlt.plaf.DB;
-import app.mlt.plaf.MLT;
+import app.mlt.plaf_old.DB;
+import app.mlt.plaf_old.MLT;
 
 /**
  * Calculate min-max-avg-stddev values for all fields that must be normalized.
@@ -95,24 +92,21 @@ public class TaskRanges extends TaskAverages {
 
 			/* Retrieve values. */
 			String name = field.getAlias();
-			for (int i = 0; i <= stats.getDeltasHistory(); i++) {
-				workDone += 1;
-				update(name, workDone, totalWork);
-				Record rcView = getDataRaw(name, i);
-				double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
-				double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
-				double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
-				double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
+			workDone += 1;
+			update(name, workDone, totalWork);
+			Record rcView = getDataRaw(name);
+			double minimum = rcView.getValue(DB.FIELD_RANGE_MINIMUM).getDouble();
+			double maximum = rcView.getValue(DB.FIELD_RANGE_MAXIMUM).getDouble();
+			double average = rcView.getValue(DB.FIELD_RANGE_AVERAGE).getDouble();
+			double std_dev = rcView.getValue(DB.FIELD_RANGE_STDDEV).getDouble();
 
-				Record rcRanges = persistorRanges.getDefaultRecord();
-				rcRanges.setValue(DB.FIELD_RANGE_NAME, name);
-				rcRanges.setValue(DB.FIELD_DELTA, i);
-				rcRanges.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
-				rcRanges.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
-				rcRanges.setValue(DB.FIELD_RANGE_AVERAGE, average);
-				rcRanges.setValue(DB.FIELD_RANGE_STDDEV, std_dev);
-				persistorRanges.insert(rcRanges);
-			}
+			Record rcRanges = persistorRanges.getDefaultRecord();
+			rcRanges.setValue(DB.FIELD_RANGE_NAME, name);
+			rcRanges.setValue(DB.FIELD_RANGE_MINIMUM, minimum);
+			rcRanges.setValue(DB.FIELD_RANGE_MAXIMUM, maximum);
+			rcRanges.setValue(DB.FIELD_RANGE_AVERAGE, average);
+			rcRanges.setValue(DB.FIELD_RANGE_STDDEV, std_dev);
+			persistorRanges.insert(rcRanges);
 		}
 	}
 
@@ -120,14 +114,10 @@ public class TaskRanges extends TaskAverages {
 	 * @param name The field name.
 	 * @return The record of the view to calculate the range for a field.
 	 */
-	private Record getDataRaw(String name, int delta) throws PersistorException {
+	private Record getDataRaw(String name) throws PersistorException {
 
 		View view = new View();
-		if (delta == 0) {
-			view.setMasterTable(stats.getTableRaw());
-		} else {
-			view.setMasterTable(stats.getTableRawDeltas());
-		}
+		view.setMasterTable(stats.getTableRaw());
 
 		Field minimum = DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum");
 		minimum.setFunction("min(" + name + ")");
@@ -147,15 +137,7 @@ public class TaskRanges extends TaskAverages {
 
 		view.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 		
-		Criteria criteria = null;
-		if (delta > 0) {
-			criteria = new Criteria();
-			Field fDELTA = stats.getTableRawDeltas().getField(DB.FIELD_DELTA);
-			Value vDELTA = new Value(delta);
-			criteria.add(Condition.fieldEQ(fDELTA, vDELTA));
-		}
-
-		RecordSet rs = view.getPersistor().select(criteria);
+		RecordSet rs = view.getPersistor().select(null);
 		Record rc = rs.get(0);
 		return rc;
 	}

@@ -47,7 +47,6 @@ import com.mlt.desktop.layout.Dimension;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.mkt.data.Instrument;
 import com.mlt.mkt.data.Period;
-import com.mlt.util.Strings;
 
 import app.mlt.plaf.statistics.Statistics;
 
@@ -127,8 +126,6 @@ public class DB {
 		FIELD_CANDLE_REL_BODY
 	};
 	
-	public static final String FIELD_DELTA = "delta";
-
 	public static final String FIELD_INSTRUMENT_ID = "instr_id";
 	public static final String FIELD_INSTRUMENT_DESC = "instr_desc";
 	public static final String FIELD_INSTRUMENT_PIP_VALUE = "instr_pipv";
@@ -139,8 +136,9 @@ public class DB {
 	public static final String FIELD_INSTRUMENT_TICK_SCALE = "instr_ticks";
 	public static final String FIELD_INSTRUMENT_VOLUME_SCALE = "instr_vols";
 	
-	public static final String FIELD_PATTERN_NAME = "pattern_name";
-	public static final String FIELD_PATTERN_ACTIVE = "pattern_active";
+	public static final String FIELD_PATTERN_DELTA = "delta";
+	public static final String FIELD_PATTERN_NAME = "name";
+	public static final String FIELD_PATTERN_ACTIVE = "active";
 	
 	public static final String FIELD_PERIOD_ID = "period_id";
 	public static final String FIELD_PERIOD_NAME = "period_name";
@@ -403,23 +401,6 @@ public class DB {
 		String pattern = period.getTimeFmtPattern();
 		field.setStringConverter(new TimeFmtConverter(new SimpleDateFormat(pattern)));
 		return field;
-	}
-
-	/**
-	 * @param name The field name with underline separators.
-	 * @return A suitable header.
-	 */
-	public static String header(String name) {
-		String[] tokens = Strings.parse(name, "_");
-		tokens[0] = Strings.capitalize(tokens[0]);
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < tokens.length; i++) {
-			if (i > 0) {
-				b.append(" ");
-			}
-			b.append(tokens[i]);
-		}
-		return b.toString();
 	}
 
 	/**

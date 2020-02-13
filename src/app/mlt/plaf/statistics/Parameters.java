@@ -35,8 +35,8 @@ public class Parameters extends ParserHandler {
 
 	/** List of averages. */
 	private List<Average> averages = new ArrayList<>();
-	/** Deltas history. */
-	private int deltasHistory;
+	/** List of deltas. */
+	private List<Integer> deltas = new ArrayList<>();
 	/** Bars ahead. */
 	private int barsAhead;
 	/** Percentage for calculated labels. */
@@ -54,7 +54,8 @@ public class Parameters extends ParserHandler {
 		set("statistics/averages/average", "period", "integer");
 		set("statistics/averages/average", "delta", "double");
 		set("statistics/averages/average", "smooths", "integer-array", false);
-		set("statistics/deltas-history", "size", "integer");
+		set("statistics/deltas");
+		set("statistics/deltas/delta", "size", "integer");
 		set("statistics/zig-zag", "bars-ahead", "integer");
 		set("statistics/label-calc", "percent", "double");
 	}
@@ -96,11 +97,12 @@ public class Parameters extends ParserHandler {
 			}
 
 			/* Validate and retrieve deltas history parameter. */
-			if (path.equals("statistics/deltas-history")) {
-				deltasHistory = getInteger(attributes, "size");
-				if (deltasHistory <= 0) {
-					throw new Exception("Invalid deltas-history " + deltasHistory);
+			if (path.equals("statistics/deltas/delta")) {
+				int size = getInteger(attributes, "size");
+				if (size <= 0) {
+					throw new Exception("Invalid delta size " + size);
 				}
+				deltas.add(size);
 			}
 			/* Validate and retrieve bars ahead parameter. */
 			if (path.equals("statistics/zig-zag")) {
@@ -138,10 +140,10 @@ public class Parameters extends ParserHandler {
 	}
 
 	/**
-	 * @return The history size for deltas of raw (and normalized) values.
+	 * @return The list of deltas.
 	 */
-	public int getDeltasHistory() {
-		return deltasHistory;
+	public List<Integer> getDeltas() {
+		return deltas;
 	}
 
 	/**

@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.desktop.control.table;
@@ -53,7 +58,8 @@ class TableCmpUI extends BasicTableUI {
 			int maxColumn = tableCmp.getColumnCount() - 1;
 
 			/*
-			 * Ctrl, toggle and extend (shift) key. The toggle (ctrl) key is used for ctrl-page-up/down and
+			 * Ctrl, toggle and extend (shift) key. The toggle (ctrl) key is used for
+			 * ctrl-page-up/down and
 			 * ctrl-home/end, thus it can not be used as toggle.
 			 */
 			boolean ctrl = Mask.check(e, Mask.CTRL);
@@ -111,8 +117,7 @@ class TableCmpUI extends BasicTableUI {
 			TableCmp tableCmp = (TableCmp) table;
 
 			/* Check ignore the event. */
-			if (!tableCmp.isEnabled() || e.isConsumed())
-				return;
+			if (!tableCmp.isEnabled() || e.isConsumed()) return;
 
 			/* Get the row and column at the mouse point. */
 			Point p = e.getPoint();
@@ -125,10 +130,13 @@ class TableCmpUI extends BasicTableUI {
 			}
 
 			/*
-			 * For a dragged mouse, use the control or shift mask as extend. Toggle is always false and extend always
+			 * For a dragged mouse, use the control or shift mask as extend. Toggle is
+			 * always false and extend always
 			 * true.
 			 */
-			tableCmp.moveSelection(row, column, false, true);
+			if (Mask.check(e, Mask.BUTTON1)) {
+				tableCmp.moveSelection(row, column, false, true);
+			}
 			e.consume();
 		}
 
@@ -142,8 +150,7 @@ class TableCmpUI extends BasicTableUI {
 			TableCmp tableCmp = (TableCmp) table;
 
 			/* Check ignore the event. */
-			if (!tableCmp.isEnabled() || e.isConsumed())
-				return;
+			if (!tableCmp.isEnabled() || e.isConsumed()) return;
 
 			/* If editing and can't stop editing, re-composite focus. */
 			if (tableCmp.isEditing() && !tableCmp.getCellEditor().stopCellEditing()) {
@@ -166,7 +173,8 @@ class TableCmpUI extends BasicTableUI {
 			CellEditor editor = tableCmp.getCellEditor();
 			if (editor == null || editor.shouldSelectCell(e)) {
 				/*
-				 * For mouse pressed, only take into account toggle, extends should always be false.
+				 * For mouse pressed, only take into account toggle, extends should always be
+				 * false.
 				 */
 				if (Mask.check(e, Mask.BUTTON1)) {
 					boolean toggle = Mask.check(e, Mask.CTRL);

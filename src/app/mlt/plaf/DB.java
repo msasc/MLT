@@ -145,7 +145,6 @@ public class DB {
 	public static final String FIELD_PERIOD_SIZE = "period_size";
 	public static final String FIELD_PERIOD_UNIT_INDEX = "period_unit_index";
 
-	public static final String FIELD_RANGE_NAME = "name";
 	public static final String FIELD_RANGE_MINIMUM = "minimum";
 	public static final String FIELD_RANGE_MAXIMUM = "maximum";
 	public static final String FIELD_RANGE_AVERAGE = "average";

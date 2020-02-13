@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.mlt.db.Field;
 import com.mlt.db.FieldGroup;
+import com.mlt.db.Index;
 import com.mlt.db.Record;
 import com.mlt.db.Table;
 import com.mlt.db.View;
@@ -92,7 +93,7 @@ public class Statistics {
 		this.parameters = new Parameters();
 		this.properties = new Properties();
 	}
-	
+
 	/**
 	 * @return A list with all related tables.
 	 */
@@ -144,18 +145,14 @@ public class Statistics {
 	 */
 	public List<Field> getFieldListAvg() {
 		List<Field> fields = new ArrayList<>();
-		List<Average> averages = getParameters().getAverages();
-		for (int i = 0; i < averages.size(); i++) {
-			Average avg = averages.get(i);
-
+		List<Average> avgs = getParameters().getAverages();
+		for (int i = 0; i < avgs.size(); i++) {
+			Average avg = avgs.get(i);
 			String nameAvg = getName("avg", pad(avg));
-			String header = header(nameAvg);
-
-			Field field = DB.field_double(nameAvg, header);
+			String headerAvg = header(nameAvg);
+			Field field = DB.field_double(nameAvg, headerAvg);
 			field.setStringConverter(new NumberScaleConverter(8));
 			field.setFieldGroup(getFieldGroup(DB.GROUP_AVG));
-			Calculator calculator = new Calculator.Avg(nameAvg, avg);
-			field.getProperties().setObject("CALCULATOR", calculator);
 			fields.add(field);
 		}
 		return fields;
@@ -166,20 +163,14 @@ public class Statistics {
 	 */
 	public List<Field> getFieldListAvgDeltas() {
 		List<Field> fields = new ArrayList<>();
-		List<Average> averages = getParameters().getAverages();
-		for (int i = 0; i < averages.size(); i++) {
-			Average avg = averages.get(i);
-
+		List<Average> avgs = getParameters().getAverages();
+		for (int i = 0; i < avgs.size(); i++) {
+			Average avg = avgs.get(i);
 			String nameDelta = getName("avg", "delta", pad(avg));
 			String header = header(nameDelta);
-
 			Field field = DB.field_double(nameDelta, header);
 			field.setStringConverter(new NumberScaleConverter(8));
 			field.setFieldGroup(getFieldGroup(DB.GROUP_AVG_DELTAS));
-
-			Calculator calculator = new Calculator.AvgDelta(nameDelta, avg);
-			field.getProperties().setObject("CALCULATOR", calculator);
-
 			fields.add(field);
 		}
 		return fields;
@@ -190,21 +181,14 @@ public class Statistics {
 	 */
 	public List<Field> getFieldListAvgSlopes() {
 		List<Field> fields = new ArrayList<>();
-		List<Average> averages = getParameters().getAverages();
-		for (int i = 0; i < averages.size(); i++) {
-			Average avg = averages.get(i);
-
-			String nameAvg = getName("avg", pad(avg));
+		List<Average> avgs = getParameters().getAverages();
+		for (int i = 0; i < avgs.size(); i++) {
+			Average avg = avgs.get(i);
 			String nameSlope = getName("avg", "slope", pad(avg));
 			String headerSlope = header(nameSlope);
-
 			Field field = DB.field_double(nameSlope, headerSlope);
 			field.setStringConverter(new NumberScaleConverter(8));
 			field.setFieldGroup(getFieldGroup(DB.GROUP_AVG_SLOPES));
-
-			Calculator calculator = new Calculator.AvgSlope(nameAvg, nameSlope);
-			field.getProperties().setObject("CALCULATOR", calculator);
-
 			fields.add(field);
 		}
 		return fields;
@@ -215,21 +199,18 @@ public class Statistics {
 	 */
 	public List<Field> getFieldListAvgSpreads() {
 		List<Field> fields = new ArrayList<>();
-		List<Average> averages = getParameters().getAverages();
+		List<Average> avgs = getParameters().getAverages();
 		String nameSpread, headerSpread;
 		Field field;
-		for (int i = 0; i < averages.size(); i++) {
-			Average fast = averages.get(i);
-			for (int j = i + 1; j < averages.size(); j++) {
-				Average slow = averages.get(j);
-
+		for (int i = 0; i < avgs.size(); i++) {
+			Average fast = avgs.get(i);
+			for (int j = i + 1; j < avgs.size(); j++) {
+				Average slow = avgs.get(j);
 				nameSpread = getName("avg", "spread", pad(fast), pad(slow));
 				headerSpread = header(nameSpread);
-
 				field = DB.field_double(nameSpread, headerSpread);
 				field.setStringConverter(new NumberScaleConverter(8));
 				field.setFieldGroup(getFieldGroup(DB.GROUP_AVG_SPREADS));
-
 				fields.add(field);
 			}
 		}
@@ -301,23 +282,20 @@ public class Statistics {
 	 */
 	public List<Field> getFieldListVar() {
 		List<Field> fields = new ArrayList<>();
-		List<Average> averages = getParameters().getAverages();
+		List<Average> avgs = getParameters().getAverages();
 		String nameVar, headerVar;
 		Field field;
-		for (int i = 0; i < averages.size() - 1; i++) {
-			Average fast = averages.get(i);
-			for (int j = i + 1; j < averages.size(); j++) {
-				Average slow = averages.get(j);
-				for (int k = j; k < averages.size(); k++) {
-					int period = averages.get(k).getPeriod();
-
+		for (int i = 0; i < avgs.size() - 1; i++) {
+			Average fast = avgs.get(i);
+			for (int j = i + 1; j < avgs.size(); j++) {
+				Average slow = avgs.get(j);
+				for (int k = j; k < avgs.size(); k++) {
+					int period = avgs.get(k).getPeriod();
 					nameVar = getName("var", pad(fast), pad(slow), pad(period));
 					headerVar = header(nameVar);
-
 					field = DB.field_double(nameVar, headerVar);
 					field.setStringConverter(new NumberScaleConverter(8));
 					field.setFieldGroup(getFieldGroup(DB.GROUP_VAR));
-
 					fields.add(field);
 				}
 			}
@@ -330,23 +308,20 @@ public class Statistics {
 	 */
 	public List<Field> getFieldListVarSlopes() {
 		List<Field> fields = new ArrayList<>();
-		List<Average> averages = getParameters().getAverages();
-		String nameVar, headerVar;
+		List<Average> avgs = getParameters().getAverages();
+		String nameSlope, headerSlope;
 		Field field;
-		for (int i = 0; i < averages.size() - 1; i++) {
-			Average fast = averages.get(i);
-			for (int j = i + 1; j < averages.size(); j++) {
-				Average slow = averages.get(j);
-				for (int k = j; k < averages.size(); k++) {
-					int period = averages.get(k).getPeriod();
-
-					nameVar = getName("var", "slope", pad(fast), pad(slow), pad(period));
-					headerVar = header(nameVar);
-
-					field = DB.field_double(nameVar, headerVar);
+		for (int i = 0; i < avgs.size() - 1; i++) {
+			Average fast = avgs.get(i);
+			for (int j = i + 1; j < avgs.size(); j++) {
+				Average slow = avgs.get(j);
+				for (int k = j; k < avgs.size(); k++) {
+					int period = avgs.get(k).getPeriod();
+					nameSlope = getName("var", "slope", pad(fast), pad(slow), pad(period));
+					headerSlope = header(nameSlope);
+					field = DB.field_double(nameSlope, headerSlope);
 					field.setStringConverter(new NumberScaleConverter(8));
 					field.setFieldGroup(getFieldGroup(DB.GROUP_VAR_SLOPES));
-
 					fields.add(field);
 				}
 			}
@@ -360,17 +335,16 @@ public class Statistics {
 	public List<Field> getFieldListVarSpreads() {
 		List<Field> varFields = getFieldListVar();
 		List<Field> fields = new ArrayList<>();
-		String nameVar, headerVar;
+		String nameSpread, headerSpread;
 		Field field;
 		for (int i = 0; i < varFields.size() - 1; i++) {
-
-			String nameFast = Strings.remove(varFields.get(i).getName(), "var_");
-			String nameSlow = Strings.remove(varFields.get(i + 1).getName(), "var_");
-
-			nameVar = getName("var", "spread", nameFast, nameSlow);
-			headerVar = header(nameVar);
-
-			field = DB.field_double(nameVar, headerVar);
+			String nameFast = varFields.get(i).getName();
+			String nameSlow = varFields.get(i + 1).getName();
+			String nameFastSuffix = Strings.remove(nameFast, "var_");
+			String nameSlowSuffix = Strings.remove(nameSlow, "var_");
+			nameSpread = getName("var", "spread", nameFastSuffix, nameSlowSuffix);
+			headerSpread = header(nameSpread);
+			field = DB.field_double(nameSpread, headerSpread);
 			field.setStringConverter(new NumberScaleConverter(8));
 			field.setFieldGroup(getFieldGroup(DB.GROUP_VAR_SPREADS));
 			fields.add(field);
@@ -393,7 +367,7 @@ public class Statistics {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * @return A suitable label.
 	 */
 	public String getLabel() {
 		StringBuilder b = new StringBuilder();
@@ -404,8 +378,12 @@ public class Statistics {
 		b.append(getId());
 		return b.toString();
 	}
-
-	private String getName(String... tokens) {
+	
+	/**
+	 * @param tokens List of tokens.
+	 * @return The name made of tokens with the underline separator.
+	 */
+	public String getName(String... tokens) {
 		if (tokens == null || tokens.length == 0) {
 			throw new IllegalArgumentException();
 		}
@@ -445,34 +423,34 @@ public class Statistics {
 	 * @return The table with normalized values.
 	 */
 	public Table getTableNrm() {
-	
+
 		Table table = (Table) properties.getObject("table_nrm");
 		if (table != null) {
 			return table;
 		}
-	
+
 		table = new Table();
-	
+
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
 		String name = DB.name_ticker(instrument, period, getName(getId(), "nrm"));
-	
+
 		table.setSchema(DB.schema_server());
 		table.setName(name);
-	
+
 		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
 		table.addField(DB.field_integer(DB.FIELD_PATTERN_DELTA, "Delta"));
-	
+
 		table.addField(DB.field_timeFmt(period, DB.FIELD_BAR_TIME, "Time fmt"));
-	
+
 		List<Field> fields = getFieldListPatterns(true);
 		for (Field field : fields) {
 			table.addField(field);
 		}
-	
+
 		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
 		table.getField(DB.FIELD_PATTERN_DELTA).setPrimaryKey(true);
-	
+
 		View view = table.getComplexView(table.getPrimaryKey());
 		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 		properties.setObject("table_nrm", table);
@@ -517,34 +495,40 @@ public class Statistics {
 	 * @return The table with raw values.
 	 */
 	public Table getTableRaw() {
-	
+
 		Table table = (Table) properties.getObject("table_raw");
 		if (table != null) {
 			return table;
 		}
-	
+
 		table = new Table();
-	
+
 		Instrument instrument = getInstrument();
 		Period period = getPeriod();
 		String name = DB.name_ticker(instrument, period, getName(getId(), "raw"));
-	
+
 		table.setSchema(DB.schema_server());
 		table.setName(name);
-	
+
 		table.addField(DB.field_long(DB.FIELD_BAR_TIME, "Time"));
 		table.addField(DB.field_integer(DB.FIELD_PATTERN_DELTA, "Delta"));
-	
+
 		table.addField(DB.field_timeFmt(period, DB.FIELD_BAR_TIME, "Time fmt"));
-	
+
 		List<Field> fields = getFieldListPatterns(true);
 		for (Field field : fields) {
 			table.addField(field);
 		}
-	
+
 		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
 		table.getField(DB.FIELD_PATTERN_DELTA).setPrimaryKey(true);
-	
+		
+		Index index = new Index();
+		index.setUnique(true);
+		index.add(table.getField(DB.FIELD_PATTERN_DELTA));
+		index.add(table.getField(DB.FIELD_BAR_TIME));
+		table.addIndex(index);
+
 		View view = table.getComplexView(table.getPrimaryKey());
 		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 		properties.setObject("table_raw", table);
@@ -570,7 +554,7 @@ public class Statistics {
 		table.setSchema(DB.schema_server());
 		table.setName(name);
 
-		table.addField(DB.field_string(DB.FIELD_RANGE_NAME, 60, "Name"));
+		table.addField(DB.field_string(DB.FIELD_PATTERN_NAME, 60, "Name"));
 		table.addField(DB.field_integer(DB.FIELD_PATTERN_DELTA, "Delta"));
 
 		table.addField(DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum"));
@@ -584,7 +568,7 @@ public class Statistics {
 		table.getField(DB.FIELD_RANGE_STDDEV).setDisplayDecimals(8);
 
 		/* Primary key. */
-		table.getField(DB.FIELD_RANGE_NAME).setPrimaryKey(true);
+		table.getField(DB.FIELD_PATTERN_NAME).setPrimaryKey(true);
 		table.getField(DB.FIELD_PATTERN_DELTA).setPrimaryKey(true);
 
 		View view = table.getComplexView(table.getPrimaryKey());

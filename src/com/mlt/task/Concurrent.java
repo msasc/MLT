@@ -67,9 +67,6 @@ public class Concurrent {
 	 * End by pooling not pooled tasks and shutting down the pool.
 	 */
 	public void end() {
-		if (pool == null) {
-			return;
-		}
 		if (!concurrents.isEmpty()) {
 			getPool().invokeAll(concurrents);
 			concurrents.clear();

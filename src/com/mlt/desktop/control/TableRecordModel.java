@@ -230,6 +230,13 @@ public class TableRecordModel extends TableModel {
 		/* Return the value. */
 		return recordSet.get(rowIndex).getValue(getFieldIndex(columnIndex));
 	}
+	
+	/**
+	 * Refresh with the current record set.
+	 */
+	public void refresh() {
+		setRecordSet(getRecordSet());
+	}
 
 	/**
 	 * Remove all columns.

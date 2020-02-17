@@ -451,6 +451,12 @@ public class Statistics {
 		table.getField(DB.FIELD_BAR_TIME).setPrimaryKey(true);
 		table.getField(DB.FIELD_PATTERN_DELTA).setPrimaryKey(true);
 
+		Index index = new Index();
+		index.setUnique(true);
+		index.add(table.getField(DB.FIELD_PATTERN_DELTA));
+		index.add(table.getField(DB.FIELD_BAR_TIME));
+		table.addIndex(index);
+
 		View view = table.getComplexView(table.getPrimaryKey());
 		table.setPersistor(new DBPersistor(MLT.getDBEngine(), view));
 		properties.setObject("table_nrm", table);

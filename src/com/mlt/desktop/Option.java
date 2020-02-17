@@ -229,10 +229,16 @@ public class Option {
 			return Integer.compare(s1, s2);
 		}
 	}
-
-	/*
-	 * Pre-defined options and helpers.
+	
+	/**
+	 * Options provider.
 	 */
+	public static interface Provider {
+		/**
+		 * @return A list of options.
+		 */
+		List<Option> getOptions();
+	}
 
 	/** Pre-defined key ACCEPT. */
 	public static final String KEY_ACCEPT = "ACCEPT";

@@ -19,7 +19,6 @@
 package com.mlt.desktop.control;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.mlt.desktop.Option;
@@ -189,7 +188,7 @@ public class OptionPane extends Pane implements PopupMenuProvider {
 	 * @return The options.
 	 */
 	public List<Option> getOptions() {
-		return Collections.unmodifiableList(options);
+		return new ArrayList<>(options);
 	}
 
 	/**

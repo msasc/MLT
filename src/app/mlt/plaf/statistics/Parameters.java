@@ -151,11 +151,19 @@ public class Parameters extends ParserHandler {
 	 */
 	public String getDescription() {
 		StringBuilder b = new StringBuilder();
+		b.append("Averages: ");
 		for (int i = 0; i < averages.size(); i++) {
 			if (i > 0) {
 				b.append(", ");
 			}
 			b.append(averages.get(i).toString());
+		}
+		b.append(", Deltas: ");
+		for (int i = 0; i < deltas.size(); i++) {
+			if (i > 0) {
+				b.append(", ");
+			}
+			b.append(deltas.get(i));
 		}
 		return b.toString();
 	}

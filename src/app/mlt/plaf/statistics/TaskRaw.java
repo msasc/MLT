@@ -337,6 +337,7 @@ public class TaskRaw extends TaskStatistics {
 			}
 		}
 		iter.close();
+		concurrent.end();
 	}
 
 	/**

@@ -29,10 +29,8 @@ import com.mlt.db.RecordSet;
 import com.mlt.desktop.Option;
 import com.mlt.desktop.Option.Group;
 import com.mlt.desktop.action.ActionRun;
-import com.mlt.desktop.control.Control;
 import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.OptionPane;
-import com.mlt.desktop.control.PopupMenu;
 import com.mlt.desktop.control.PopupMenuProvider;
 import com.mlt.desktop.control.TablePane;
 import com.mlt.desktop.control.TableRecord;
@@ -44,12 +42,15 @@ import com.mlt.desktop.layout.Constraints;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.desktop.layout.Orientation;
+import com.mlt.util.Lists;
 import com.mlt.util.Logs;
 import com.mlt.util.Properties;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
-import app.mlt.plaf.action.statistics.ActionBrowsePatterns;
+import app.mlt.plaf.action.statistics.ActionBrowsePtn;
+import app.mlt.plaf.action.statistics.ActionBrowseRaw;
+import app.mlt.plaf.action.statistics.ActionBrowseSrc;
 import app.mlt.plaf.action.statistics.ActionCalculate;
 import app.mlt.plaf.action.statistics.ActionCreate;
 import app.mlt.plaf.action.statistics.ActionDelete;
@@ -61,37 +62,6 @@ import app.mlt.plaf.statistics.Statistics;
  * @author Miquel Sas
  */
 public class ActionStatistics extends ActionRun {
-
-	/**
-	 * Popup menu provider.
-	 */
-	class MenuProvider implements PopupMenuProvider {
-		@Override
-		public PopupMenu getPopupMenu(Control control) {
-
-			/* Option pane options. */
-			OptionPane optionPane = (OptionPane) getProperties().getObject("OPTION-PANE");
-			PopupMenu popup = optionPane.getPopupMenu(control);
-
-			/* Options from selected statistics. */
-			List<Option> options = getOptionsStats();
-			Option.sort(options);
-			popup.addSeparator();
-			for (int i = 0; i < options.size(); i++) {
-				popup.add(options.get(i).getMenuItem());
-				if (i < options.size() - 1) {
-					Option.Group gprev = options.get(i).getOptionGroup();
-					Option.Group gnext = options.get(i + 1).getOptionGroup();
-					if (!gprev.equals(gnext)) {
-						popup.addSeparator();
-					}
-				}
-			}
-
-			return popup;
-		}
-
-	}
 
 	/**
 	 * Constructor.
@@ -138,9 +108,9 @@ public class ActionStatistics extends ActionRun {
 		List<Option> options = new ArrayList<>();
 
 		Option option;
-		Option.Group groupCalculate = new Option.Group("CALCULATE", 1);
-		Option.Group groupBrowse = new Option.Group("BROWSE", 2);
-		Option.Group groupChart = new Option.Group("CHART", 3);
+		Option.Group groupCalculate = new Option.Group("CALCULATE", 1001);
+		Option.Group groupBrowse = new Option.Group("BROWSE", 1002);
+		Option.Group groupChart = new Option.Group("CHART", 1003);
 
 		TableRecord tableStats = getRootTable();
 		Record rc = tableStats.getSelectedRecord();
@@ -161,11 +131,32 @@ public class ActionStatistics extends ActionRun {
 		option.setKey("BROWSE-PTN");
 		option.setText("Browse and activate patterns");
 		option.setToolTip("Browse and activate patterns");
-		option.setAction(new ActionBrowsePatterns(getProperties()));
+		option.setAction(new ActionBrowsePtn(getProperties()));
 		option.setOptionGroup(groupBrowse);
 		option.setSortIndex(1);
 		options.add(option);
 
+		option = new Option();
+		option.setKey("BROWSE-SRC");
+		option.setText("Browse sources");
+		option.setToolTip("Browse source averages, labels and pivots");
+		option.setAction(new ActionBrowseSrc(getProperties()));
+		option.setOptionGroup(groupBrowse);
+		option.setSortIndex(1);
+		options.add(option);
+
+		int deltas = getStatistics().getParameters().getDeltas().size();
+		for (int delta = 0; delta <= deltas; delta++) {
+			option = new Option();
+			option.setKey("BROWSE-RAW-" + delta);
+			option.setText("Browse raw delta " + delta);
+			option.setToolTip("Browse raw values, delta = " + delta);
+			option.setAction(new ActionBrowseRaw(getProperties(), delta));
+			option.setOptionGroup(groupBrowse);
+			option.setSortIndex(1);
+			options.add(option);
+		}
+		
 		return options;
 	}
 	
@@ -232,7 +223,8 @@ public class ActionStatistics extends ActionRun {
 			optionPane.add(getOptionsEdit());
 			getProperties().setObject("OPTION-PANE", optionPane);
 	
-			tableStats.setPopupMenuProvider(new MenuProvider());
+			Option.Provider op = () -> Lists.asList(getOptionsEdit(), getOptionsStats());
+			tableStats.setPopupMenuProvider(new PopupMenuProvider.Default(op));
 	
 			GridBagPane pane = new GridBagPane();
 			pane.add(

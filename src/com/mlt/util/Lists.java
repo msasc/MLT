@@ -106,6 +106,25 @@ public class Lists {
 	}
 
 	/**
+	 * Returns a list given the argument array.
+	 *
+	 * @param <T>   The type.
+	 * @param array The array.
+	 * @return The list.
+	 */
+	@SafeVarargs
+	public static <T> List<T> asList(List<T>... array) {
+		if (array == null) {
+			return new ArrayList<>();
+		}
+		List<T> list = new ArrayList<>();
+		for (List<T> e : array) {
+			list.addAll(e);
+		}
+		return list;
+	}
+
+	/**
 	 * Compare two byte arrays.
 	 *
 	 * @param a The first array.

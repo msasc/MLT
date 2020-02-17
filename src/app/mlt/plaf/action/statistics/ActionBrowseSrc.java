@@ -17,14 +17,9 @@
 
 package app.mlt.plaf.action.statistics;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.mlt.db.Persistor;
-import com.mlt.db.Record;
+import com.mlt.db.ListPersistor;
+import com.mlt.db.View;
 import com.mlt.desktop.Option;
-import com.mlt.desktop.Option.Group;
-import com.mlt.desktop.action.ActionRun;
 import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.OptionPane;
 import com.mlt.desktop.control.TablePane;
@@ -37,7 +32,7 @@ import com.mlt.desktop.layout.Constraints;
 import com.mlt.desktop.layout.Fill;
 import com.mlt.desktop.layout.Insets;
 import com.mlt.desktop.layout.Orientation;
-import com.mlt.task.Concurrent;
+import com.mlt.mkt.data.DataRecordSet;
 import com.mlt.util.Logs;
 import com.mlt.util.Properties;
 
@@ -47,71 +42,17 @@ import app.mlt.plaf.action.ActionStatistics;
 import app.mlt.plaf.statistics.Statistics;
 
 /**
- * Browse and activate/deactivate patterns.
+ * Browse sources (averages, pivots and labels)
  *
  * @author Miquel Sas
  */
-public class ActionBrowsePatterns extends ActionStatistics {
-
-	class ChangeActivation extends ActionRun {
-		boolean activate;
-
-		ChangeActivation(Properties properties, boolean activate) {
-			this.activate = activate;
-			getProperties().putAll(properties);
-		}
-
-		@Override
-		public void run() {
-			try {
-				TableRecord table = (TableRecord) getProperties().getObject("TABLE-PATTERNS");
-				List<Record> records = table.getSelectedRecords();
-				Persistor persistor = getStatistics().getTablePtn().getPersistor();
-				Concurrent concurrent = new Concurrent(10, 50);
-				for (Record record : records) {
-					record.setValue(DB.FIELD_PATTERN_ACTIVE, activate);
-//					persistor.update(record);
-					concurrent.add(new Record.Update(record, persistor));
-				}
-				concurrent.end();
-				table.getModel().refresh();
-			} catch (Exception exc) {
-				Logs.catching(exc);
-			}
-		}
-	}
-
+public class ActionBrowseSrc extends ActionStatistics {
+	
 	/**
-	 * Constructor.
-	 * 
-	 * @param rootProperties Properties of the root action.
+	 * @param rootProperties
 	 */
-	public ActionBrowsePatterns(Properties rootProperties) {
-		super();
-		getProperties().putAll(rootProperties);
-	}
-
-	private List<Option> getOptionsEdit() {
-
-		List<Option> options = new ArrayList<>();
-
-		Option option;
-
-		option = new Option();
-		option.setText("Activate");
-		option.setToolTip("Activate selected patterns");
-		option.setOptionGroup(Group.EDIT);
-		option.setAction(new ChangeActivation(getProperties(), true));
-		options.add(option);
-
-		option = new Option();
-		option.setText("Deactivate");
-		option.setToolTip("Deactivate selected patterns");
-		option.setOptionGroup(Group.EDIT);
-		option.setAction(new ChangeActivation(getProperties(), false));
-		options.add(option);
-
-		return options;
+	public ActionBrowseSrc(Properties rootProperties) {
+		super(rootProperties);
 	}
 
 	/**
@@ -121,28 +62,34 @@ public class ActionBrowsePatterns extends ActionStatistics {
 	public void run() {
 		try {
 			Statistics stats = getStatistics();
-			String key = stats.getTabPaneKey("PATTERNS");
-			String text = stats.getTabPaneText("Patterns");
+			String key = stats.getTabPaneKey("SOURCES");
+			String text = stats.getTabPaneText("Sources");
 
-			Persistor persistor = stats.getTablePtn().getPersistor();
+			View view = stats.getTableSrc().getPersistor().getView();
+			ListPersistor persistor = new ListPersistor(view.getPersistor(), view.getOrderBy());
+			persistor.setCacheSize(10000);
+			persistor.setPageSize(100);
 
 			TableRecordModel model = new TableRecordModel(persistor.getDefaultRecord());
-			model.addColumn(DB.FIELD_PATTERN_DELTA);
-			model.addColumn(DB.FIELD_PATTERN_NAME);
-			model.addColumn(DB.FIELD_PATTERN_ACTIVE);
-
-			model.setRecordSet(persistor.select(null));
+			int index = view.getFieldIndex(DB.FIELD_BAR_TIME_FMT);
+			for (int i = index; i < view.getFieldCount(); i++) {
+				model.addColumn(view.getField(i).getAlias());
+			}
+			
+			model.setRecordSet(new DataRecordSet(persistor));
 
 			TableRecord table = new TableRecord(false);
 			table.setSelectionMode(SelectionMode.MULTIPLE_ROW_INTERVAL);
 			table.setModel(model);
 			table.setSelectedRow(0);
-			getProperties().setObject("TABLE-PATTERNS", table);
+			getProperties().setObject("TABLE-SOURCES", table);
+			
 
 			TablePane tablePane = new TablePane(table);
 
 			OptionPane optionPane = new OptionPane(Orientation.HORIZONTAL);
-			optionPane.add(getOptionsEdit());
+			optionPane.add(Option.option_COLUMNS(table));
+			table.setPopupMenuProvider(optionPane);
 
 			GridBagPane pane = new GridBagPane();
 			pane.add(
@@ -162,5 +109,4 @@ public class ActionBrowsePatterns extends ActionStatistics {
 			Logs.catching(exc);
 		}
 	}
-
 }

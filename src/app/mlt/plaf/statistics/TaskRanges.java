@@ -22,6 +22,7 @@ import java.util.List;
 import com.mlt.db.Condition;
 import com.mlt.db.Criteria;
 import com.mlt.db.Field;
+import com.mlt.db.Order;
 import com.mlt.db.Persistor;
 import com.mlt.db.PersistorException;
 import com.mlt.db.Record;
@@ -43,6 +44,7 @@ public class TaskRanges extends TaskStatistics {
 	
 	private Persistor persistorRng;
 	private List<Field> fields;
+	private View view;
 
 	/**
 	 * @param stats The statistics.
@@ -76,21 +78,21 @@ public class TaskRanges extends TaskStatistics {
 		/* Count. */
 		calculateTotalWork();
 
-		/* Iterate fields. */
+		/* Iterate deltas and fields on deltas. */
 		List<Integer> deltas = stats.getParameters().getDeltas();
 		long totalWork = getTotalWork();
 		long workDone = 0;
-		for (Field field : fields) {
-
+		
+		for (int delta = 0; delta <= deltas.size(); delta++) {
+			
 			/* Check cancel requested. */
 			if (isCancelRequested()) {
 				setCancelled();
 				break;
 			}
 			
-			/* Iterate deltas. */
-			String name = field.getAlias();
-			for (int delta = 0; delta <= deltas.size(); delta++) {
+			for (Field field : fields) {
+				String name = field.getAlias();
 				workDone += 1;
 				update(name, workDone, totalWork);
 				Record rcView = getDataRaw(name, delta);
@@ -116,38 +118,58 @@ public class TaskRanges extends TaskStatistics {
 	 * @return The record of the view to calculate the range for a field.
 	 */
 	private Record getDataRaw(String name, int deltaIndex) throws PersistorException {
-
-		View view = new View();
-		view.setMasterTable(stats.getTableRaw());
-
-		Field delta = DB.field_integer(DB.FIELD_PATTERN_DELTA, "Delta");
-		view.addField(delta);
-		view.addGroupBy(delta);
-
-		Field minimum = DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum");
-		minimum.setFunction("min(" + name + ")");
-		view.addField(minimum);
-
-		Field maximum = DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum");
-		maximum.setFunction("max(" + name + ")");
-		view.addField(maximum);
-
-		Field average = DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average");
-		average.setFunction("avg(" + name + ")");
-		view.addField(average);
-
-		Field std_dev = DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev");
-		std_dev.setFunction("stddev(" + name + ")");
-		view.addField(std_dev);
-
-		Persistor persistor = new DBPersistor(MLT.getDBEngine(), view);
-		view.setPersistor(persistor);
+		View view = getView(name);
+		
+		Field fDELTA = view.getField(DB.FIELD_PATTERN_DELTA);
 		
 		Criteria criteria = new Criteria();
-		criteria.add(Condition.fieldEQ(delta, new Value(deltaIndex)));
-		RecordSet rs = view.getPersistor().select(criteria);
+		criteria.add(Condition.fieldEQ(fDELTA, new Value(deltaIndex)));
+		
+		Order order = new Order();
+		order.add(fDELTA);
+		
+		RecordSet rs = view.getPersistor().select(criteria, order);
 		Record rc = rs.get(0);
 		
 		return rc;
+	}
+	
+	/**
+	 * @param name The field name.
+	 * @return The view.
+	 */
+	private View getView(String name) {
+		if (view == null) {
+
+			view = new View();
+			Table master = stats.getTableRaw();
+			view.setMasterTable(master);
+
+			Field delta = master.getField(DB.FIELD_PATTERN_DELTA);
+			view.addField(delta);
+			view.addGroupBy(delta);
+
+			Field minimum = DB.field_double(DB.FIELD_RANGE_MINIMUM, "Minimum");
+			view.addField(minimum);
+
+			Field maximum = DB.field_double(DB.FIELD_RANGE_MAXIMUM, "Maximum");
+			view.addField(maximum);
+
+			Field average = DB.field_double(DB.FIELD_RANGE_AVERAGE, "Average");
+			view.addField(average);
+
+			Field std_dev = DB.field_double(DB.FIELD_RANGE_STDDEV, "Std Dev");
+			view.addField(std_dev);
+
+			Persistor persistor = new DBPersistor(MLT.getDBEngine(), view);
+			view.setPersistor(persistor);
+		}
+		
+		view.getField(DB.FIELD_RANGE_MINIMUM).setFunction("min(" + name + ")");
+		view.getField(DB.FIELD_RANGE_MAXIMUM).setFunction("max(" + name + ")");
+		view.getField(DB.FIELD_RANGE_AVERAGE).setFunction("avg(" + name + ")");
+		view.getField(DB.FIELD_RANGE_STDDEV).setFunction("stddev(" + name + ")");
+		
+		return view;
 	}
 }

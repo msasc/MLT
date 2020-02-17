@@ -41,6 +41,8 @@ public class Parameters extends ParserHandler {
 	private int barsAhead;
 	/** Percentage for calculated labels. */
 	private double percentCalc;
+	/** Percentage for edited labels. */
+	private double percentEdit;
 
 	/**
 	 * Constructor.
@@ -58,6 +60,7 @@ public class Parameters extends ParserHandler {
 		set("statistics/deltas/delta", "size", "integer");
 		set("statistics/zig-zag", "bars-ahead", "integer");
 		set("statistics/label-calc", "percent", "double");
+		set("statistics/label-edit", "percent", "double");
 	}
 
 	/**
@@ -118,6 +121,13 @@ public class Parameters extends ParserHandler {
 					throw new Exception("Invalid percentage for label calc " + percentCalc);
 				}
 			}
+			/* Validate and retrieve percent edit. */
+			if (path.equals("statistics/label-edit")) {
+				percentEdit = getDouble(attributes, "percent");
+				if (percentEdit <= 0 || percentEdit >= 50) {
+					throw new Exception("Invalid percentage for label edit " + percentEdit);
+				}
+			}
 
 		} catch (Exception exc) {
 			Alert.error(exc.getMessage());
@@ -172,6 +182,13 @@ public class Parameters extends ParserHandler {
 	 * @return The percentage to generate calculated labels over pivots.
 	 */
 	public double getPercentCalc() {
+		return percentCalc;
+	}
+
+	/**
+	 * @return The percentage to generate calculated labels over pivots.
+	 */
+	public double getPercentEdit() {
 		return percentCalc;
 	}
 }

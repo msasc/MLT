@@ -64,6 +64,7 @@ public class ActionBrowseSrc extends ActionStatistics {
 			Statistics stats = getStatistics();
 			String key = stats.getTabPaneKey("SOURCES");
 			String text = stats.getTabPaneText("Sources");
+			MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
 			View view = stats.getTableSrc().getPersistor().getView();
 			ListPersistor persistor = new ListPersistor(view.getPersistor(), view.getOrderBy());
@@ -104,6 +105,7 @@ public class ActionBrowseSrc extends ActionStatistics {
 			iconGrid.setMarginFactors(0.12, 0.12, 0.12, 0.12);
 
 			MLT.getTabbedPane().addTab(key, iconGrid, text, "Defined ", pane);
+			MLT.getStatusBar().removeProgress(key);
 
 		} catch (Exception exc) {
 			Logs.catching(exc);

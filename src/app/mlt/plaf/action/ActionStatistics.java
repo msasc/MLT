@@ -48,6 +48,7 @@ import com.mlt.util.Properties;
 
 import app.mlt.plaf.DB;
 import app.mlt.plaf.MLT;
+import app.mlt.plaf.action.statistics.ActionBrowseNrm;
 import app.mlt.plaf.action.statistics.ActionBrowsePtn;
 import app.mlt.plaf.action.statistics.ActionBrowseRaw;
 import app.mlt.plaf.action.statistics.ActionBrowseSrc;
@@ -109,8 +110,11 @@ public class ActionStatistics extends ActionRun {
 
 		Option option;
 		Option.Group groupCalculate = new Option.Group("CALCULATE", 1001);
-		Option.Group groupBrowse = new Option.Group("BROWSE", 1002);
-		Option.Group groupChart = new Option.Group("CHART", 1003);
+		Option.Group groupBrowsePtn = new Option.Group("BROWSE-PTN", 1002);
+		Option.Group groupBrowseSrc = new Option.Group("BROWSE-SRC", 1003);
+		Option.Group groupBrowseRaw = new Option.Group("BROWSE-RAW", 1004);
+		Option.Group groupBrowseNrm = new Option.Group("BROWSE-NRM", 1005);
+//		Option.Group groupChart = new Option.Group("CHART", 1006);
 
 		TableRecord tableStats = getRootTable();
 		Record rc = tableStats.getSelectedRecord();
@@ -132,7 +136,7 @@ public class ActionStatistics extends ActionRun {
 		option.setText("Browse and activate patterns");
 		option.setToolTip("Browse and activate patterns");
 		option.setAction(new ActionBrowsePtn(getProperties()));
-		option.setOptionGroup(groupBrowse);
+		option.setOptionGroup(groupBrowsePtn);
 		option.setSortIndex(1);
 		options.add(option);
 
@@ -141,18 +145,30 @@ public class ActionStatistics extends ActionRun {
 		option.setText("Browse sources");
 		option.setToolTip("Browse source averages, labels and pivots");
 		option.setAction(new ActionBrowseSrc(getProperties()));
-		option.setOptionGroup(groupBrowse);
+		option.setOptionGroup(groupBrowseSrc);
 		option.setSortIndex(1);
 		options.add(option);
 
 		int deltas = getStatistics().getParameters().getDeltas().size();
+		
 		for (int delta = 0; delta <= deltas; delta++) {
 			option = new Option();
 			option.setKey("BROWSE-RAW-" + delta);
 			option.setText("Browse raw delta " + delta);
 			option.setToolTip("Browse raw values, delta = " + delta);
 			option.setAction(new ActionBrowseRaw(getProperties(), delta));
-			option.setOptionGroup(groupBrowse);
+			option.setOptionGroup(groupBrowseRaw);
+			option.setSortIndex(1);
+			options.add(option);
+		}
+		
+		for (int delta = 0; delta <= deltas; delta++) {
+			option = new Option();
+			option.setKey("BROWSE-NRM-" + delta);
+			option.setText("Browse normalized delta " + delta);
+			option.setToolTip("Browse normalized values, delta = " + delta);
+			option.setAction(new ActionBrowseNrm(getProperties(), delta));
+			option.setOptionGroup(groupBrowseNrm);
 			option.setSortIndex(1);
 			options.add(option);
 		}

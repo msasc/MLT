@@ -45,11 +45,11 @@ import app.mlt.plaf.action.ActionStatistics;
 import app.mlt.plaf.statistics.Statistics;
 
 /**
- * Browse raw values.
+ * Browse normalized values.
  *
  * @author Miquel Sas
  */
-public class ActionBrowseRaw extends ActionStatistics {
+public class ActionBrowseNrm extends ActionStatistics {
 
 	private int delta;
 
@@ -57,7 +57,7 @@ public class ActionBrowseRaw extends ActionStatistics {
 	 * @param rootProperties
 	 * @param delta
 	 */
-	public ActionBrowseRaw(Properties rootProperties, int delta) {
+	public ActionBrowseNrm(Properties rootProperties, int delta) {
 		super(rootProperties);
 		this.delta = delta;
 	}
@@ -69,11 +69,11 @@ public class ActionBrowseRaw extends ActionStatistics {
 	public void run() {
 		try {
 			Statistics stats = getStatistics();
-			String key = stats.getTabPaneKey("RAW-" + delta);
-			String text = stats.getTabPaneText("Raw delta " + delta);
+			String key = stats.getTabPaneKey("NRM-" + delta);
+			String text = stats.getTabPaneText("Normalized delta " + delta);
 			MLT.getStatusBar().setProgressIndeterminate(key, "Setup " + text, true);
 
-			View view = stats.getTableRaw().getPersistor().getView();
+			View view = stats.getTableNrm().getPersistor().getView();
 			ListPersistor persistor = new ListPersistor(view.getPersistor(), view.getOrderBy());
 			persistor.setCacheSize(10000);
 			persistor.setPageSize(100);

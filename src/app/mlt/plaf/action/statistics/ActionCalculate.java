@@ -22,7 +22,9 @@ import com.mlt.util.Properties;
 
 import app.mlt.plaf.action.ActionStatistics;
 import app.mlt.plaf.statistics.Statistics;
+import app.mlt.plaf.statistics.TaskLabels;
 import app.mlt.plaf.statistics.TaskNormalize;
+import app.mlt.plaf.statistics.TaskPivots;
 import app.mlt.plaf.statistics.TaskRanges;
 import app.mlt.plaf.statistics.TaskRaw;
 
@@ -51,8 +53,8 @@ public class ActionCalculate extends ActionStatistics {
 		frame.addTasks(new TaskRaw(stats));
 		frame.addTasks(new TaskRanges(stats));
 		frame.addTasks(new TaskNormalize(stats));
-//		frame.addTasks(new TaskPivots(Statistics.this));
-//		frame.addTasks(new TaskLabelsCalc(Statistics.this));
+		frame.addTasks(new TaskPivots(stats));
+		frame.addTasks(new TaskLabels(stats, true));
 //		frame.addTasks(new TaskPatterns(Statistics.this, true, 0.8));
 		frame.show();
 	}

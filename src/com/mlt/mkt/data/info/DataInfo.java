@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+import com.mlt.mkt.chart.plotter.DataPlotter;
 import com.mlt.mkt.data.Data;
 import com.mlt.mkt.data.DataList;
 import com.mlt.mkt.data.Instrument;
@@ -71,8 +72,11 @@ public class DataInfo {
 			int count = info.getOutputCount();
 			for (int i = 0; i < count; i++) {
 				OutputInfo output = info.getOutput(i);
+				if (output.getPlotter() != null && !output.getPlotter().isPlot()) {
+					continue;
+				}
 				int outputIndex = output.getIndex();
-				if (i > 0) {
+				if (b.length() > 0) {
 					b.append(", ");
 				}
 				String shortName = output.getShortName();
@@ -80,10 +84,11 @@ public class DataInfo {
 					b.append(shortName);
 					b.append(": ");
 				}
-				b.append(Formats.fromDouble(
-					data.getValue(outputIndex),
-					info.getTickScale(),
-					Locale.getDefault()));
+				b.append(
+					Formats.fromDouble(
+						data.getValue(outputIndex),
+						info.getTickScale(),
+						Locale.getDefault()));
 			}
 			return b.toString();
 		}
@@ -148,14 +153,15 @@ public class DataInfo {
 	}
 
 	/**
-	 * Adds an output data information to the list of outputs.
+	 * Adds an output to the list of outputs.
 	 *
-	 * @param name      The output name.
-	 * @param shortName The output short name.
-	 * @param index     The index in the data.
+	 * @param name        The output name.
+	 * @param shortName   The output short name.
+	 * @param index       The index in the data.
+	 * @param description The output description.
 	 */
-	public void addOutput(String name, String shortName, int index) {
-		addOutput(new OutputInfo(name, shortName, index));
+	public void addOutput(String name, String shortName, int index, String description) {
+		addOutput(name, shortName, index, description, null);
 	}
 
 	/**
@@ -165,9 +171,15 @@ public class DataInfo {
 	 * @param shortName   The output short name.
 	 * @param index       The index in the data.
 	 * @param description The output description.
+	 * @param plotter     The data plotter.
 	 */
-	public void addOutput(String name, String shortName, int index, String description) {
-		outputs.add(new OutputInfo(name, shortName, index, description));
+	public void addOutput(
+		String name,
+		String shortName,
+		int index,
+		String description,
+		DataPlotter plotter) {
+		addOutput(new OutputInfo(name, shortName, index, description, plotter));
 	}
 
 	/**

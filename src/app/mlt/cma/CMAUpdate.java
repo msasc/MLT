@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 
@@ -98,25 +103,128 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root
 	 * @param purge   A boolean.
 	 */
-	private static void addTasks(ArgumentManager argMngr, List<Task> tasks, String srcRoot, String dstRoot,
+	private static void addTasks(
+		ArgumentManager argMngr,
+		List<Task> tasks,
+		String srcRoot,
+		String dstRoot,
 		boolean purge) {
+
+		boolean library = true;
+		boolean budget_dictionary = true;
+		boolean budget_local = true;
+		boolean margins_central = true;
+		boolean margins_dictionary = true;
+		boolean margins_library = true;
+		boolean margins_local = true;
+		boolean security = true;
+		boolean strategic_plan_central = true;
+		boolean strategic_plan_local = true;
+		boolean working_capital_central = true;
+		boolean working_capital_local = true;
+		if (argMngr.isPassed("packages")) {
+			library = argMngr.getValues("packages").contains("library");
+			budget_dictionary = argMngr.getValues("packages").contains("budget_dictionary");
+			budget_local = argMngr.getValues("packages").contains("budget_local");
+			margins_central = argMngr.getValues("packages").contains("margins_central");
+			margins_dictionary = argMngr.getValues("packages").contains("margins_dictionary");
+			margins_library = argMngr.getValues("packages").contains("margins_library");
+			margins_local = argMngr.getValues("packages").contains("margins_local");
+			security = argMngr.getValues("packages").contains("security");
+			strategic_plan_central =
+				argMngr.getValues("packages").contains("strategic_plan_central");
+			strategic_plan_local = argMngr.getValues("packages").contains("strategic_plan_local");
+			working_capital_central =
+				argMngr.getValues("packages").contains("working_capital_central");
+			working_capital_local = argMngr.getValues("packages").contains("working_capital_local");
+		}
+		
+		/* CMA64. */
+		if (argMngr.getValues("modules").contains("cma64")) {
+			FileCopy fc = new FileCopy(Locale.US);
+			fc.setTitle(getDescription(argMngr, "cma64"));
+			fc.setPurgeDestination(purge);
+			if (library) {
+				addLibrary(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (budget_dictionary) {
+				addModuleBudgetDictionary(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (budget_local) {
+				addModuleBudgetLocal(fc, srcRoot, dstRoot, "CMA64", true);
+			}
+			if (margins_central) {
+				addModuleMarginsCentral(fc, srcRoot, dstRoot, "CMA64", true);
+			}
+			if (margins_dictionary) {
+				addModuleMarginsDictionary(fc, srcRoot, dstRoot, "CMA64", true);
+			}
+			if (margins_library) {
+				addModuleMarginsLibrary(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (margins_local) {
+				addModuleMarginsLocal(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (strategic_plan_central) {
+				addModuleStrategicPlanCentral(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (strategic_plan_local) {
+				addModuleStrategicPlanLocal(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (working_capital_central) {
+				addModuleWorkingCapitalCentral(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (working_capital_local) {
+				addModuleWorkingCapitalLocal(fc, srcRoot, dstRoot, "CMA64");
+			}
+			if (security) {
+				addModuleSecurity(fc, srcRoot, dstRoot, "CMA64");
+			}
+			tasks.add(fc);
+			return;
+		}
+
 		/* Central. */
 		if (argMngr.getValues("modules").contains("central")) {
 			FileCopy fc = new FileCopy(Locale.US);
 			fc.setTitle(getDescription(argMngr, "central"));
 			fc.setPurgeDestination(purge);
-			addLibrary(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleBudgetDictionary(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleBudgetLocal(fc, srcRoot, dstRoot, "CMA_Central", false);
-			addModuleMarginsCentral(fc, srcRoot, dstRoot, "CMA_Central", true);
-			addModuleMarginsDictionary(fc, srcRoot, dstRoot, "CMA_Central", false);
-			addModuleMarginsLibrary(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleMarginsLocal(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleStrategicPlanCentral(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleStrategicPlanLocal(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleWorkingCapitalCentral(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleWorkingCapitalLocal(fc, srcRoot, dstRoot, "CMA_Central");
-			addModuleSecurity(fc, srcRoot, dstRoot, "CMA_Central");
+			if (library) {
+				addLibrary(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (budget_dictionary) {
+				addModuleBudgetDictionary(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (budget_local) {
+				addModuleBudgetLocal(fc, srcRoot, dstRoot, "CMA_Central", false);
+			}
+			if (margins_central) {
+				addModuleMarginsCentral(fc, srcRoot, dstRoot, "CMA_Central", true);
+			}
+			if (margins_dictionary) {
+				addModuleMarginsDictionary(fc, srcRoot, dstRoot, "CMA_Central", false);
+			}
+			if (margins_library) {
+				addModuleMarginsLibrary(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (margins_local) {
+				addModuleMarginsLocal(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (strategic_plan_central) {
+				addModuleStrategicPlanCentral(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (strategic_plan_local) {
+				addModuleStrategicPlanLocal(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (working_capital_central) {
+				addModuleWorkingCapitalCentral(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (working_capital_local) {
+				addModuleWorkingCapitalLocal(fc, srcRoot, dstRoot, "CMA_Central");
+			}
+			if (security) {
+				addModuleSecurity(fc, srcRoot, dstRoot, "CMA_Central");
+			}
 			tasks.add(fc);
 		}
 		/* Dictionary. */
@@ -124,7 +232,9 @@ public class CMAUpdate {
 			FileCopy fc = new FileCopy(Locale.US);
 			fc.setTitle(getDescription(argMngr, "dictionary"));
 			fc.setPurgeDestination(purge);
-			addLibrary(fc, srcRoot, dstRoot, "CMA_Dictionary");
+			if (library) {
+				addLibrary(fc, srcRoot, dstRoot, "CMA_Dictionary");
+			}
 			addModuleBudgetDictionary(fc, srcRoot, dstRoot, "CMA_Dictionary");
 			addModuleMarginsCentral(fc, srcRoot, dstRoot, "CMA_Dictionary", false);
 			addModuleMarginsDictionary(fc, srcRoot, dstRoot, "CMA_Dictionary", true);
@@ -138,7 +248,9 @@ public class CMAUpdate {
 			FileCopy fc = new FileCopy(Locale.US);
 			fc.setTitle(getDescription(argMngr, "local"));
 			fc.setPurgeDestination(purge);
-			addLibrary(fc, srcRoot, dstRoot, "CMA_Local");
+			if (library) {
+				addLibrary(fc, srcRoot, dstRoot, "CMA_Local");
+			}
 			addModuleBudgetDictionary(fc, srcRoot, dstRoot, "CMA_Local");
 			addModuleBudgetLocal(fc, srcRoot, dstRoot, "CMA_Local", true);
 			addModuleMarginsCentral(fc, srcRoot, dstRoot, "CMA_Local", false);
@@ -172,7 +284,11 @@ public class CMAUpdate {
 		return b.toString();
 	}
 
-	private static String getSrcParent(String workspaceDir, String srcRoot, String dstRoot, String dstParent) {
+	private static String getSrcParent(
+		String workspaceDir,
+		String srcRoot,
+		String dstRoot,
+		String dstParent) {
 		if (dstRoot.length() > 2) {
 			return srcRoot + workspaceDir;
 		}
@@ -204,9 +320,14 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleBudgetDictionary(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleBudgetDictionary(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_budget_dictionary";
-		String srcParent = getSrcParent("\\XVR COM Module Budget Dictionary", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module Budget Dictionary", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -230,9 +351,15 @@ public class CMAUpdate {
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 * @param menu    A boolean to indicate if the menu file should be copied.
 	 */
-	private static void addModuleBudgetLocal(FileCopy fc, String srcRoot, String dstRoot, String module, boolean menu) {
+	private static void addModuleBudgetLocal(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module,
+		boolean menu) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_budget_local";
-		String srcParent = getSrcParent("\\XVR COM Module Budget Local", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module Budget Local", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -260,10 +387,15 @@ public class CMAUpdate {
 	 * @param menu    A boolean to indicate if the menu file should be copied.
 	 */
 	private static void addModuleMarginsCentral(
-		FileCopy fc, String srcRoot, String dstRoot, String module, boolean menu) {
-		
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module,
+		boolean menu) {
+
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_margins_central";
-		String srcParent = getSrcParent("\\XVR COM Module Margins Central", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module Margins Central", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -291,9 +423,14 @@ public class CMAUpdate {
 	 * @param menu    A boolean to indicate if the menu file should be copied.
 	 */
 	private static void addModuleMarginsDictionary(
-		FileCopy fc, String srcRoot, String dstRoot, String module, boolean menu) {
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module,
+		boolean menu) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_margins_dictionary";
-		String srcParent = getSrcParent("\\XVR COM Module Margins Dictionary", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module Margins Dictionary", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -319,9 +456,14 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleMarginsLibrary(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleMarginsLibrary(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_margins_library";
-		String srcParent = getSrcParent("\\XVR COM Module Margins Library", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module Margins Library", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -344,9 +486,14 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleMarginsLocal(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleMarginsLocal(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_margins_local";
-		String srcParent = getSrcParent("\\XVR COM Module Margins Local", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module Margins Local", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -369,7 +516,11 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleSecurity(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleSecurity(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_security";
 		String srcParent = getSrcParent("\\XVR COM Module Seguridad", srcRoot, dstRoot, dstParent);
 		// bin
@@ -405,9 +556,14 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleStrategicPlanCentral(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleStrategicPlanCentral(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_stplan_central";
-		String srcParent = getSrcParent("\\XVR COM Module StrategicPlan Central", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module StrategicPlan Central", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -430,9 +586,14 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleStrategicPlanLocal(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleStrategicPlanLocal(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_stplan_local";
-		String srcParent = getSrcParent("\\XVR COM Module StrategicPlan Local", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module StrategicPlan Local", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -455,9 +616,14 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleWorkingCapitalCentral(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleWorkingCapitalCentral(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_wcapital_central";
-		String srcParent = getSrcParent("\\XVR COM Module WorkingCapital Central", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module WorkingCapital Central", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -480,9 +646,14 @@ public class CMAUpdate {
 	 * @param dstRoot Destination root.
 	 * @param module  Module (CMA_Central/CMA_Dictionary/CMA_Local)
 	 */
-	private static void addModuleWorkingCapitalLocal(FileCopy fc, String srcRoot, String dstRoot, String module) {
+	private static void addModuleWorkingCapitalLocal(
+		FileCopy fc,
+		String srcRoot,
+		String dstRoot,
+		String module) {
 		String dstParent = dstRoot + "\\" + module + "\\mads\\module_wcapital_local";
-		String srcParent = getSrcParent("\\XVR COM Module WorkingCapital Local", srcRoot, dstRoot, dstParent);
+		String srcParent =
+			getSrcParent("\\XVR COM Module WorkingCapital Local", srcRoot, dstRoot, dstParent);
 		// bin
 		addDirectory(fc, srcParent, dstParent, "bin");
 		// res
@@ -578,26 +749,54 @@ public class CMAUpdate {
 		/* Validate arguments. */
 		ArgumentManager argMngr = new ArgumentManager();
 		/* Environment: Quality/Production. */
-		Argument argEnv = new Argument("environment", "Environment: quality/qroduction", true, false, "quality", "production");
+		Argument argEnv =
+			new Argument("environment", "Environment: quality/qroduction", true, false, "quality", "production");
 		/* Target: Local/Remote */
-		Argument argTarget = new Argument("target", "Target: local/remote", true, false, "local", "remote");
+		Argument argTarget =
+			new Argument("target", "Target: local/remote", true, false, "local", "remote");
 		/*
 		 * Destination, based on target.
-		 * - If Local, indicate a directory like "C:\Development\Eclipse-Workspaces\Roca\cma-head"
+		 * - If Local, indicate a directory like
+		 * "C:\Development\Eclipse-Workspaces\Roca\cma-head"
 		 * - If Remote, indicate a list of drives like "IJKLMN"
 		 */
-		Argument argDest = new Argument("destination", "Destination, depends on target", true, true, false);
+		Argument argDest =
+			new Argument("destination", "Destination, depends on target", true, true, false);
 		/*
 		 * Source, based on environment and target.
 		 * - If quality and local indicate the development root directory for quality
 		 * - If quality and remote indicate the image root directory for quality
 		 * Similar for production.
 		 */
-		Argument argSrc = new Argument("source", "Source, depends on anvironment and target", true, true, false);
+		Argument argSrc =
+			new Argument("source", "Source, depends on anvironment and target", true, true, false);
 		/* List of modules to update. */
-		Argument argMods = new Argument("modules", "Modules: central/dictionary/local", true, true, "central", "dictionary", "local");
+		String[] modules =
+			new String[] {
+				"central", "dictionary", "local", "cma64"
+			};
+		Argument argMods =
+			new Argument("modules", "Modules: central/dictionary/local", true, true, modules);
 		/* Purge destination directories. */
-		Argument argPurge = new Argument("purge", "Purge destination directories", false, false, false);
+		Argument argPurge =
+			new Argument("purge", "Purge destination directories", false, false, false);
+		/* List of packages to update (optional). */
+		String[] packages =
+			new String[] {
+				"library", "budget_dictionary",
+				"budget_local",
+				"margins_central",
+				"margins_dictionary",
+				"margins_library",
+				"margins_local",
+				"security",
+				"strategic_plan_central",
+				"strategic_plan_local",
+				"working_capital_central",
+				"working_capital_local"
+			};
+		Argument argPacks =
+			new Argument("packages", "Packages: budget_dictionary/.../working_capital_local", false, true, packages);
 
 		argMngr.add(argEnv);
 		argMngr.add(argTarget);
@@ -605,6 +804,7 @@ public class CMAUpdate {
 		argMngr.add(argSrc);
 		argMngr.add(argMods);
 		argMngr.add(argPurge);
+		argMngr.add(argPacks);
 
 		/* Validate arguments. */
 		if (!argMngr.parse(args)) {

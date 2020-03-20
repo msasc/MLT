@@ -31,6 +31,7 @@ import com.mlt.mkt.data.IndicatorSource;
 import com.mlt.mkt.data.info.DataInfo;
 import com.mlt.mkt.data.info.IndicatorInfo;
 import com.mlt.mkt.data.info.InputInfo;
+import com.mlt.mkt.data.info.OutputInfo;
 import com.mlt.mkt.data.info.ParameterInfo;
 import com.mlt.mkt.data.info.validators.IntegerValidator;
 import com.mlt.util.Numbers;
@@ -358,7 +359,7 @@ public abstract class PeriodIndicator extends Indicator {
 				b.append("-" + i);
 			}
 			b.append("(" + period + ")");
-			info.addOutput(b.toString(), b.toString(), i);
+			info.addOutput(b.toString(), b.toString(), i, b.toString());
 		}
 
 		// Set look backward to the indicator info.

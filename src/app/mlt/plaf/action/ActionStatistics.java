@@ -53,6 +53,7 @@ import app.mlt.plaf.action.statistics.ActionBrowsePtn;
 import app.mlt.plaf.action.statistics.ActionBrowseRaw;
 import app.mlt.plaf.action.statistics.ActionBrowseSrc;
 import app.mlt.plaf.action.statistics.ActionCalculate;
+import app.mlt.plaf.action.statistics.ActionChart;
 import app.mlt.plaf.action.statistics.ActionCreate;
 import app.mlt.plaf.action.statistics.ActionDelete;
 import app.mlt.plaf.statistics.Statistics;
@@ -114,7 +115,7 @@ public class ActionStatistics extends ActionRun {
 		Option.Group groupBrowseSrc = new Option.Group("BROWSE-SRC", 1003);
 		Option.Group groupBrowseRaw = new Option.Group("BROWSE-RAW", 1004);
 		Option.Group groupBrowseNrm = new Option.Group("BROWSE-NRM", 1005);
-//		Option.Group groupChart = new Option.Group("CHART", 1006);
+		Option.Group groupChart = new Option.Group("CHART", 1006);
 
 		TableRecord tableStats = getRootTable();
 		Record rc = tableStats.getSelectedRecord();
@@ -172,6 +173,15 @@ public class ActionStatistics extends ActionRun {
 			option.setSortIndex(1);
 			options.add(option);
 		}
+		
+		option = new Option();
+		option.setKey("CHART");
+		option.setText("Chart on statistics");
+		option.setToolTip("Chart on statistics");
+		option.setAction(new ActionChart(getProperties()));
+		option.setOptionGroup(groupChart);
+		option.setSortIndex(1);
+		options.add(option);
 		
 		return options;
 	}

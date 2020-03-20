@@ -383,9 +383,9 @@ public class PlotterPane extends BorderPane {
 			infoPane.addInfo(pd.getInfoTimeFromIndex(index), Font.PLAIN, Colors.BLACK);
 			boolean black = false;
 			for (int i = 0; i < pd.size(); i++) {
+				DataInfo info = pd.getDataInfo(i);
 				Color color = (black ? Colors.BLACK : Colors.BLUE);
 				black = !black;
-				DataInfo info = pd.getDataInfo(i);
 				String text = "";
 				if (index >= 0 && index < pd.get(i).size()) {
 					text = info.getInfoData(pd, i, index);

@@ -13,12 +13,25 @@
  */
 package com.mlt.desktop.layout;
 
+import com.mlt.util.Numbers;
+
 /**
  * Dimension.
  *
  * @author Miquel Sas
  */
 public class Dimension {
+	
+	public static Dimension max(Dimension... dimensions) {
+		double width = Numbers.MIN_DOUBLE;
+		double height = Numbers.MIN_DOUBLE;
+		for (Dimension dimension : dimensions) {
+			width = Math.max(width, dimension.getWidth());
+			height = Math.max(height, dimension.getHeight());
+		}
+		return new Dimension(width, height);
+	}
+	
 	/** Width. */
 	private double width;
 	/** Height. */

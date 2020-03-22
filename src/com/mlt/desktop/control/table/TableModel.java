@@ -150,10 +150,6 @@ public abstract class TableModel extends AbstractTableModel {
 		editMap.remove(new EditCell(rowIndex, columnIndex));
 	}
 
-	/*
-	 * Sort management.
-	 */
-
 	/**
 	 * Effectively sort the model.
 	 * 

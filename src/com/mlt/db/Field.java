@@ -21,6 +21,8 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.Icon;
+
 import com.mlt.util.Strings;
 import com.mlt.util.Properties;
 import com.mlt.util.StringConverter;
@@ -120,6 +122,10 @@ public class Field implements Comparable<Object> {
 	private Calculator calculator;
 	/** Displayed/edited in a check or combo box for booleans. */
 	private boolean editBooleanInCheckBox = true;
+	/** Icon checked. */
+	private Icon iconChecked;
+	/** Icon unchecked. */
+	private Icon iconUnchecked;
 	/** List of validators. */
 	private List<Validator<Value>> validators;
 	/** Optional string converter. */
@@ -207,6 +213,8 @@ public class Field implements Comparable<Object> {
 		this.caseModifier = field.caseModifier;
 		this.calculator = field.calculator;
 		this.editBooleanInCheckBox = field.editBooleanInCheckBox;
+		this.iconChecked = field.iconChecked;
+		this.iconUnchecked = field.iconUnchecked;
 		if (field.validators != null) {
 			this.validators = new ArrayList<>();
 			this.validators.addAll(field.validators);
@@ -698,6 +706,20 @@ public class Field implements Comparable<Object> {
 	 */
 	public String getHorizontalAlignment() {
 		return horizontalAlignment;
+	}
+
+	/**
+	 * @return The icon checked.
+	 */
+	public Icon getIconChecked() {
+		return iconChecked;
+	}
+
+	/**
+	 * @return The icon unchecked.
+	 */
+	public Icon getIconUnchecked() {
+		return iconUnchecked;
 	}
 
 	/**
@@ -1254,6 +1276,15 @@ public class Field implements Comparable<Object> {
 	}
 
 	/**
+	 * Check if this field is an icon.
+	 *
+	 * @return A boolean.
+	 */
+	public boolean isIcon() {
+		return getType().isIcon();
+	}
+
+	/**
 	 * Check if this field is an integer.
 	 *
 	 * @return A boolean.
@@ -1578,6 +1609,20 @@ public class Field implements Comparable<Object> {
 	}
 
 	/**
+	 * @param iconChecked The icon checked.
+	 */
+	public void setIconChecked(Icon iconChecked) {
+		this.iconChecked = iconChecked;
+	}
+
+	/**
+	 * @param iconUnchecked The icon unchecked.
+	 */
+	public void setIconUnchecked(Icon iconUnchecked) {
+		this.iconUnchecked = iconUnchecked;
+	}
+
+	/**
 	 * Set the initial value.
 	 *
 	 * @param initialValue The initial value.
@@ -1755,7 +1800,7 @@ public class Field implements Comparable<Object> {
 		if (isNumber()) {
 			setHorizontalAlignmentRight();
 		} else {
-			if (isBoolean()) {
+			if (isBoolean() || isIcon()) {
 				setHorizontalAlignmentCenter();
 			} else {
 				setHorizontalAlignmentLeft();

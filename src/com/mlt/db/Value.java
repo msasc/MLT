@@ -31,6 +31,8 @@ import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Locale;
 
+import javax.swing.Icon;
+
 /**
  * An immutable value of supported types.
  *
@@ -76,6 +78,8 @@ public class Value implements Comparable<Object> {
 			return Formats.fromTime(value.getTime());
 		case DATETIME:
 			return Formats.fromDateTime(value.getDateTime());
+		case ICON:
+			throw new IllegalArgumentException("ICON can not be converted to string");
 		}
 
 		/* Should never come here. */
@@ -116,6 +120,8 @@ public class Value implements Comparable<Object> {
 			return new Value(Formats.toTime(str));
 		case DATETIME:
 			return new Value(Formats.toDateTime(str));
+		case ICON:
+			throw new IllegalArgumentException("String can not be converted to ICON");
 		}
 
 		/* Should never come here. */
@@ -211,6 +217,18 @@ public class Value implements Comparable<Object> {
 		value = i;
 		type = Types.INTEGER;
 	}
+
+	/**
+	 * Constructor assigning an icon.
+	 *
+	 * @param icon An icon
+	 */
+	public Value(Icon icon) {
+		super();
+		value = icon;
+		type = Types.ICON;
+	}
+
 
 	/**
 	 * Constructor assigning an integer.
@@ -622,6 +640,18 @@ public class Value implements Comparable<Object> {
 	}
 
 	/**
+	 * Get the value as an <code>Icon</code>.
+	 *
+	 * @return An icon
+	 */
+	public Icon getIcon() {
+		if (isIcon()) {
+			return (Icon) value;
+		}
+		throw new UnsupportedOperationException("Value " + value + " is not an icon");
+	}
+
+	/**
 	 * Get the value as an <code>int</code>.
 	 *
 	 * @return An integer
@@ -853,6 +883,15 @@ public class Value implements Comparable<Object> {
 	 */
 	public boolean isFloatingPoint() {
 		return getType().isFloatingPoint();
+	}
+
+	/**
+	 * Check if this value is an icon.
+	 *
+	 * @return A boolean.
+	 */
+	public boolean isIcon() {
+		return getType().isIcon();
 	}
 
 	/**

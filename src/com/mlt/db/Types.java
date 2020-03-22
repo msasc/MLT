@@ -1,14 +1,19 @@
 /*
  * Copyright (C) 2018 Miquel Sas
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later
  * version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mlt.db;
@@ -43,10 +48,13 @@ public enum Types {
 	/** Time-stamp. */
 	DATETIME,
 	/** Binary (byte array). */
-	BYTEARRAY;
+	BYTEARRAY,
+	/** Icon (not persistent). */
+	ICON;
 
 	/**
-	 * The fixed length to select between VARCHAR/VARBINARY or LONVARCHAR/LONGVARBINARY.
+	 * The fixed length to select between VARCHAR/VARBINARY or
+	 * LONVARCHAR/LONGVARBINARY.
 	 */
 	public static final int FIXED_LENGTH = 2000;
 
@@ -57,9 +65,12 @@ public enum Types {
 	 * @param type  The required type.
 	 */
 	public static void validateValueType(Value value, Types type) {
-		if ((type.isBoolean() && !value.isBoolean()) || (type.isDate() && !value.isDate())
-		|| (type.isTime() && !value.isTime()) || (type.isDateTime() && !value.isDateTime())
-		|| (type.isString() && !value.isString()) || (type.isNumber() && !value.isNumber())) {
+		if ((type.isBoolean() && !value.isBoolean()) ||
+			(type.isDate() && !value.isDate()) ||
+			(type.isTime() && !value.isTime()) ||
+			(type.isDateTime() && !value.isDateTime()) ||
+			(type.isString() && !value.isString()) ||
+			(type.isNumber() && !value.isNumber())) {
 			StringBuilder b = new StringBuilder();
 			b.append("Invalid value type (");
 			b.append(value.getType());
@@ -142,6 +153,15 @@ public enum Types {
 	 */
 	public boolean isDouble() {
 		return equals(DOUBLE);
+	}
+
+	/**
+	 * Check if this type is an icon.
+	 *
+	 * @return A boolean
+	 */
+	public boolean isIcon() {
+		return equals(ICON);
 	}
 
 	/**

@@ -42,8 +42,6 @@ import com.mlt.util.Resources;
  */
 public class TableRecordCellRenderer extends CellRenderer {
 
-	/** The image icon used to display images. */
-	private ImageIcon icon = new ImageIcon();
 	/** Icon checked for boolean values. */
 	private ImageIcon iconChecked;
 	/** Icon unchecked for boolean values. */
@@ -91,6 +89,7 @@ public class TableRecordCellRenderer extends CellRenderer {
 		Value value = (Value) object;
 		if (value == null || value.isNull()) {
 			getLabel().setText("");
+			getLabel().setIcon(null);
 			return this;
 		}
 
@@ -113,17 +112,33 @@ public class TableRecordCellRenderer extends CellRenderer {
 			} catch (ParseException ignore) {}
 			return this;
 		}
+		
+		/* Icon field. */
+		if (field.isIcon()) {
+			getLabel().setText("");
+			getLabel().setIcon(value.getIcon());
+			getLabel().setHorizontalAlignment(SwingConstants.CENTER);
+			getLabel().setVerticalAlignment(SwingConstants.CENTER);
+			return this;
+		}
 
 		/* Boolean field. */
 		if (field.isBoolean()) {
 			if (field.isEditBooleanInCheckBox()) {
 				getLabel().setText("");
 				if (value.getBoolean()) {
-					icon.setImage(iconChecked.getImage());
+					if (field.getIconChecked() == null) {
+						getLabel().setIcon(iconChecked);
+					} else {
+						getLabel().setIcon(field.getIconChecked());
+					}
 				} else {
-					icon.setImage(iconUnchecked.getImage());
+					if (field.getIconUnchecked() == null) {
+						getLabel().setIcon(iconUnchecked);
+					} else {
+						getLabel().setIcon(field.getIconUnchecked());
+					}
 				}
-				getLabel().setIcon(icon);
 				getLabel().setHorizontalAlignment(SwingConstants.CENTER);
 				getLabel().setVerticalAlignment(SwingConstants.CENTER);
 			} else {

@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import javax.swing.Icon;
+
 import com.mlt.util.Properties;
 import java.util.Arrays;
 
@@ -404,6 +406,16 @@ public class Record implements Comparable<Object> {
 	 * @param index Index.
 	 * @param value Value.
 	 */
+	public void setValue(int index, Icon value) {
+		setValue(index, new Value(value));
+	}
+
+	/**
+	 * Set the value.
+	 * 
+	 * @param index Index.
+	 * @param value Value.
+	 */
 	public void setValue(int index, Integer value) {
 		setValue(index, new Value(value));
 	}
@@ -575,6 +587,17 @@ public class Record implements Comparable<Object> {
 	 * @param value The value.
 	 */
 	public void setValue(String alias, Integer value) {
+		int index = fields.getFieldIndex(alias);
+		setValue(index, value);
+	}
+
+	/**
+	 * Set the value.
+	 *
+	 * @param alias The alias of the field.
+	 * @param value The value.
+	 */
+	public void setValue(String alias, Icon value) {
 		int index = fields.getFieldIndex(alias);
 		setValue(index, value);
 	}

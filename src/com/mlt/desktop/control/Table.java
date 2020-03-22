@@ -188,7 +188,7 @@ public class Table extends Control {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public JScrollPane getComponent() {
+	public final JScrollPane getComponent() {
 		return (JScrollPane) super.getComponent();
 	}
 

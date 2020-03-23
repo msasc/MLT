@@ -19,6 +19,7 @@ package com.mlt.desktop.control;
 
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
+import javax.swing.tree.TreePath;
 
 import com.mlt.desktop.control.tree.TreeItemCellRenderer;
 import com.mlt.desktop.control.tree.TreeItemModel;
@@ -47,6 +48,22 @@ public class Tree extends Control {
 	@Override
 	public final JScrollPane getComponent() {
 		return (JScrollPane) super.getComponent();
+	}
+	
+	/**
+	 * @return The model.
+	 */
+	public TreeItemModel getModel() {
+		return (TreeItemModel) getTreeComponent().getModel();
+	}
+	
+	/**
+	 * @param x X.
+	 * @param y Y.
+	 * @return The path.
+	 */
+	public TreePath getPathForLocation(int x, int y) {
+		return getTreeComponent().getPathForLocation(x, y);
 	}
 
 	/**

@@ -158,53 +158,6 @@ public class TreeItemCellRenderer implements TreeCellRenderer {
 			paneRender.add(control, getConstraints(gridx++, 5));
 		}
 
-		/*
-		 * If the node aligns with its siblings, check if all siblings have the same
-		 * number of elements and all of them also aligns. And if so, calculate the
-		 * proper dimension of each column.
-		 */
-		if (node.isAlignWithSiblings()) {
-			
-			boolean align = true;
-
-			/* Get all siblings. */
-			List<TreeItemNode> siblings = node.getSiblings();
-			
-			/* Check number of elements and sibling align. */
-			for (TreeItemNode sibling : siblings) {
-				if (sibling.getControls().size() != controls.size()) {
-					align = false;
-					break;
-				}
-				if (!sibling.isAlignWithSiblings()) {
-					align = false;
-					break;
-				}
-			}
-			if (!align) {
-				return paneRender.getComponent();
-			}
-			
-			/* Keep maximum dimensions. */
-//			Dimension[] sizes = new Dimension[controls.size()];
-//			for (TreeItemNode sibling : siblings) {
-//				for (int i = 0; i < sibling.getControls().size(); i++) {
-//					Control control = sibling.getControls().get(i);
-//					if (sizes[i] == null) {
-//						sizes[i] = control.getPreferredSize();
-//					} else {
-//						sizes[i] = Dimension.max(sizes[i], control.getPreferredSize());
-//					}
-//				}
-//			}
-//			double margin = 10;
-//			for (int i = 0; i < controls.size(); i++) {
-//				double width = sizes[i].getWidth() + margin;
-//				double height = sizes[i].getHeight();
-//				controls.get(i).setPreferredSize(new Dimension(width, height));
-//			}
-		}
-
 		return paneRender.getComponent();
 	}
 

@@ -45,12 +45,6 @@ public class TreeItemNode extends DefaultMutableTreeNode {
 	private List<Control> controls;
 
 	/**
-	 * A boolean that indicates whether the node elements should be aligned with its
-	 * siblings.
-	 */
-	private boolean alignWithSiblings = true;
-
-	/**
 	 * Constructor.
 	 */
 	public TreeItemNode() {
@@ -60,34 +54,40 @@ public class TreeItemNode extends DefaultMutableTreeNode {
 	/**
 	 * @param control a control.
 	 */
-	public void add(Control control) {
+	public void add(String name, Control control) {
+		if (name == null) {
+			throw new NullPointerException("The name must be set");
+		}
+		control.setName(name);
 		controls.add(control);
 	}
 
 	/**
 	 * @param icon Icon.
 	 */
-	public void add(Icon icon) {
-		controls.add(new Label(icon));
+	public void add(String name, Icon icon) {
+		Label label = new Label(icon);
+		add(name, label);
 	}
 
 	/**
 	 * @param text Text.
 	 */
-	public void add(String text) {
-		add(text, null);
+	public void add(String name, String text) {
+		add(name, text, null);
 	}
 
 	/**
 	 * @param text Text.
 	 * @param font Font.
 	 */
-	public void add(String text, Font font) {
+	public void add(String name, String text, Font font) {
 		Label label = new Label(text);
 		if (font != null) {
 			label.setFont(font);
 		}
-		controls.add(label);
+		label.setOpaque(true);
+		add(name, label);
 	}
 
 	/**
@@ -96,6 +96,21 @@ public class TreeItemNode extends DefaultMutableTreeNode {
 	@Override
 	public TreeItemNode getChildAt(int index) {
 		return (TreeItemNode) super.getChildAt(index);
+	}
+
+	/**
+	 * Return the control with the given name.
+	 * 
+	 * @param name The name.
+	 * @return The control.
+	 */
+	public Control getControl(String name) {
+		for (Control control : controls) {
+			if (control.getName().equals(name)) {
+				return control;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -146,22 +161,6 @@ public class TreeItemNode extends DefaultMutableTreeNode {
 			}
 		}
 		return siblings;
-	}
-
-	/**
-	 * @return A boolean indicating whether the node elements should be aligned with
-	 *         its siblings.
-	 */
-	public boolean isAlignWithSiblings() {
-		return alignWithSiblings;
-	}
-
-	/**
-	 * @param alignWithSiblings A boolean that indicates whether the node elements
-	 *                          should be aligned with its siblings.
-	 */
-	public void setAlignWithSiblings(boolean alignWithSiblings) {
-		this.alignWithSiblings = alignWithSiblings;
 	}
 
 	/**

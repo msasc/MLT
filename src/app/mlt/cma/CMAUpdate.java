@@ -19,23 +19,28 @@ package app.mlt.cma;
 
 import java.awt.Font;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 import javax.swing.KeyStroke;
+import javax.swing.tree.TreePath;
 
 import com.mlt.desktop.Alert;
 import com.mlt.desktop.Option;
 import com.mlt.desktop.OptionWindow;
+import com.mlt.desktop.TaskFrame;
 import com.mlt.desktop.control.CheckBox;
 import com.mlt.desktop.control.Frame;
 import com.mlt.desktop.control.GridBagPane;
 import com.mlt.desktop.control.Tree;
 import com.mlt.desktop.control.tree.TreeItemNode;
+import com.mlt.desktop.event.MouseHandler;
 import com.mlt.launch.Argument;
 import com.mlt.launch.ArgumentManager;
+import com.mlt.task.file.FileCopy;
 import com.mlt.util.Resources;
 
 /**
@@ -55,6 +60,15 @@ public class CMAUpdate {
 		File srcFile;
 		File dstFile;
 		List<FileIO> children = new ArrayList<>();
+		boolean selected = false;
+
+		File getSrcFile() {
+			return srcFile;
+		}
+
+		File getDstFile(String drive) {
+			return new File(drive + dstFile.getPath());
+		}
 
 		boolean isDirectory() {
 			return type == Type.DIRECTORY;
@@ -92,6 +106,32 @@ public class CMAUpdate {
 
 	}
 
+	/** Mouse listener. */
+	class MouseListener extends MouseHandler {
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			if (e.getClickCount() == 1) {
+				TreePath path = tree.getPathForLocation(e.getX(), e.getY());
+				if (path != null) {
+					TreeItemNode parent = (TreeItemNode) path.getLastPathComponent();
+
+					List<TreeItemNode> nodes = new ArrayList<>();
+					nodes.add(parent);
+					fillChildren(nodes, parent);
+
+					boolean selected = !isSelected(parent);
+					for (TreeItemNode node : nodes) {
+						setSelected(node, selected);
+						tree.getModel().nodeChanged(node);
+					}
+				}
+			}
+			super.mouseClicked(e);
+		}
+
+	}
+
 	/** Type (file or directory) */
 	enum Type {
 		DIRECTORY, FILE
@@ -112,6 +152,7 @@ public class CMAUpdate {
 	}
 
 	private ArgumentManager argMngr;
+	private Tree tree;
 	private TreeItemNode root;
 	private Font font = new Font(Font.DIALOG, Font.PLAIN, 14);
 
@@ -194,16 +235,15 @@ public class CMAUpdate {
 		}
 	}
 
-	private String[] getDrives() {
-		String dest = argMngr.getValue("drives");
-		String[] drives = new String[dest.length()];
-		for (int i = 0; i < dest.length(); i++) {
-			drives[i] = String.valueOf(dest.charAt(i)) + ":";
+	private void fillChildren(List<TreeItemNode> children, TreeItemNode parent) {
+		for (int i = 0; i < parent.getChildCount(); i++) {
+			TreeItemNode child = parent.getChildAt(i);
+			children.add(child);
+			fillChildren(children, child);
 		}
-		return drives;
 	}
 
-	private void fillIOFiles(List<FileIO> ios, FileIO parent) {
+	private void fillFiles(List<FileIO> ios, FileIO parent) {
 		ios.add(parent);
 		if (parent.isDirectory()) {
 			File[] files = parent.srcFile.listFiles();
@@ -222,9 +262,44 @@ public class CMAUpdate {
 				} else {
 					child.type = Type.FILE;
 				}
-				fillIOFiles(parent.children, child);
+				fillFiles(parent.children, child);
 			}
 		}
+	}
+
+	/**
+	 * @param ios The list of IO files.
+	 */
+	private void fillTree(List<FileIO> ios, TreeItemNode parent) {
+		for (FileIO io : ios) {
+			TreeItemNode child = new TreeItemNode();
+			child.setUserObject(io);
+			child.add("CHK", new CheckBox());
+			child.add("SRC", io.srcFile.getPath(), font);
+			setSelected(child, true);
+			// child.add(io.dstFile.getPath());
+			parent.add(child);
+			if (io.isDirectory()) {
+				fillTree(io.children, child);
+			}
+		}
+	}
+
+	/**
+	 * @param node The node.
+	 * @return The checkbox in the node.
+	 */
+	private CheckBox getCheckBox(TreeItemNode node) {
+		return (CheckBox) node.getControl("CHK");
+	}
+
+	private String[] getDrives() {
+		String dest = argMngr.getValue("drives");
+		String[] drives = new String[dest.length()];
+		for (int i = 0; i < dest.length(); i++) {
+			drives[i] = String.valueOf(dest.charAt(i)) + ":";
+		}
+		return drives;
 	}
 
 	private FileIO getIO(
@@ -249,6 +324,14 @@ public class CMAUpdate {
 		io.srcFile = new File(new File(srcParent), fileName.toString());
 		io.dstFile = new File(new File(dstParent), fileName.toString());
 		return io;
+	}
+
+	/**
+	 * @param node The node.
+	 * @return The IO user object.
+	 */
+	private FileIO getIOFile(TreeItemNode node) {
+		return (FileIO) node.getUserObject();
 	}
 
 	private List<FileIO> getIOFiles() {
@@ -330,11 +413,11 @@ public class CMAUpdate {
 		dstModule = "module_wcapital_local";
 		filePrefix = "WorkingCapital_Local";
 		iosTmp.addAll(getIOFiles(srcModule, dstModule, filePrefix));
-		
+
 		/* Final list. */
 		List<FileIO> ios = new ArrayList<>();
 		for (FileIO io : iosTmp) {
-			fillIOFiles(ios, io);
+			fillFiles(ios, io);
 		}
 
 		return ios;
@@ -396,6 +479,23 @@ public class CMAUpdate {
 	}
 
 	/**
+	 * @param node The node.
+	 * @return a boolean.
+	 */
+	private boolean isSelected(TreeItemNode node) {
+		return getIOFile(node).selected;
+	}
+
+	/**
+	 * @param node     The node.
+	 * @param selected A boolean.
+	 */
+	private void setSelected(TreeItemNode node, boolean selected) {
+		getIOFile(node).selected = selected;
+		getCheckBox(node).setSelected(selected);
+	}
+
+	/**
 	 * @param args Startup arguments.
 	 */
 	private void setup(String[] args) {
@@ -412,43 +512,110 @@ public class CMAUpdate {
 		wnd.setTitle("Select to copy");
 		wnd.setOptionsBottom();
 
-		Tree tree = new Tree();
+		tree = new Tree();
+		tree.addMouseListener(new MouseListener());
 		tree.setFont(new Font(Font.DIALOG, Font.PLAIN, 16));
 		tree.setRoot(root);
 		tree.setRootVisible(false);
 		wnd.setCenter(tree);
 
-		Option option = new Option();
-		option.setKey("CLOSE");
-		option.setText("Close");
-		option.setToolTip("Close the window");
-		option.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0));
-		option.setDefaultClose(true);
-		option.setAction(listener -> {
-			wnd.close();
+		Option selectAll = new Option();
+		selectAll.setKey("SELECT_ALL");
+		selectAll.setText("Select all");
+		selectAll.setToolTip("Select all nodes");
+		selectAll.setAction(listener -> {
+			List<TreeItemNode> nodes = new ArrayList<>();
+			fillChildren(nodes, root);
+			for (TreeItemNode node : nodes) {
+				setSelected(node, true);
+				tree.getModel().nodeChanged(node);
+			}
 		});
-		wnd.getOptionPane().add(option);
+
+		Option clearAll = new Option();
+		clearAll.setKey("CLEAR_ALL");
+		clearAll.setText("Clear all");
+		clearAll.setToolTip("Clear all nodes");
+		clearAll.setAction(listener -> {
+			List<TreeItemNode> nodes = new ArrayList<>();
+			fillChildren(nodes, root);
+			for (TreeItemNode node : nodes) {
+				setSelected(node, false);
+				tree.getModel().nodeChanged(node);
+			}
+		});
+
+		Option update = new Option();
+		update.setKey("UPDATE");
+		update.setText("Update");
+		update.setToolTip("Update");
+		update.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
+		update.setAction(listener -> {
+			wnd.close();
+			update();
+		});
+
+		Option cancel = new Option();
+		cancel.setKey("CANCEL");
+		cancel.setText("Cancel");
+		cancel.setToolTip("Cancel update");
+		cancel.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0));
+		cancel.setDefaultClose(true);
+		cancel.setAction(listener -> {
+			wnd.close();
+			System.exit(0);
+		});
+
+		wnd.getOptionPane().add(selectAll, clearAll, update, cancel);
 
 		wnd.pack();
-		wnd.setSize(0.6, 0.5);
+		wnd.setSize(0.9, 0.9);
 		wnd.centerOnScreen();
 		wnd.show();
 	}
 
-	/**
-	 * @param ios The list of IO files.
-	 */
-	private void fillTree(List<FileIO> ios, TreeItemNode parent) {
-		for (FileIO io : ios) {
-			TreeItemNode child = new TreeItemNode();
-			child.setUserObject(io);
-			child.add(new CheckBox());
-			child.add(io.srcFile.getPath(), font);
-//			child.add(io.dstFile.getPath());
-			parent.add(child);
-			if (io.isDirectory()) {
-				fillTree(io.children, child);
+	private void update() {
+
+		List<TreeItemNode> nodes = new ArrayList<>();
+		fillChildren(nodes, root);
+		for (int i = nodes.size() - 1; i >= 0; i--) {
+			if (!nodes.get(i).isLeaf() || !isSelected(nodes.get(i))) {
+				nodes.remove(i);
 			}
 		}
+
+		String src = argMngr.getValue("source");
+		String dst = argMngr.getValue("destination");
+		String[] drives = getDrives();
+
+		FileCopy[] fcs = new FileCopy[drives.length];
+		for (int i = 0; i < drives.length; i++) {
+
+			String drive = drives[i];
+
+			StringBuilder title = new StringBuilder();
+			title.append("Copy [");
+			title.append(src);
+			title.append("] to [");
+			title.append(drive);
+			title.append(dst);
+			title.append("]");
+
+			FileCopy fc = new FileCopy(Locale.US);
+			fc.setTitle(title.toString());
+			fc.setPurgeDestination(false);
+
+			for (TreeItemNode node : nodes) {
+				FileIO io = getIOFile(node);
+				File srcFile = io.getSrcFile();
+				File dstFile = io.getDstFile(drive);
+				fc.addFiles(srcFile, dstFile);
+			}
+			fcs[i] = fc;
+		}
+
+		TaskFrame frame = new TaskFrame();
+		frame.addTasks(fcs);
+		frame.show();
 	}
 }

@@ -160,7 +160,7 @@ public class FileCopy extends Task {
 
 		}
 	}
-
+	
 	/**
 	 * Purge listener.
 	 */
@@ -212,7 +212,7 @@ public class FileCopy extends Task {
 			}
 		}
 	}
-
+	
 	/** Additional label to show the from file. */
 	private static final String LABEL_FROM = "LABEL-FROM";
 	/** Additional label to show the to file. */
@@ -244,7 +244,7 @@ public class FileCopy extends Task {
 	private long bytesProcessed;
 	/** Current running scanner. */
 	private FileScanner scanner;
-
+	
 	/**
 	 * Constructor.
 	 * 
@@ -551,7 +551,6 @@ public class FileCopy extends Task {
 		if (scanner.isCancelled()) {
 			setState(State.CANCELLED);
 		}
-
 		clearMessages();
 	}
 

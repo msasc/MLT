@@ -40,6 +40,7 @@ import com.mlt.desktop.control.tree.TreeItemNode;
 import com.mlt.desktop.event.MouseHandler;
 import com.mlt.launch.Argument;
 import com.mlt.launch.ArgumentManager;
+import com.mlt.task.Task;
 import com.mlt.task.file.FileCopy;
 import com.mlt.util.Resources;
 
@@ -154,7 +155,8 @@ public class CMAUpdate {
 	private ArgumentManager argMngr;
 	private Tree tree;
 	private TreeItemNode root;
-	private Font font = new Font(Font.DIALOG, Font.PLAIN, 14);
+	private Font fontPlain = new Font(Font.DIALOG, Font.PLAIN, 16);
+	private Font fontBold = new Font(Font.DIALOG, Font.BOLD, 16);
 
 	private CMAUpdate() {
 		argMngr = new ArgumentManager();
@@ -164,24 +166,19 @@ public class CMAUpdate {
 	private void checkArguments(String[] args) {
 
 		/* Environment: Quality/Production. */
-		Argument argEnv =
-			new Argument("environment", "Environment: quality/production", true, false, "quality", "production");
+		Argument argEnv = new Argument("environment", "Environment: quality/production", true, false, "development", "quality", "production");
 
 		/* Target: Local/Remote */
-		Argument argTarget =
-			new Argument("target", "Target: local/remote", true, false, "local", "remote");
+		Argument argTarget = new Argument("target", "Target: local/remote", true, false, "local", "remote");
 
 		/* Destination (without drive). */
-		Argument argDest =
-			new Argument("destination", "Destination root", true, true, false);
+		Argument argDest = new Argument("destination", "Destination root", true, true, false);
 
 		/* Drives. */
-		Argument argDrives =
-			new Argument("drives", "Drives", true, true, false);
+		Argument argDrives = new Argument("drives", "Drives", true, true, false);
 
 		/* Source. */
-		Argument argSrc =
-			new Argument("source", "Source root", true, true, false);
+		Argument argSrc = new Argument("source", "Source root", true, true, false);
 
 		argMngr.add(argEnv);
 		argMngr.add(argTarget);
@@ -250,19 +247,30 @@ public class CMAUpdate {
 			String srcParent = parent.srcFile.getPath();
 			String dstParent = parent.dstFile.getPath();
 			for (File file : files) {
-				String name = file.getName();
-				FileIO child = new FileIO();
-				child.srcParent = srcParent;
-				child.dstParent = dstParent;
-				child.names = new String[] { name };
-				child.srcFile = new File(srcParent, name);
-				child.dstFile = new File(dstParent, name);
 				if (file.isDirectory()) {
+					String name = file.getName();
+					FileIO child = new FileIO();
 					child.type = Type.DIRECTORY;
-				} else {
-					child.type = Type.FILE;
+					child.srcParent = srcParent;
+					child.dstParent = dstParent;
+					child.names = new String[] { name };
+					child.srcFile = new File(srcParent, name);
+					child.dstFile = new File(dstParent, name);
+					fillFiles(parent.children, child);
 				}
-				fillFiles(parent.children, child);
+			}
+			for (File file : files) {
+				if (file.isFile()) {
+					String name = file.getName();
+					FileIO child = new FileIO();
+					child.type = Type.FILE;
+					child.srcParent = srcParent;
+					child.dstParent = dstParent;
+					child.names = new String[] { name };
+					child.srcFile = new File(srcParent, name);
+					child.dstFile = new File(dstParent, name);
+					fillFiles(parent.children, child);
+				}
 			}
 		}
 	}
@@ -275,9 +283,13 @@ public class CMAUpdate {
 			TreeItemNode child = new TreeItemNode();
 			child.setUserObject(io);
 			child.add("CHK", new CheckBox());
-			child.add("SRC", io.srcFile.getPath(), font);
+			if (io.isDirectory()) {
+				child.add("SRC", io.srcFile.getPath(), fontBold);
+			} else {
+				child.add("SRC", io.srcFile.getPath(), fontPlain);
+			}
+//			child.add("DST", io.dstFile.getPath(), font);
 			setSelected(child, true);
-			// child.add(io.dstFile.getPath());
 			parent.add(child);
 			if (io.isDirectory()) {
 				fillTree(io.children, child);
@@ -433,7 +445,7 @@ public class CMAUpdate {
 		String dstRoot = argMngr.getValue("destination");
 
 		String srcParent = getParentSrc(srcRoot, srcModule, dstModule);
-		String dstParent = getParentDst(dstRoot, srcModule);
+		String dstParent = getParentDst(dstRoot, dstModule);
 
 		List<FileIO> ios = new ArrayList<>();
 
@@ -575,6 +587,69 @@ public class CMAUpdate {
 	}
 
 	private void update() {
+
+		List<TreeItemNode> nodes = new ArrayList<>();
+		fillChildren(nodes, root);
+		for (int i = nodes.size() - 1; i >= 0; i--) {
+			if (!nodes.get(i).isLeaf() || !isSelected(nodes.get(i))) {
+				nodes.remove(i);
+			}
+		}
+
+		int groupSize = 200;
+		List<List<TreeItemNode>> groups = new ArrayList<>();
+		List<TreeItemNode> groupTmp = new ArrayList<>();
+		for (TreeItemNode node : nodes) {
+			groupTmp.add(node);
+			if (groupTmp.size() >= groupSize) {
+				groups.add(new ArrayList<>(groupTmp));
+				groupTmp.clear();
+			}
+		}
+		if (!groupTmp.isEmpty()) {
+			groups.add(new ArrayList<>(groupTmp));
+			groupTmp.clear();
+		}
+
+		String src = argMngr.getValue("source");
+		String dst = argMngr.getValue("destination");
+		String[] drives = getDrives();
+		
+		List<Task> fcs = new ArrayList<>();
+		for (int i = 0; i < drives.length; i++) {
+			
+			String drive = drives[i];
+			for (int j = 0; j < groups.size(); j++) {
+				
+				StringBuilder title = new StringBuilder();
+				title.append("Copy [");
+				title.append(src);
+				title.append("] to [");
+				title.append(drive);
+				title.append(dst);
+				title.append("] - ");
+				title.append(j);
+				
+				FileCopy fc = new FileCopy(Locale.US);
+				fc.setTitle(title.toString());
+				fc.setPurgeDestination(false);
+			
+				for (TreeItemNode node : groups.get(j)) {
+					FileIO io = getIOFile(node);
+					File srcFile = io.getSrcFile();
+					File dstFile = io.getDstFile(drive);
+					fc.addFiles(srcFile, dstFile);
+				}
+				fcs.add(fc);
+			}
+		}
+
+		TaskFrame frame = new TaskFrame();
+		frame.addTasks(fcs);
+		frame.show();
+	}
+
+	private void updateOld() {
 
 		List<TreeItemNode> nodes = new ArrayList<>();
 		fillChildren(nodes, root);
